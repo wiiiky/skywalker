@@ -15,38 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package shell
+package protocol
 
 import (
-    "flag"
+    "skywalker/shell"
 )
 
-type Options struct {
-    BindAddr string
-    BindPort string
-    RemoteAddr string
-    RemotePort string
+
+type InProtocol interface {
+    Start(*shell.Options) bool    /* 初始化 */
+    Read([]byte) interface{}
+    Close()
 }
 
-var (
-    Opts *Options
-)
-
-func init() {
-    Opts = parseOptions()
-}
-
-func parseOptions() *Options {
-    bindAddr := flag.String("bindAddr", "127.0.0.1", "the IP address to listen")
-    bindPort := flag.String("bindPort", "42312", "the port to listen")
-    remoteAddr := flag.String("remoteAddr", "www.baidu.com", "")
-    remotePort := flag.String("remotePort", "80", "")
-    flag.Parse()
-
-    return &Options{
-        BindAddr: *bindAddr,
-        BindPort: *bindPort,
-        RemoteAddr: *remoteAddr,
-        RemotePort: *remotePort,
-    }
+type OutProtocol interface {
+    Start(*shell.Options) bool
+    Read([]byte) interface{}
+    Close()
 }
