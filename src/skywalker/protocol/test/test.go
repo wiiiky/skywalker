@@ -2,6 +2,7 @@ package test
 
 import (
     "skywalker/shell"
+    "skywalker/protocol"
 )
 
 type InTest struct {
@@ -11,27 +12,35 @@ type InTest struct {
 type OutTest struct {
 }
 
+func (t *InTest) Name() string {
+    return "Test In"
+}
+
 func (t *InTest) Start(opts *shell.Options) bool {
     return true
 }
 
-func (t *InTest) Read(data []byte) interface{} {
+func (t *InTest) Read(data []byte) (interface{}, protocol.ProtocolError) {
     if t.header == false {
         t.header = true
-        return [][]byte{[]byte("www.baidu.com:80"), data}
+        return [][]byte{[]byte("www.baidu.com:80"), data}, nil
     }
-    return data
+    return data, nil
 }
 
 func (t *InTest) Close() {
+}
+
+func (t *OutTest) Name() string {
+    return "Test Out"
 }
 
 func (t *OutTest) Start(opts *shell.Options) bool {
     return true
 }
 
-func (t *OutTest) Read(data []byte) interface{} {
-    return data
+func (t *OutTest) Read(data []byte) (interface{}, protocol.ProtocolError) {
+    return data, nil
 }
 
 func (t *OutTest) Close() {
