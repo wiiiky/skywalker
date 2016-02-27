@@ -34,6 +34,8 @@ func (c *ByteChan) Write(v interface{}) {
             for _, d := range data {
                 c.channel <- d
             }
+        case string:
+            c.channel <- []byte(data)
     }
 }
 

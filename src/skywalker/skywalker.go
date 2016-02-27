@@ -21,19 +21,19 @@ import (
     "skywalker/net"
     "skywalker/protocol"
     "skywalker/protocol/test"
+    "skywalker/protocol/socks5"
     "skywalker/shell"
     "skywalker/log"
     "strings"
 )
 
 func main() {
-    opts := shell.Opts
-
-    listener, err := net.TcpListen(opts.BindAddr, opts.BindPort)
+    cfg := shell.Config
+    listener, err := net.TcpListen(cfg.BindAddr, cfg.BindPort)
     if err != nil {
         panic("couldn't start listening: " + err.Error())
     }
-    log.INFO("listen on %s:%s\n", opts.BindAddr, opts.BindPort)
+    log.INFO("listen on %s:%d\n", cfg.BindAddr, cfg.BindPort)
     for {
         conn, err := listener.Accept()
         if err != nil {
@@ -53,6 +53,7 @@ func handleConn(conn *net.TcpConn) {
 }
 
 func findInProtocol() protocol.AgentProtocol {
+    return &socks5.Socks5Protocol{}
     return &test.InTest{}
 }
 
@@ -64,7 +65,7 @@ func startInProxy(conn *net.TcpConn, in *net.ByteChan, out *net.ByteChan) {
     defer out.Close()
     defer conn.Close()
     proto := findInProtocol()
-    if proto.Start(shell.Opts) {
+    if proto.Start(true, shell.Config.InboundConfig) {
         log.INFO("start '%s' as in protocol successfully", proto.Name())
     }else {
         log.WARNING("fail to start '%s' as in protocol", proto.Name())
@@ -118,7 +119,7 @@ func startOutProxy(in *net.ByteChan, out *net.ByteChan) {
     }
     defer conn.Close()
     proto := findOutProtocol()
-    if proto.Start(shell.Opts) {
+    if proto.Start(false, shell.Config.OutboundConfig) {
         log.INFO("start '%s' as out protocol successfully", proto.Name())
     }else {
         log.WARNING("fail to start '%s' as out protocol", proto.Name())

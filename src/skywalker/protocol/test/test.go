@@ -1,7 +1,6 @@
 package test
 
 import (
-    "skywalker/shell"
     "skywalker/protocol"
 )
 
@@ -16,8 +15,12 @@ func (t *InTest) Name() string {
     return "Test In"
 }
 
-func (t *InTest) Start(opts *shell.Options) bool {
-    return true
+func (t *InTest) Start(inbound bool, cfg interface {}) bool {
+    if inbound {
+        return true
+    }else {
+        return false
+    }
 }
 
 func (t *InTest) Read(data []byte) (interface{}, interface{}, protocol.ProtocolError) {
@@ -35,8 +38,12 @@ func (t *OutTest) Name() string {
     return "Test Out"
 }
 
-func (t *OutTest) Start(opts *shell.Options) bool {
-    return true
+func (t *OutTest) Start(inbound bool, cfg interface{}) bool {
+    if ! inbound {
+        return true
+    } else {
+        return false
+    }
 }
 
 func (t *OutTest) Read(data []byte) (interface{}, interface{}, protocol.ProtocolError) {

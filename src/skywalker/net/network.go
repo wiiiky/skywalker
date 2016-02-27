@@ -20,6 +20,7 @@ package net
 
 import (
     "net"
+    "strconv"
 )
 
 type TcpConn struct {
@@ -41,6 +42,8 @@ func (c *TcpConn) Write(v interface{}) (int, error) {
                 }
                 n += i
             }
+        case string:
+            n, err = c.conn.Write([]byte(data))
     }
     return n, err
 }
@@ -69,22 +72,42 @@ func (l *TcpListener) Close() {
     l.listener.Close()
 }
 
+/*
+ * 将int、uint16类型的端口转化为字符串形式
+ */
+func convertPort(port interface{}) string {
+    var portStr string
+    switch p := port.(type) {
+        case int:
+            portStr = strconv.Itoa(p)
+        case uint16:
+            portStr = strconv.Itoa(int(p))
+        case string:
+            portStr = p
+        default:
+            panic("")
+    }
+    return portStr
+}
 
-func TcpListen(addr string, port string) (*TcpListener, error) {
-    listener, err := net.Listen("tcp", addr + ":" + port)
+func TcpListen(addr string, port interface{}) (*TcpListener, error) {
+    listener, err := net.Listen("tcp", addr + ":" + convertPort(port))
     if err != nil {
         return nil, err
     }
     return &TcpListener{listener}, nil
 }
 
-func TcpConnect(host string, port string) (*TcpConn, error) {
+/*
+ * 连接远程服务器，解析DNS会阻塞
+ */
+func TcpConnect(host string, port interface{}) (*TcpConn, error) {
     ips, err := net.LookupIP(host)
     if err != nil || len(ips) == 0 {
         return nil, err
     }
-    addr := ips[0].String() + ":" + port
-    conn, err := net.Dial("tcp", addr)
+    addr := ips[0].String() + ":" + convertPort(port)
+    conn, err := net.DialTimeout("tcp", addr, 10000000000)
     if err != nil {
         return nil, err
     }

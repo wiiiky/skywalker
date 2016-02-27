@@ -17,10 +17,6 @@
 
 package protocol
 
-import (
-    "skywalker/shell"
-)
-
 
 type ProtocolError interface {
     /* 返回错误码 */
@@ -38,12 +34,12 @@ type AgentProtocol interface {
      * 初始化成功，返回true
      * 初始化失败，返回false
      */
-    Start(*shell.Options) bool
+    Start(bool, interface{}) bool
 
     /*
      * 读取数据
-     * 返回[]byte表示转发数据
-     * 返回[][]byte表示分多次转发数据
+     * 返回的第一个值为转发数据，第二个值为响应数据，第三个值表示出错
+     * 数据可以是[]byte也可以是[][]byte。[][]byte回被看做多个[]byte
      * 出错关闭链接
      * 对于入口协议，第一个有效的数据必须指明远程服务器地址
      */
