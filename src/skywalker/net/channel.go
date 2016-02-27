@@ -15,27 +15,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package network
+package net
 
 
-import (
-    "net"
-)
-
-
-func TcpListen(addr string, port string) (net.Listener, error) {
-    return net.Listen("tcp", addr + ":" + port)
+type ByteChan struct {
+    channel chan []byte
 }
 
-func TcpConnect(host string, port string) net.Conn {
-    ips, err := net.LookupIP(host)
-    if err != nil || len(ips) == 0 {
-        return nil
+func NewByteChan() *ByteChan {
+    return &ByteChan{make(chan []byte)}
+}
+
+func (c *ByteChan) Write(v interface{}) {
+    switch data := v.(type) {
+        case []byte:
+            c.channel <- data
+        case [][]byte:
+            for _, d := range data {
+                c.channel <- d
+            }
     }
-    addr := ips[0].String() + ":" + port
-    conn, err := net.Dial("tcp", addr)
-    if err != nil {
-        return nil
-    }
-    return conn
+}
+
+func (c *ByteChan) Read() ([]byte, bool) {
+    data, ok := <- c.channel
+    return data, ok
+}
+
+func (c *ByteChan) Close() {
+    close(c.channel)
 }

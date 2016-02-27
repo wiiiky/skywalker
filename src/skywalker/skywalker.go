@@ -18,8 +18,7 @@
 package main
 
 import (
-    "net"
-    "skywalker/network"
+    "skywalker/net"
     "skywalker/protocol"
     "skywalker/protocol/test"
     "skywalker/shell"
@@ -30,25 +29,25 @@ import (
 func main() {
     opts := shell.Opts
 
-    server, err := network.TcpListen(opts.BindAddr, opts.BindPort)
-    if server == nil {
+    listener, err := net.TcpListen(opts.BindAddr, opts.BindPort)
+    if err != nil {
         panic("couldn't start listening: " + err.Error())
     }
     log.INFO("listen on %s:%s\n", opts.BindAddr, opts.BindPort)
     for {
-        client, err := server.Accept()
-        if client == nil {
+        conn, err := listener.Accept()
+        if err != nil {
             log.WARNING("couldn't accept: %s", err.Error())
             continue
         }
-        go handleConn(client)
+        go handleConn(conn)
     }
-    server.Close()
+    listener.Close()
 }
 
-func handleConn(conn net.Conn) {
-    inOut := make(chan []byte)
-    outIn := make(chan []byte)
+func handleConn(conn *net.TcpConn) {
+    inOut := net.NewByteChan()
+    outIn := net.NewByteChan()
     go startInProxy(conn, outIn, inOut)
     go startOutProxy(inOut, outIn)
 }
@@ -61,8 +60,8 @@ func findOutProtocol() protocol.AgentProtocol {
     return &test.OutTest{}
 }
 
-func startInProxy(conn net.Conn, in chan []byte, out chan []byte) {
-    defer close(out)
+func startInProxy(conn *net.TcpConn, in *net.ByteChan, out *net.ByteChan) {
+    defer out.Close()
     defer conn.Close()
     proto := findInProtocol()
     if proto.Start(shell.Opts) {
@@ -75,7 +74,7 @@ func startInProxy(conn net.Conn, in chan []byte, out chan []byte) {
 
     go func() {
         for {
-            data, ok := <-in
+            data, ok := in.Read()
             if ok == false {
                 break
             }
@@ -93,32 +92,28 @@ func startInProxy(conn net.Conn, in chan []byte, out chan []byte) {
         if err != nil {
             break
         }
-        data, err := proto.Read(buf[:n])
+        odata, cdata, err := proto.Read(buf[:n])
         if err != nil {
             log.WARNING("'%s' error: %s", proto.Name(), err.Error())
             break
         }
-        switch data := data.(type) {
-            case []byte:
-                out <- data
-            case [][]byte:
-                for _, seg := range data {
-                    out <- seg
-                }
+        out.Write(odata)
+        if _, err := conn.Write(cdata); err != nil {
+            break
         }
     }
     log.DEBUG("in closed")
 }
 
-func startOutProxy(in chan []byte, out chan []byte) {
-    defer close(out)
-    data, ok := <-in
+func startOutProxy(in *net.ByteChan, out *net.ByteChan) {
+    defer out.Close()
+    data, ok := in.Read()
     if ok == false {
         return
     }
     addrinfo := strings.Split(string(data), ":")
-    conn := network.TcpConnect(addrinfo[0], addrinfo[1])
-    if conn == nil {
+    conn, err := net.TcpConnect(addrinfo[0], addrinfo[1])
+    if err != nil {
         return
     }
     defer conn.Close()
@@ -133,7 +128,7 @@ func startOutProxy(in chan []byte, out chan []byte) {
 
     go func() {
         for {
-            data, ok := <-in
+            data, ok := in.Read()
             if ok == false {
                 break
             }
@@ -151,17 +146,13 @@ func startOutProxy(in chan []byte, out chan []byte) {
         if err != nil {
             break
         }
-        data, err := proto.Read(buf[:n])
+        idata, rdata, err := proto.Read(buf[:n])
         if err != nil {
             break
         }
-        switch data := data.(type) {
-            case []byte:
-                out <- data
-            case [][]byte:
-                for _, seg := range data {
-                    out <- seg
-                }
+        out.Write(idata)
+        if _, err := conn.Write(rdata); err != nil {
+            break
         }
     }
     log.DEBUG("out closed")

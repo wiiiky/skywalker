@@ -47,7 +47,7 @@ type AgentProtocol interface {
      * 出错关闭链接
      * 对于入口协议，第一个有效的数据必须指明远程服务器地址
      */
-    Read([]byte) (interface{}, ProtocolError)
+    Read([]byte) (interface{}, interface{}, ProtocolError)
 
     /* 关闭链接，释放资源，收尾工作 */
     Close()
