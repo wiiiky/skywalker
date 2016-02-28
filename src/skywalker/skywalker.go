@@ -48,88 +48,126 @@ func main() {
 func handleConn(conn *net.TcpConn) {
     inOut := net.NewByteChan()
     outIn := net.NewByteChan()
-    go startInProxy(conn, outIn, inOut)
-    go startOutProxy(inOut, outIn)
+    go startInboundAgent(conn, outIn, inOut)
+    go startOutboundAgent(inOut, outIn)
 }
 
-func findInProtocol() protocol.AgentProtocol {
-    return &socks5.Socks5Protocol{}
-    return &test.InTest{}
-}
-
-func findOutProtocol() protocol.AgentProtocol {
-    return &test.OutTest{}
-}
-
-func startInProxy(conn *net.TcpConn, in *net.ByteChan, out *net.ByteChan) {
-    defer out.Close()
-    defer conn.Close()
-    proto := findInProtocol()
-    if proto.Start(true, shell.Config.InboundConfig) {
+func getInboundProtocol() protocol.InboundProtocol {
+    proto := &socks5.Socks5Protocol{}
+    if proto.Start(shell.Config.InboundConfig) {
         log.INFO("start '%s' as in protocol successfully", proto.Name())
     }else {
         log.WARNING("fail to start '%s' as in protocol", proto.Name())
+        return nil
+    }
+    return proto
+}
+
+func getOutboundProtocol() protocol.OutboundProtocol {
+    proto := &test.OutTest{}
+    if proto.Start(shell.Config.OutboundConfig) {
+        log.INFO("start '%s' as out protocol successfully", proto.Name())
+    }else {
+        log.WARNING("fail to start '%s' as out protocol", proto.Name())
+        return nil
+    }
+    return proto
+}
+
+/* 启动入站代理 */
+func startInboundAgent(conn *net.TcpConn, inChan *net.ByteChan, outChan *net.ByteChan) {
+    defer outChan.Close()
+    defer conn.Close()
+    proto := getInboundProtocol()
+    if proto == nil {
         return
     }
     defer proto.Close()
 
-    go func() {
-        for {
-            data, ok := in.Read()
-            if ok == false {
-                break
-            }
-            if _, err := conn.Write(data); err != nil {
-                break
-            }
-        }
-        log.DEBUG("in closed 1")
-        conn.Close()
-    }()
-
     buf := make([]byte, 4096)
+    connected := false
     for {
         n, err := conn.Read(buf)
         if err != nil {
             break
         }
-        odata, cdata, err := proto.Read(buf[:n])
+        tdata, rdata, err := proto.Read(buf[:n])
         if err != nil {
             log.WARNING("'%s' error: %s", proto.Name(), err.Error())
             break
         }
-        out.Write(odata)
-        if _, err := conn.Write(cdata); err != nil {
+        outChan.Write(tdata)
+        if _, err := conn.Write(rdata); err != nil {
             break
+        }
+
+        if connected == false && tdata != nil {
+            /* 等待连接结果 */
+            data, ok := inChan.Read()
+            if ok == false {
+                break
+            }
+            result := string(data)
+            tdata, rdata, err := proto.ConnectResult(result)
+            if _, err := conn.Write(rdata); err != nil {
+                break
+            }
+            if result != protocol.CONNECT_OK || err != nil {
+                break
+            }
+            outChan.Write(tdata)
+            connected = true
+            /* 连接成功启动转发流程 */
+            go func() {
+                for {
+                    data, ok := inChan.Read()
+                    if ok == false {
+                        break
+                    }
+                    if _, err := conn.Write(data); err != nil {
+                        break
+                    }
+                }
+                log.DEBUG("in closed 1")
+                conn.Close()
+            }()
         }
     }
     log.DEBUG("in closed")
 }
 
-func startOutProxy(in *net.ByteChan, out *net.ByteChan) {
-    defer out.Close()
-    data, ok := in.Read()
-    if ok == false {
-        return
-    }
-    addrinfo := strings.Split(string(data), ":")
-    conn, err := net.TcpConnect(addrinfo[0], addrinfo[1])
-    if err != nil {
-        return
-    }
-    defer conn.Close()
-    proto := findOutProtocol()
-    if proto.Start(false, shell.Config.OutboundConfig) {
-        log.INFO("start '%s' as out protocol successfully", proto.Name())
-    }else {
-        log.WARNING("fail to start '%s' as out protocol", proto.Name())
+/* 启动出战代理 */
+func startOutboundAgent(inChan *net.ByteChan, outChan *net.ByteChan) {
+    defer outChan.Close()
+
+    proto := getOutboundProtocol()
+    if proto == nil {
         return
     }
     defer proto.Close()
 
+    /* 收到的第一个数据一定是目标地址，连接返回结果 */
+    data, ok := inChan.Read()
+    if ok == false {
+        return
+    }
+    addrinfo := strings.Split(string(data), ":")
+    addr, port := proto.GetRemoteAddress(addrinfo[0], addrinfo[1])
+    conn, errno := net.TcpConnect(addr, port)
+    if errno == 1 {
+        outChan.Write(protocol.CONNECT_UNKNOWN_HOST)
+        return
+    } else if errno == 2 {
+        outChan.Write(protocol.CONNECT_UNREACHABLE)
+        return
+    } else {
+        outChan.Write(protocol.CONNECT_OK)
+    }
+    defer conn.Close()
+
     go func() {
         for {
-            data, ok := in.Read()
+            data, ok := inChan.Read()
             if ok == false {
                 break
             }
@@ -151,7 +189,7 @@ func startOutProxy(in *net.ByteChan, out *net.ByteChan) {
         if err != nil {
             break
         }
-        out.Write(idata)
+        outChan.Write(idata)
         if _, err := conn.Write(rdata); err != nil {
             break
         }

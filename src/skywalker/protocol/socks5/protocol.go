@@ -30,12 +30,22 @@ const (
     socks5_protocol_unsupported_version = 4
 )
 
+/* 方法常量 */
+const (
+    METHOD_NO_AUTH_REQUIRED = byte('\x00')
+    METHOD_GSSAPI = byte('\x01')
+    METHOD_USERNAME_PASSWORD = byte('\x02')
+    METHOD_NO_ACCEPTABLE = byte('\xFF')
+)
+
+/* 地址类型 */
 const (
     ATYPE_IPV4 = 1
     ATYPE_DOMAINNAME = 3
     ATYPE_IPV6 = 4
 )
 
+/* 返回结果 */
 const (
     REPLAY_SUCCEED = 0
     REPLAY_GENERAL_FAILURE = 1
@@ -58,9 +68,6 @@ type ProtocolError struct {
     errno int
 }
 
-func (e *ProtocolError) Errno() int{
-    return e.errno
-}
 
 func (e *ProtocolError) Error() string {
     switch e.errno {

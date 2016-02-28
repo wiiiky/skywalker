@@ -101,17 +101,17 @@ func TcpListen(addr string, port interface{}) (*TcpListener, error) {
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
-func TcpConnect(host string, port interface{}) (*TcpConn, error) {
+func TcpConnect(host string, port interface{}) (*TcpConn, int) {
     ips, err := net.LookupIP(host)
     if err != nil || len(ips) == 0 {
-        return nil, err
+        return nil, 1
     }
     addr := ips[0].String() + ":" + convertPort(port)
     conn, err := net.DialTimeout("tcp", addr, 10000000000)
     if err != nil {
-        return nil, err
+        return nil, 2
     }
-    return &TcpConn{conn}, nil
+    return &TcpConn{conn}, 0
 }
 
 

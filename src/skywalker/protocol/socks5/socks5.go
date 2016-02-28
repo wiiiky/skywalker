@@ -18,8 +18,8 @@
 package socks5
 
 import (
-    "skywalker/protocol"
     "strconv"
+    "skywalker/protocol"
 )
 
 /*
@@ -27,12 +27,6 @@ import (
  * https://tools.ietf.org/html/rfc1928
  */
 
-const (
-    METHOD_NO_AUTH_REQUIRED = byte('\x00')
-    METHOD_GSSAPI = byte('\x01')
-    METHOD_USERNAME_PASSWORD = byte('\x02')
-    METHOD_NO_ACCEPTABLE = byte('\xFF')
-)
 
 const (
     state_init = 0          /* 初始化状态，等待客户端发送握手请求 */
@@ -41,10 +35,13 @@ const (
 )
 
 type Socks5Protocol struct {
-    inbound bool
     version uint8
     nmethods uint8
     methods []uint8  /* 每个字节表示一个方法 */
+
+    atype uint8
+    address string
+    port uint16
 
     state uint8
 }
@@ -53,12 +50,24 @@ func (p *Socks5Protocol) Name() string {
     return "Socks5"
 }
 
-func (p *Socks5Protocol) Start(inbound bool, cfg interface{}) bool {
-    p.inbound = inbound
+func (p *Socks5Protocol) Start(cfg interface{}) bool {
     return true
 }
 
-func (p *Socks5Protocol) inboundRead(data []byte) (interface{}, interface{}, protocol.ProtocolError) {
+func (p *Socks5Protocol) ConnectResult(result string) (interface{}, interface{}, error){
+    var rep uint8 = REPLAY_GENERAL_FAILURE
+    if result == protocol.CONNECT_OK {
+        rep = REPLAY_SUCCEED
+    } else if result == protocol.CONNECT_UNKNOWN_HOST {
+        rep = REPLAY_HOST_UNREACHABLE
+    } else if result == protocol.CONNECT_UNREACHABLE {
+        rep = REPLAY_NETWORK_UNREACHABLE
+    }
+    return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil
+}
+
+
+func (p *Socks5Protocol) Read(data []byte) (interface{}, interface{}, error) {
     switch p.state {
         case state_init:
             ver, nmethods, methods, err := parseVersionMessage(data)
@@ -76,28 +85,20 @@ func (p *Socks5Protocol) inboundRead(data []byte) (interface{}, interface{}, pro
             ver, cmd, atype, address, port, err := parseAddressMessage(data)
             if err != nil {
                 return nil, nil, err
-            } else if ver != 5 {
+            } else if ver != p.version {
                 return nil, nil, &ProtocolError{socks5_protocol_unsupported_version}
             } else if cmd != CMD_CONNECT {
                 return nil, nil, &ProtocolError{socks5_protocol_unsupported_cmd}
             }
+            p.atype = atype
+            p.address = address
+            p.port = port
             p.state = state_transfer
-            return address + ":" + strconv.Itoa(int(port)), buildAddressReply(ver, REPLAY_SUCCEED, atype, address, port), nil
+            return address + ":" + strconv.Itoa(int(port)), nil, nil
         case state_transfer:
             return data, nil, nil
     }
     return nil, nil, nil
-}
-
-func (p *Socks5Protocol) outboundRead(data []byte) (interface{}, interface{}, protocol.ProtocolError) {
-    return data, nil, nil
-}
-
-func (p *Socks5Protocol) Read(data []byte) (interface{}, interface{}, protocol.ProtocolError) {
-    if p.inbound {
-        return p.inboundRead(data)
-    }
-    return p.outboundRead(data)
 }
 
 func (p *Socks5Protocol) Close() {
