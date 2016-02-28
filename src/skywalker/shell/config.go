@@ -36,11 +36,11 @@ type ProxyConfig struct {
     BindAddr string      `json:"bindAddr"`
     BindPort uint16      `json:"bindPort"`
 
-    InboundProtocol string      `json:"inboundProtocol"`
-    InboundConfig interface{}   `json:"inboundConfig"`
+    ClientProtocol string                 `json:"clientProtocol"`
+    ClientConfig map[string]interface{}   `json:"clientConfig"`
 
-    OutboundProtocol string     `json:"outboundProtocol"`
-    OutboundConfig interface{}  `json:"outboundConfig"`
+    ServerProtocol string                 `json:"serverProtocol"`
+    ServerConfig map[string]interface{}   `json:"serverConfig"`
 
     Logger []LoggerConfig       `json:"logger"`
 }

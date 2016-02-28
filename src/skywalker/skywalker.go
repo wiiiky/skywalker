@@ -20,8 +20,8 @@ package main
 import (
     "skywalker/net"
     "skywalker/protocol"
-    "skywalker/protocol/test"
     "skywalker/protocol/socks5"
+    "skywalker/protocol/shadowsocks"
     "skywalker/shell"
     "skywalker/log"
     "strings"
@@ -46,43 +46,46 @@ func main() {
 }
 
 func handleConn(conn *net.TcpConn) {
-    inOut := net.NewByteChan()
-    outIn := net.NewByteChan()
-    go startInboundAgent(conn, outIn, inOut)
-    go startOutboundAgent(inOut, outIn)
+    cAgent := getClientAgent()
+    sAgent := getServerAgent()
+    if cAgent == nil || sAgent == nil {
+        conn.Close()
+        log.DEBUG("Conntion dropped!")
+        return
+    }
+    c1 := net.NewByteChan()
+    c2 := net.NewByteChan()
+    go startClientAgent(cAgent, conn, c2, c1)
+    go startServerAgent(sAgent, c1, c2)
 }
 
-func getInboundProtocol() protocol.InboundProtocol {
-    proto := &socks5.Socks5Protocol{}
-    if proto.Start(shell.Config.InboundConfig) {
-        log.INFO("start '%s' as in protocol successfully", proto.Name())
+func getClientAgent() protocol.ClientAgent {
+    agent := socks5.NewSocks5ClientAgent()
+    if agent.Start(shell.Config.ClientConfig) {
+        log.INFO("start '%s' as in protocol successfully", agent.Name())
     }else {
-        log.WARNING("fail to start '%s' as in protocol", proto.Name())
+        log.WARNING("fail to start '%s' as in protocol", agent.Name())
         return nil
     }
-    return proto
+    return agent
 }
 
-func getOutboundProtocol() protocol.OutboundProtocol {
-    proto := &test.OutTest{}
-    if proto.Start(shell.Config.OutboundConfig) {
-        log.INFO("start '%s' as out protocol successfully", proto.Name())
+func getServerAgent() protocol.ServerAgent {
+    agent := shadowsocks.NewShadowSocksServerAgent()
+    if agent.Start(shell.Config.ServerConfig) {
+        log.INFO("start '%s' as out protocol successfully", agent.Name())
     }else {
-        log.WARNING("fail to start '%s' as out protocol", proto.Name())
+        log.WARNING("fail to start '%s' as out protocol", agent.Name())
         return nil
     }
-    return proto
+    return agent
 }
 
 /* 启动入站代理 */
-func startInboundAgent(conn *net.TcpConn, inChan *net.ByteChan, outChan *net.ByteChan) {
+func startClientAgent(agent protocol.ClientAgent, conn *net.TcpConn, inChan *net.ByteChan, outChan *net.ByteChan) {
     defer outChan.Close()
     defer conn.Close()
-    proto := getInboundProtocol()
-    if proto == nil {
-        return
-    }
-    defer proto.Close()
+    defer agent.Close()
 
     buf := make([]byte, 4096)
     connected := false
@@ -91,9 +94,9 @@ func startInboundAgent(conn *net.TcpConn, inChan *net.ByteChan, outChan *net.Byt
         if err != nil {
             break
         }
-        tdata, rdata, err := proto.Read(buf[:n])
+        tdata, rdata, err := agent.OnRead(buf[:n])
         if err != nil {
-            log.WARNING("'%s' error: %s", proto.Name(), err.Error())
+            log.WARNING("'%s' error: %s", agent.Name(), err.Error())
             break
         }
         outChan.Write(tdata)
@@ -108,7 +111,7 @@ func startInboundAgent(conn *net.TcpConn, inChan *net.ByteChan, outChan *net.Byt
                 break
             }
             result := string(data)
-            tdata, rdata, err := proto.ConnectResult(result)
+            tdata, rdata, err := agent.ConnectResult(result)
             if _, err := conn.Write(rdata); err != nil {
                 break
             }
@@ -137,14 +140,9 @@ func startInboundAgent(conn *net.TcpConn, inChan *net.ByteChan, outChan *net.Byt
 }
 
 /* 启动出战代理 */
-func startOutboundAgent(inChan *net.ByteChan, outChan *net.ByteChan) {
+func startServerAgent(agent protocol.ServerAgent, inChan *net.ByteChan, outChan *net.ByteChan) {
     defer outChan.Close()
-
-    proto := getOutboundProtocol()
-    if proto == nil {
-        return
-    }
-    defer proto.Close()
+    defer agent.Close()
 
     /* 收到的第一个数据一定是目标地址，连接返回结果 */
     data, ok := inChan.Read()
@@ -152,18 +150,25 @@ func startOutboundAgent(inChan *net.ByteChan, outChan *net.ByteChan) {
         return
     }
     addrinfo := strings.Split(string(data), ":")
-    addr, port := proto.GetRemoteAddress(addrinfo[0], addrinfo[1])
-    conn, errno := net.TcpConnect(addr, port)
-    if errno == 1 {
-        outChan.Write(protocol.CONNECT_UNKNOWN_HOST)
+    addr, port := agent.GetRemoteAddress(addrinfo[0], addrinfo[1])
+    conn, result := net.TcpConnect(addr, port)
+
+    /* 通知客户端代理连接成功 */
+    outChan.Write(result)
+    if result != protocol.CONNECT_OK  {
         return
-    } else if errno == 2 {
-        outChan.Write(protocol.CONNECT_UNREACHABLE)
-        return
-    } else {
-        outChan.Write(protocol.CONNECT_OK)
     }
     defer conn.Close()
+
+    /* 连接初始化 */
+    tdata, rdata, err := agent.OnConnected()
+    if err != nil {
+        return
+    }
+    outChan.Write(tdata)
+    if _, err := conn.Write(rdata); err != nil {
+        return
+    }
 
     go func() {
         for {
@@ -171,7 +176,11 @@ func startOutboundAgent(inChan *net.ByteChan, outChan *net.ByteChan) {
             if ok == false {
                 break
             }
-            if _, err := conn.Write(data); err != nil {
+            _, tdata, err := agent.OnWrite(data)
+            if err != nil {
+                break
+            }
+            if _, err := conn.Write(tdata); err != nil {
                 break
             }
         }
@@ -185,11 +194,11 @@ func startOutboundAgent(inChan *net.ByteChan, outChan *net.ByteChan) {
         if err != nil {
             break
         }
-        idata, rdata, err := proto.Read(buf[:n])
+        tdata, rdata, err := agent.OnRead(buf[:n])
         if err != nil {
             break
         }
-        outChan.Write(idata)
+        outChan.Write(tdata)
         if _, err := conn.Write(rdata); err != nil {
             break
         }

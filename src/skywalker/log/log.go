@@ -30,7 +30,7 @@ var (
 )
 
 func init() {
-    debugLogger = log.New(os.Stdout, "[DEBUG]", log.Lshortfile)
+    debugLogger = log.New(os.Stdout, "[DEBUG]", log.Ldate|log.Ltime)
     infoLogger = log.New(os.Stdout, "[INFO]", log.Ldate|log.Ltime)
     warningLogger = log.New(os.Stderr, "[WARNING]", log.Ldate|log.Ltime)
     errorLogger = log.New(os.Stderr, "[ERROR]", log.Ldate|log.Ltime)

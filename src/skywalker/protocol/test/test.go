@@ -30,7 +30,7 @@ func (t *OutTest) Name() string {
     return "Test Out"
 }
 
-func (t *OutTest) Start(cfg interface{}) bool {
+func (t *OutTest) Start(cfg map[string]interface{}) bool {
     return true
 }
 

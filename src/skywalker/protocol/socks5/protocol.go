@@ -23,11 +23,11 @@ import (
 )
 
 const (
-    socks5_protocol_ok = 0
-    socks5_protocol_invalid_nmethods = 1
-    socks5_protocol_invalid_message_size = 2
-    socks5_protocol_unsupported_cmd = 3
-    socks5_protocol_unsupported_version = 4
+    socks5_error_ok = 0
+    socks5_error_invalid_nmethods = 1
+    socks5_error_invalid_message_size = 2
+    socks5_error_unsupported_cmd = 3
+    socks5_error_unsupported_version = 4
 )
 
 /* 方法常量 */
@@ -64,18 +64,18 @@ const (
     CMD_UDP_ASSOCIATE = 3
 )
 
-type ProtocolError struct {
+type Socks5Error struct {
     errno int
 }
 
 
-func (e *ProtocolError) Error() string {
+func (e *Socks5Error) Error() string {
     switch e.errno {
-        case socks5_protocol_ok:
+        case socks5_error_ok:
             return "OK"
-        case socks5_protocol_invalid_nmethods:
+        case socks5_error_invalid_nmethods:
             return "Invalid nmethods Field"
-        case socks5_protocol_invalid_message_size:
+        case socks5_error_invalid_message_size:
             return "Invalid Message Size"
         default:
             return "Unknown Error"
@@ -83,16 +83,16 @@ func (e *ProtocolError) Error() string {
 }
 
 /* 解析握手请求 */
-func parseVersionMessage(data []byte) (uint8, uint8, []uint8, *ProtocolError) {
+func parseVersionMessage(data []byte) (uint8, uint8, []uint8, *Socks5Error) {
     if len(data) < 3 {
-        return 0, 0, nil, &ProtocolError{socks5_protocol_invalid_message_size}
+        return 0, 0, nil, &Socks5Error{socks5_error_invalid_message_size}
     }
     version := uint8(data[0])
     nmethods := uint8(data[1])
     if nmethods < 1 {
-        return 0, 0, nil, &ProtocolError{socks5_protocol_invalid_nmethods}
+        return 0, 0, nil, &Socks5Error{socks5_error_invalid_nmethods}
     } else if len(data) != 2 + int(nmethods) {
-        return 0, 0, nil, &ProtocolError{socks5_protocol_invalid_message_size}
+        return 0, 0, nil, &Socks5Error{socks5_error_invalid_message_size}
     }
     return version, nmethods, []uint8(data[2:]), nil
 }
@@ -105,9 +105,9 @@ func buildVersionReply(ver uint8, method uint8) []byte {
 }
 
 /* 解析连接请求 */
-func parseAddressMessage(data []byte) (uint8, uint8, uint8, string, uint16, *ProtocolError) {
+func parseAddressMessage(data []byte) (uint8, uint8, uint8, string, uint16, *Socks5Error) {
     if len(data) < 6 {
-        return 0, 0, 0, "", 0, &ProtocolError{socks5_protocol_invalid_message_size}
+        return 0, 0, 0, "", 0, &Socks5Error{socks5_error_invalid_message_size}
     }
     version := uint8(data[0])
     cmd := uint8(data[1])
@@ -116,20 +116,20 @@ func parseAddressMessage(data []byte) (uint8, uint8, uint8, string, uint16, *Pro
     var port uint16
     if atype == ATYPE_IPV4 {
         if len(data) != 10 {
-            return 0, 0, 0, "", 0, &ProtocolError{socks5_protocol_invalid_message_size}
+            return 0, 0, 0, "", 0, &Socks5Error{socks5_error_invalid_message_size}
         }
         address = net.IP(data[4:8]).String()
         data = data[8:]
     }else if atype == ATYPE_IPV6 {
         if len(data) != 22 {
-            return 0, 0, 0, "", 0, &ProtocolError{socks5_protocol_invalid_message_size}
+            return 0, 0, 0, "", 0, &Socks5Error{socks5_error_invalid_message_size}
         }
         address = net.IP(data[4:20]).String()
         data = data[20:]
     }else {
         length := uint8(data[4])
         if len(data) != 7 + int(length) {
-            return 0, 0, 0, "", 0, &ProtocolError{socks5_protocol_invalid_message_size}
+            return 0, 0, 0, "", 0, &Socks5Error{socks5_error_invalid_message_size}
         }
         address = string(data[5:(5+length)])
         data = data[(5+length):]

@@ -21,6 +21,7 @@ package net
 import (
     "net"
     "strconv"
+    "skywalker/protocol"
 )
 
 type TcpConn struct {
@@ -101,17 +102,17 @@ func TcpListen(addr string, port interface{}) (*TcpListener, error) {
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
-func TcpConnect(host string, port interface{}) (*TcpConn, int) {
+func TcpConnect(host string, port interface{}) (*TcpConn, string) {
     ips, err := net.LookupIP(host)
     if err != nil || len(ips) == 0 {
-        return nil, 1
+        return nil, protocol.CONNECT_UNKNOWN_HOST
     }
     addr := ips[0].String() + ":" + convertPort(port)
     conn, err := net.DialTimeout("tcp", addr, 10000000000)
     if err != nil {
-        return nil, 2
+        return nil, protocol.CONNECT_UNREACHABLE
     }
-    return &TcpConn{conn}, 0
+    return &TcpConn{conn}, protocol.CONNECT_OK
 }
 
 

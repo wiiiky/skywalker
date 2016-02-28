@@ -17,7 +17,6 @@
 
 package net
 
-
 type ByteChan struct {
     channel chan []byte
 }

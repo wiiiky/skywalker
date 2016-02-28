@@ -26,8 +26,20 @@ const (
     CONNECT_UNKNOWN_ERROR = "CONNECT_UNKNOWN_ERROR"
 )
 
+/*
+ * 代理模型
+ *
+ * +--------+       +--------------+--------------+        +---------+
+ * | Client |  <==> | Client Agent | Server Agent |  <==>  | Server  |
+ * +--------+       +--------------+--------------+        +---------+
+ */
 
-type InboundProtocol interface {
+
+/*
+ * 客户端代理
+ * 处理面向客户端的连接数据
+ */
+type ClientAgent interface {
     /* 返回协议名 */
     Name() string
     /* 
@@ -35,9 +47,9 @@ type InboundProtocol interface {
      * 初始化成功，返回true
      * 初始化失败，返回false
      */
-    Start(interface{}) bool
+    Start(map[string]interface{}) bool
 
-    /* 连接结果，只有入站协议才会调用该方法 */
+    /* 连接服务器结果 */
     ConnectResult(string) (interface{}, interface{}, error)
 
     /*
@@ -47,13 +59,17 @@ type InboundProtocol interface {
      * 出错关闭链接
      * 对于入口协议，第一个有效的数据必须指明远程服务器地址
      */
-    Read([]byte) (interface{}, interface{}, error)
+    OnRead([]byte) (interface{}, interface{}, error)
 
     /* 关闭链接，释放资源，收尾工作 */
     Close()
 }
 
-type OutboundProtocol interface {
+/*
+ * 服务器代理
+ * 处理面向服务端的连接数据
+ */
+type ServerAgent interface {
     /* 返回协议名 */
     Name() string
     /* 
@@ -61,7 +77,7 @@ type OutboundProtocol interface {
      * 初始化成功，返回true
      * 初始化失败，返回false
      */
-    Start(interface{}) bool
+    Start(map[string]interface{}) bool
 
     /* 
      * 获取远程地址，参数是入站协议传递过来的远程服务器地址
@@ -69,14 +85,20 @@ type OutboundProtocol interface {
      */
     GetRemoteAddress(string, string) (string, string)
 
+    /* 只有成功连接远程服务器才会被调用 */
+    OnConnected() (interface{}, interface{}, error)
+
     /*
      * 读取数据
      * 返回的第一个值为转发数据，第二个值为响应数据，第三个值表示出错
      * 数据可以是[]byte也可以是[][]byte。[][]byte回被看做多个[]byte
      * 出错关闭链接
-     * 对于入口协议，第一个有效的数据必须指明远程服务器地址
      */
-    Read([]byte) (interface{}, interface{}, error)
+    OnRead([]byte) (interface{}, interface{}, error)
+    /*
+     * 写数据
+     */
+    OnWrite([]byte) (interface{}, interface{}, error)
 
     /* 关闭链接，释放资源，收尾工作 */
     Close()
