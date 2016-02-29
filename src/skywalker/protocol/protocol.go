@@ -47,10 +47,10 @@ type ClientAgent interface {
      * 初始化成功，返回true
      * 初始化失败，返回false
      */
-    Start(map[string]interface{}) bool
+    OnStart(map[string]interface{}) bool
 
     /* 连接服务器结果 */
-    ConnectResult(string) (interface{}, interface{}, error)
+    OnConnectResult(string) (interface{}, interface{}, error)
 
     /*
      * 读取数据
@@ -62,7 +62,7 @@ type ClientAgent interface {
     OnRead([]byte) (interface{}, interface{}, error)
 
     /* 关闭链接，释放资源，收尾工作 */
-    Close()
+    OnClose()
 }
 
 /*
@@ -77,7 +77,7 @@ type ServerAgent interface {
      * 初始化成功，返回true
      * 初始化失败，返回false
      */
-    Start(map[string]interface{}) bool
+    OnStart(map[string]interface{}) bool
 
     /* 
      * 获取远程地址，参数是入站协议传递过来的远程服务器地址
@@ -101,5 +101,5 @@ type ServerAgent interface {
     OnWrite([]byte) (interface{}, interface{}, error)
 
     /* 关闭链接，释放资源，收尾工作 */
-    Close()
+    OnClose()
 }

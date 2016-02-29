@@ -54,12 +54,12 @@ func (p *Socks5ClientAgent) Name() string {
     return "Socks5"
 }
 
-func (p *Socks5ClientAgent) Start(cfg map[string]interface{}) bool {
+func (p *Socks5ClientAgent) OnStart(cfg map[string]interface{}) bool {
     return true
 }
 
 /* 给客户端返回连接结果 */
-func (p *Socks5ClientAgent) ConnectResult(result string) (interface{}, interface{}, error){
+func (p *Socks5ClientAgent) OnConnectResult(result string) (interface{}, interface{}, error){
     var rep uint8 = REPLAY_GENERAL_FAILURE
     if result == protocol.CONNECT_OK {
         rep = REPLAY_SUCCEED
@@ -106,5 +106,5 @@ func (p *Socks5ClientAgent) OnRead(data []byte) (interface{}, interface{}, error
     return nil, nil, nil
 }
 
-func (p *Socks5ClientAgent) Close() {
+func (p *Socks5ClientAgent) OnClose() {
 }

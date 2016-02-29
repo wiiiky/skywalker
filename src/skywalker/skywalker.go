@@ -61,7 +61,7 @@ func handleConn(conn *net.TcpConn) {
 
 func getClientAgent() protocol.ClientAgent {
     agent := socks5.NewSocks5ClientAgent()
-    if agent.Start(shell.Config.ClientConfig) {
+    if agent.OnStart(shell.Config.ClientConfig) {
         log.INFO("start '%s' as in protocol successfully", agent.Name())
     }else {
         log.WARNING("fail to start '%s' as in protocol", agent.Name())
@@ -72,7 +72,7 @@ func getClientAgent() protocol.ClientAgent {
 
 func getServerAgent() protocol.ServerAgent {
     agent := shadowsocks.NewShadowSocksServerAgent()
-    if agent.Start(shell.Config.ServerConfig) {
+    if agent.OnStart(shell.Config.ServerConfig) {
         log.INFO("start '%s' as out protocol successfully", agent.Name())
     }else {
         log.WARNING("fail to start '%s' as out protocol", agent.Name())
@@ -85,7 +85,7 @@ func getServerAgent() protocol.ServerAgent {
 func startClientAgent(agent protocol.ClientAgent, conn *net.TcpConn, inChan *net.ByteChan, outChan *net.ByteChan) {
     defer outChan.Close()
     defer conn.Close()
-    defer agent.Close()
+    defer agent.OnClose()
 
     buf := make([]byte, 4096)
     connected := false
@@ -111,7 +111,7 @@ func startClientAgent(agent protocol.ClientAgent, conn *net.TcpConn, inChan *net
                 break
             }
             result := string(data)
-            tdata, rdata, err := agent.ConnectResult(result)
+            tdata, rdata, err := agent.OnConnectResult(result)
             if _, err := conn.Write(rdata); err != nil {
                 break
             }
@@ -142,7 +142,7 @@ func startClientAgent(agent protocol.ClientAgent, conn *net.TcpConn, inChan *net
 /* 启动出战代理 */
 func startServerAgent(agent protocol.ServerAgent, inChan *net.ByteChan, outChan *net.ByteChan) {
     defer outChan.Close()
-    defer agent.Close()
+    defer agent.OnClose()
 
     /* 收到的第一个数据一定是目标地址，连接返回结果 */
     data, ok := inChan.Read()

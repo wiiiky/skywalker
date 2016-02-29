@@ -62,7 +62,7 @@ func (p *ShadowSocksServerAgent) Name() string {
 }
 
 /* 初始化读取配置 */
-func (p *ShadowSocksServerAgent) Start(cfg map[string]interface{}) bool {
+func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) bool {
     var serverAddr, serverPort, password, method string
     var val interface{}
     var ok bool
@@ -156,5 +156,5 @@ func (p *ShadowSocksServerAgent) OnWrite(data []byte) (interface{}, interface{},
     return nil, p.encrypt(data), nil
 }
 
-func (p *ShadowSocksServerAgent) Close() {
+func (p *ShadowSocksServerAgent) OnClose() {
 }
