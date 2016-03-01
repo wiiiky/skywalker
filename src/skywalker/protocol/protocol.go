@@ -18,14 +18,6 @@
 package protocol
 
 
-/* 连接远程服务器的结果 */
-const (
-    CONNECT_OK = "CONNECT_OK"
-    CONNECT_UNKNOWN_HOST = "CONNECT_UNKNOWN_HOST"
-    CONNECT_UNREACHABLE = "CONNECT_UNREACHABLE"
-    CONNECT_UNKNOWN_ERROR = "CONNECT_UNKNOWN_ERROR"
-)
-
 /*
  * 代理模型
  *
