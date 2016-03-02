@@ -18,18 +18,19 @@
 package main
 
 import (
-    "skywalker/net"
     "skywalker/protocol"
     "skywalker/protocol/socks5"
     "skywalker/protocol/shadowsocks"
     "skywalker/shell"
     "skywalker/log"
     "strings"
+    "strconv"
+    "net"
 )
 
 func main() {
     cfg := shell.Config
-    listener, err := net.TcpListen(cfg.BindAddr, cfg.BindPort)
+    listener, err := net.Listen("tcp", cfg.BindAddr + ":" + convertPort(cfg.BindPort))
     if err != nil {
         panic("couldn't start listening: " + err.Error())
     }
@@ -67,7 +68,7 @@ func getServerAgent() protocol.ServerAgent {
     return agent
 }
 
-func startTransfer(conn *net.TcpConn) {
+func startTransfer(conn net.Conn) {
     cAgent := getClientAgent()
     sAgent := getServerAgent()
     if cAgent == nil || sAgent == nil {
@@ -81,7 +82,7 @@ func startTransfer(conn *net.TcpConn) {
     go startServerGoruntine(sAgent, c2s, s2c)
 }
 
-func getConnectionChannel(conn *net.TcpConn) chan []byte {
+func getConnectionChannel(conn net.Conn, tag string) chan []byte {
     channel := make(chan []byte)
     go func(){
         defer close(channel)
@@ -91,14 +92,17 @@ func getConnectionChannel(conn *net.TcpConn) chan []byte {
             if err != nil {
                 break
             }
-            channel <- buf[:n]
+            log.DEBUG("read from %s %d", tag, n)
+            data := make([]byte, n)
+            copy(data, buf[:n])
+            channel <- data
         }
     }()
     return channel
 }
 
 func transferData(ic chan *protocol.InternalPackage,
-                  conn *net.TcpConn, tdata interface{},
+                  conn net.Conn, tdata interface{},
                   rdata interface{}, err error) bool {
     switch data := tdata.(type) {
         case string:
@@ -136,12 +140,12 @@ func transferData(ic chan *protocol.InternalPackage,
 func startClientGoruntine(cAgent protocol.ClientAgent,
                           c2s chan *protocol.InternalPackage,
                           s2c chan *protocol.InternalPackage,
-                          cConn *net.TcpConn) {
+                          cConn net.Conn) {
     defer cAgent.OnClose()
     defer cConn.Close()
     defer close(c2s)
 
-    cChan := getConnectionChannel(cConn)
+    cChan := getConnectionChannel(cConn, "CLIENT")
     var running bool = true
     for running == true {
         select {
@@ -188,7 +192,7 @@ func startServerGoruntine(sAgent protocol.ServerAgent,
     defer sAgent.OnClose()
     defer close(s2c)
 
-    var sConn *net.TcpConn;
+    var sConn net.Conn;
     for {
         pkg, ok := <- c2s
         if ok == false {
@@ -203,7 +207,7 @@ func startServerGoruntine(sAgent protocol.ServerAgent,
             return
         }
         addr, port := sAgent.GetRemoteAddress(addrinfo[0], addrinfo[1])
-        conn, result := net.TcpConnect(addr, port)
+        conn, result := tcpConnect(addr, port)
         s2c <- protocol.NewInternalPackage(protocol.INTERNAL_PROTOCOL_CONNECT_RESULT, []byte(result))
         if result != protocol.CONNECT_OK {
             return
@@ -216,8 +220,9 @@ func startServerGoruntine(sAgent protocol.ServerAgent,
     if ! transferData(s2c, sConn, tdata, rdata, err) {
         return
     }
+    log.DEBUG("%s CONNECTED", sConn.RemoteAddr())
 
-    sChan := getConnectionChannel(sConn)
+    sChan := getConnectionChannel(sConn, "SERVER")
     var running bool = true
     for running == true {
         select {
@@ -250,4 +255,38 @@ func startServerGoruntine(sAgent protocol.ServerAgent,
         }
     }
     log.DEBUG("server exits")
+}
+
+/*
+ * 将int、uint16类型的端口转化为字符串形式
+ */
+func convertPort(port interface{}) string {
+    var portStr string
+    switch p := port.(type) {
+        case int:
+            portStr = strconv.Itoa(p)
+        case uint16:
+            portStr = strconv.Itoa(int(p))
+        case string:
+            portStr = p
+        default:
+            panic("")
+    }
+    return portStr
+}
+
+/*
+ * 连接远程服务器，解析DNS会阻塞
+ */
+func tcpConnect(host string, port interface{}) (net.Conn, string) {
+    ips, err := net.LookupIP(host)
+    if err != nil || len(ips) == 0 {
+        return nil, protocol.CONNECT_UNKNOWN_HOST
+    }
+    addr := ips[0].String() + ":" + convertPort(port)
+    conn, err := net.DialTimeout("tcp", addr, 10000000000)
+    if err != nil {
+        return nil, protocol.CONNECT_UNREACHABLE
+    }
+    return conn, protocol.CONNECT_OK
 }
