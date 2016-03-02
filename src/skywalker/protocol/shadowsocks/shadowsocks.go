@@ -22,7 +22,6 @@ import (
     "crypto/aes"
     "crypto/cipher"
     "bytes"
-    "fmt"
 )
 
 
@@ -39,10 +38,14 @@ type ShadowSocksServerAgent struct {
     method string
     encrypter cipher.Stream
     decrypter cipher.Stream
+    block cipher.Block
     iv []byte
 
     targetAddr string
     targetPort string
+
+    ivSize int
+    keySize int
 }
 
 func (p *ShadowSocksServerAgent) encrypt(plain []byte) []byte {
@@ -52,6 +55,9 @@ func (p *ShadowSocksServerAgent) encrypt(plain []byte) []byte {
 }
 
 func (p *ShadowSocksServerAgent) decrypt(encrypted []byte) []byte {
+    if encrypted == nil {
+        return nil
+    }
     plain := make([]byte, len(encrypted))
     p.decrypter.XORKeyStream(plain, encrypted)
     return plain
@@ -68,17 +74,14 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) bool {
     var ok bool
     val, ok = cfg["serverAddr"]
     if ok == false {
-        fmt.Println(1)
         return false
     }
     serverAddr, ok = val.(string)
     if ok == false {
-        fmt.Println(2)
         return false
     }
     val, ok = cfg["serverPort"]
     if ok == false {
-        fmt.Println(3)
         return false
     }
     switch port := val.(type) {
@@ -89,12 +92,10 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) bool {
         case float64:
             serverPort = strconv.Itoa(int(port))
         default:
-            fmt.Printf("4, %T\n",port)
             return false
     }
     val, ok = cfg["password"]
     if ok == false {
-    fmt.Println(5)
         return false
     }
     password, ok = val.(string)
@@ -107,7 +108,6 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) bool {
     }else{
         method, ok = val.(string)
         if ok == false {
-            fmt.Println(6)
             return false
         }
     }
@@ -116,7 +116,6 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) bool {
 
     block, err := aes.NewCipher(key)
     if err != nil {
-        fmt.Println(7)
         return false
     }
 
@@ -124,9 +123,12 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) bool {
     p.serverPort = serverPort
     p.password = password
     p.method = method
+    p.block = block
     p.encrypter = cipher.NewCFBEncrypter(block, iv)
-    p.decrypter = cipher.NewCFBDecrypter(block, iv)
+    p.decrypter = nil
     p.iv = iv
+    p.ivSize = 16
+    p.keySize = 32
     return true
 }
 
@@ -149,6 +151,17 @@ func (p *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error)
 }
 
 func (p *ShadowSocksServerAgent) OnRead(data []byte) (interface{}, interface{}, error) {
+    if p.decrypter == nil {
+        if len(data) < p.ivSize {
+            return nil, nil, &ShadowSocksError{shadowsocks_error_invalid_package}
+        }
+        iv := data[:p.ivSize]
+        data = data[p.ivSize:]
+        if len(data) == 0 {
+            data = nil
+        }
+        p.decrypter = cipher.NewCFBDecrypter(p.block, iv)
+    }
     return p.decrypt(data), nil, nil
 }
 

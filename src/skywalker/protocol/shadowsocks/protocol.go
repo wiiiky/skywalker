@@ -26,6 +26,7 @@ import (
 
 const (
     shadowsocks_error_invalid_target = 1
+    shadowsocks_error_invalid_package = 2
 )
 
 type ShadowSocksError struct {
