@@ -49,13 +49,16 @@ type ShadowSocksServerAgent struct {
 }
 
 func (p *ShadowSocksServerAgent) encrypt(plain []byte) []byte {
+    if plain == nil || len(plain) == 0 {
+        return nil
+    }
     encrypted := make([]byte, len(plain))
     p.encrypter.XORKeyStream(encrypted, plain)
     return encrypted
 }
 
 func (p *ShadowSocksServerAgent) decrypt(encrypted []byte) []byte {
-    if encrypted == nil {
+    if encrypted == nil || len(encrypted) == 0 {
         return nil
     }
     plain := make([]byte, len(encrypted))

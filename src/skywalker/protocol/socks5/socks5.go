@@ -87,7 +87,7 @@ func (p *Socks5ClientAgent) OnRead(data []byte) (interface{}, interface{}, error
             p.state = state_addr
             return nil, buildVersionReply(ver, 0), nil
         case state_addr:    /* 接收客户端的地址请求，等待连接结果 */
-            ver, cmd, atype, address, port, err := parseAddressMessage(data)
+            ver, cmd, atype, address, port, left, err := parseAddressMessage(data)
             if err != nil {
                 return nil, nil, err
             } else if ver != p.version {
@@ -99,7 +99,11 @@ func (p *Socks5ClientAgent) OnRead(data []byte) (interface{}, interface{}, error
             p.address = address
             p.port = port
             p.state = state_transfer
-            return address + ":" + strconv.Itoa(int(port)), nil, nil
+            addrinfo := address + ":" + strconv.Itoa(int(port))
+            if left == nil {
+                return addrinfo, nil, nil
+            }
+            return [][]byte{[]byte(addrinfo), left}, nil, nil
         case state_transfer:    /* 直接转发数据 */
             return data, nil, nil
     }

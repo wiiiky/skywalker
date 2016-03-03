@@ -78,8 +78,8 @@ func startTransfer(id uint, conn net.Conn) {
         conn.Close()
         return
     }
-    c2s := make(chan *protocol.InternalPackage)
-    s2c := make(chan *protocol.InternalPackage)
+    c2s := make(chan *protocol.InternalPackage, 100)
+    s2c := make(chan *protocol.InternalPackage, 100)
     go startClientGoruntine(id, cAgent, c2s, s2c, conn)
     go startServerGoruntine(id, sAgent, c2s, s2c)
 }
@@ -155,6 +155,7 @@ func startClientGoruntine(id uint, cAgent protocol.ClientAgent,
                     log.INFO("%d CLOSED BY CLIENT", id)
                     break
                 }
+                log.DEBUG("%d read from client: %d", id, len(data))
                 tdata, rdata, err := cAgent.OnRead(data)
                 if ! transferData(c2s, cConn, tdata, rdata, err) {
                     running = false
@@ -229,6 +230,7 @@ func startServerGoruntine(id uint, sAgent protocol.ServerAgent,
                     log.INFO("%d CLOSED BY SERVER", id)
                     break
                 }
+                log.DEBUG("%d read from server: %d", id, len(data))
                 tdata, rdata, err := sAgent.OnRead(data)
                 if ! transferData(s2c, sConn, tdata, rdata, err) {
                     running = false

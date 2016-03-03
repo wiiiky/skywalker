@@ -105,31 +105,38 @@ func buildVersionReply(ver uint8, method uint8) []byte {
 }
 
 /* 解析连接请求 */
-func parseAddressMessage(data []byte) (uint8, uint8, uint8, string, uint16, *Socks5Error) {
+func parseAddressMessage(data []byte) (uint8, uint8, uint8, string, uint16, []byte, *Socks5Error) {
     if len(data) < 6 {
-        return 0, 0, 0, "", 0, &Socks5Error{socks5_error_invalid_message_size}
+        return 0, 0, 0, "", 0, nil, &Socks5Error{socks5_error_invalid_message_size}
     }
     version := uint8(data[0])
     cmd := uint8(data[1])
     atype := uint8(data[3])
     var address string
     var port uint16
+    var left []byte = nil
     if atype == ATYPE_IPV4 {
-        if len(data) != 10 {
-            return 0, 0, 0, "", 0, &Socks5Error{socks5_error_invalid_message_size}
+        if len(data) < 10 {
+            return 0, 0, 0, "", 0, nil, &Socks5Error{socks5_error_invalid_message_size}
+        } else if len(data) > 10 {
+            left = data[10:]
         }
         address = net.IP(data[4:8]).String()
         data = data[8:]
     }else if atype == ATYPE_IPV6 {
-        if len(data) != 22 {
-            return 0, 0, 0, "", 0, &Socks5Error{socks5_error_invalid_message_size}
+        if len(data) < 22 {
+            return 0, 0, 0, "", 0, nil, &Socks5Error{socks5_error_invalid_message_size}
+        } else if len(data) > 22 {
+            left = data[22:]
         }
         address = net.IP(data[4:20]).String()
         data = data[20:]
     }else {
         length := uint8(data[4])
-        if len(data) != 7 + int(length) {
-            return 0, 0, 0, "", 0, &Socks5Error{socks5_error_invalid_message_size}
+        if len(data) < 7 + int(length) {
+            return 0, 0, 0, "", 0, nil, &Socks5Error{socks5_error_invalid_message_size}
+        } else if len(data) > 7 + int(length) {
+            left = data[7 + int(length):]
         }
         address = string(data[5:(5+length)])
         data = data[(5+length):]
@@ -137,7 +144,7 @@ func parseAddressMessage(data []byte) (uint8, uint8, uint8, string, uint16, *Soc
     buf := bytes.NewReader(data)
     binary.Read(buf, binary.BigEndian, &port)
 
-    return version, cmd, atype, address, port, nil
+    return version, cmd, atype, address, port, left,  nil
 }
 
 /* */
