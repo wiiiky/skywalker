@@ -34,16 +34,19 @@ func main() {
     if err != nil {
         panic("couldn't start listening: " + err.Error())
     }
+    defer listener.Close()
     log.INFO("listen on %s:%d\n", cfg.BindAddr, cfg.BindPort)
+
+    var id uint = 0
     for {
         conn, err := listener.Accept()
         if err != nil {
             log.WARNING("couldn't accept: %s", err.Error())
             continue
         }
-        startTransfer(conn)
+        startTransfer(id, conn)
+        id += 1
     }
-    listener.Close()
 }
 
 func getClientAgent() protocol.ClientAgent {
@@ -68,36 +71,32 @@ func getServerAgent() protocol.ServerAgent {
     return agent
 }
 
-func startTransfer(conn net.Conn) {
+func startTransfer(id uint, conn net.Conn) {
     cAgent := getClientAgent()
     sAgent := getServerAgent()
     if cAgent == nil || sAgent == nil {
         conn.Close()
-        log.DEBUG("Conntion dropped!")
         return
     }
     c2s := make(chan *protocol.InternalPackage)
     s2c := make(chan *protocol.InternalPackage)
-    go startClientGoruntine(cAgent, c2s, s2c, conn)
-    go startServerGoruntine(sAgent, c2s, s2c)
+    go startClientGoruntine(id, cAgent, c2s, s2c, conn)
+    go startServerGoruntine(id, sAgent, c2s, s2c)
 }
 
-func getConnectionChannel(conn net.Conn, tag string) chan []byte {
+func getConnectionChannel(conn net.Conn) chan []byte {
     channel := make(chan []byte)
-    go func(){
+    go func(conn net.Conn, channel chan []byte){
         defer close(channel)
-        buf := make([]byte, 4096)
         for {
+            buf := make([]byte, 4096)
             n, err := conn.Read(buf)
             if err != nil {
                 break
             }
-            log.DEBUG("read from %s %d", tag, n)
-            data := make([]byte, n)
-            copy(data, buf[:n])
-            channel <- data
+            channel <- buf[:n]
         }
-    }()
+    }(conn, channel)
     return channel
 }
 
@@ -137,7 +136,7 @@ func transferData(ic chan *protocol.InternalPackage,
     return err == nil
 }
 
-func startClientGoruntine(cAgent protocol.ClientAgent,
+func startClientGoruntine(id uint, cAgent protocol.ClientAgent,
                           c2s chan *protocol.InternalPackage,
                           s2c chan *protocol.InternalPackage,
                           cConn net.Conn) {
@@ -145,7 +144,7 @@ func startClientGoruntine(cAgent protocol.ClientAgent,
     defer cConn.Close()
     defer close(c2s)
 
-    cChan := getConnectionChannel(cConn, "CLIENT")
+    cChan := getConnectionChannel(cConn)
     var running bool = true
     for running == true {
         select {
@@ -153,10 +152,9 @@ func startClientGoruntine(cAgent protocol.ClientAgent,
                 /* 来自客户端的数据 */
                 if ok == false {
                     running = false
-                    log.WARNING("CLOSED BY CLIENT")
+                    log.INFO("%d CLOSED BY CLIENT", id)
                     break
                 }
-                log.DEBUG("read from browser")
                 tdata, rdata, err := cAgent.OnRead(data)
                 if ! transferData(c2s, cConn, tdata, rdata, err) {
                     running = false
@@ -168,12 +166,10 @@ func startClientGoruntine(cAgent protocol.ClientAgent,
                     break
                 }
                 if pkg.CMD == protocol.INTERNAL_PROTOCOL_TRANSFER {
-                    log.DEBUG("read from server agent %d", len(pkg.Payload))
                     if ! transferData(c2s, cConn, nil, pkg.Payload, nil) {
                         running = false
                     }
                 } else if pkg.CMD == protocol.INTERNAL_PROTOCOL_CONNECT_RESULT {
-                    log.DEBUG("read from server agent connection result")
                     tdata, rdata, err := cAgent.OnConnectResult(string(pkg.Payload))
                     if ! transferData(c2s, cConn, tdata, rdata, err) {
                         running = false
@@ -183,10 +179,10 @@ func startClientGoruntine(cAgent protocol.ClientAgent,
                 }
         }
     }
-    log.DEBUG("client exits")
+    log.DEBUG("%d client exits", id)
 }
 
-func startServerGoruntine(sAgent protocol.ServerAgent,
+func startServerGoruntine(id uint, sAgent protocol.ServerAgent,
                           c2s chan *protocol.InternalPackage,
                           s2c chan *protocol.InternalPackage) {
     defer sAgent.OnClose()
@@ -220,9 +216,9 @@ func startServerGoruntine(sAgent protocol.ServerAgent,
     if ! transferData(s2c, sConn, tdata, rdata, err) {
         return
     }
-    log.DEBUG("%s CONNECTED", sConn.RemoteAddr())
+    log.DEBUG("%d %s CONNECTED",id, sConn.RemoteAddr())
 
-    sChan := getConnectionChannel(sConn, "SERVER")
+    sChan := getConnectionChannel(sConn)
     var running bool = true
     for running == true {
         select {
@@ -230,10 +226,10 @@ func startServerGoruntine(sAgent protocol.ServerAgent,
                 /* 来自服务端的数据 */
                 if ok == false {
                     running = false
+                    log.INFO("%d CLOSED BY SERVER", id)
                     break
                 }
                 tdata, rdata, err := sAgent.OnRead(data)
-                log.DEBUG("read from server %d", len(data))
                 if ! transferData(s2c, sConn, tdata, rdata, err) {
                     running = false
                 }
@@ -243,7 +239,6 @@ func startServerGoruntine(sAgent protocol.ServerAgent,
                     running = false
                     break
                 }
-                log.DEBUG("read from client agents")
                 if pkg.CMD == protocol.INTERNAL_PROTOCOL_TRANSFER {
                     tdata, rdata, err := sAgent.OnWrite(pkg.Payload)
                     if ! transferData(s2c, sConn, tdata, rdata, err) {
@@ -254,7 +249,7 @@ func startServerGoruntine(sAgent protocol.ServerAgent,
                 }
         }
     }
-    log.DEBUG("server exits")
+    log.DEBUG("%d server exits", id)
 }
 
 /*
