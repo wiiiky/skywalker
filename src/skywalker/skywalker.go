@@ -19,29 +19,28 @@ package main
 
 import (
     "skywalker/protocol"
-    "skywalker/protocol/socks5"
-    "skywalker/protocol/shadowsocks"
-    "skywalker/shell"
+    "skywalker/internal"
+    "skywalker/config"
+    "skywalker/utils"
     "skywalker/log"
     "strings"
-    "strconv"
     "net"
 )
 
 func main() {
-    cfg := shell.Config
-    listener, err := net.Listen("tcp", cfg.BindAddr + ":" + convertPort(cfg.BindPort))
+    cfg := config.Config
+    listener, err := net.Listen("tcp", cfg.BindAddr + ":" + utils.ConvertToString(cfg.BindPort))
     if err != nil {
         panic("couldn't start listening: " + err.Error())
     }
     defer listener.Close()
     log.INFO("listen on %s:%d\n", cfg.BindAddr, cfg.BindPort)
 
-    var id uint = 0
+    var id uint = 1
     for {
         conn, err := listener.Accept()
         if err != nil {
-            log.WARNING("couldn't accept: %s", err.Error())
+            log.WARNING("Couldn't accept: %s", err.Error())
             continue
         }
         startTransfer(id, conn)
@@ -49,37 +48,15 @@ func main() {
     }
 }
 
-func getClientAgent() protocol.ClientAgent {
-    agent := socks5.NewSocks5ClientAgent()
-    if agent.OnStart(shell.Config.ClientConfig) {
-        log.INFO("start '%s' as in protocol successfully", agent.Name())
-    }else {
-        log.WARNING("fail to start '%s' as in protocol", agent.Name())
-        return nil
-    }
-    return agent
-}
-
-func getServerAgent() protocol.ServerAgent {
-    agent := shadowsocks.NewShadowSocksServerAgent()
-    if agent.OnStart(shell.Config.ServerConfig) {
-        log.INFO("start '%s' as out protocol successfully", agent.Name())
-    }else {
-        log.WARNING("fail to start '%s' as out protocol", agent.Name())
-        return nil
-    }
-    return agent
-}
-
 func startTransfer(id uint, conn net.Conn) {
-    cAgent := getClientAgent()
-    sAgent := getServerAgent()
+    cAgent := config.GetClientAgent()
+    sAgent := config.GetServerAgent()
     if cAgent == nil || sAgent == nil {
         conn.Close()
         return
     }
-    c2s := make(chan *protocol.InternalPackage, 100)
-    s2c := make(chan *protocol.InternalPackage, 100)
+    c2s := make(chan *internal.InternalPackage, 100)
+    s2c := make(chan *internal.InternalPackage, 100)
     go startClientGoruntine(id, cAgent, c2s, s2c, conn)
     go startServerGoruntine(id, sAgent, c2s, s2c)
 }
@@ -100,21 +77,21 @@ func getConnectionChannel(conn net.Conn) chan []byte {
     return channel
 }
 
-func transferData(ic chan *protocol.InternalPackage,
+func transferData(ic chan *internal.InternalPackage,
                   conn net.Conn, tdata interface{},
                   rdata interface{}, err error) bool {
     switch data := tdata.(type) {
         case string:
-            ic <- protocol.NewInternalPackage(protocol.INTERNAL_PROTOCOL_TRANSFER, []byte(data))
+            ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, data)
         case []byte:
-            ic <- protocol.NewInternalPackage(protocol.INTERNAL_PROTOCOL_TRANSFER, data)
+            ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, data)
         case [][]byte:
             for _, d := range data {
-                ic <- protocol.NewInternalPackage(protocol.INTERNAL_PROTOCOL_TRANSFER, d)
+                ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, d)
             }
-        case *protocol.InternalPackage:
+        case *internal.InternalPackage:
             ic <- data
-        case protocol.InternalPackage:
+        case internal.InternalPackage:
             ic <- &data
     }
     switch data := rdata.(type){
@@ -137,43 +114,42 @@ func transferData(ic chan *protocol.InternalPackage,
 }
 
 func startClientGoruntine(id uint, cAgent protocol.ClientAgent,
-                          c2s chan *protocol.InternalPackage,
-                          s2c chan *protocol.InternalPackage,
+                          c2s chan *internal.InternalPackage,
+                          s2c chan *internal.InternalPackage,
                           cConn net.Conn) {
     defer cAgent.OnClose()
     defer cConn.Close()
     defer close(c2s)
 
     cChan := getConnectionChannel(cConn)
-    var running bool = true
-    for running == true {
+
+    RUNNING:
+    for {
         select {
             case data, ok := <- cChan:
                 /* 来自客户端的数据 */
                 if ok == false {
-                    running = false
                     log.INFO("%d CLOSED BY CLIENT", id)
-                    break
+                    break RUNNING
                 }
                 log.DEBUG("%d read from client: %d", id, len(data))
                 tdata, rdata, err := cAgent.OnRead(data)
                 if ! transferData(c2s, cConn, tdata, rdata, err) {
-                    running = false
+                    break RUNNING
                 }
             case pkg, ok := <- s2c:
                 /* 来自服务端代理的数据 */
                 if ok == false {
-                    running = false
-                    break
+                    break RUNNING
                 }
-                if pkg.CMD == protocol.INTERNAL_PROTOCOL_TRANSFER {
+                if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
                     if ! transferData(c2s, cConn, nil, pkg.Payload, nil) {
-                        running = false
+                        break RUNNING
                     }
-                } else if pkg.CMD == protocol.INTERNAL_PROTOCOL_CONNECT_RESULT {
+                } else if pkg.CMD == internal.INTERNAL_PROTOCOL_CONNECT_RESULT {
                     tdata, rdata, err := cAgent.OnConnectResult(string(pkg.Payload))
                     if ! transferData(c2s, cConn, tdata, rdata, err) {
-                        running = false
+                        break RUNNING
                     }
                 } else {
                     log.WARNING("unknown package from server agent")
@@ -184,34 +160,30 @@ func startClientGoruntine(id uint, cAgent protocol.ClientAgent,
 }
 
 func startServerGoruntine(id uint, sAgent protocol.ServerAgent,
-                          c2s chan *protocol.InternalPackage,
-                          s2c chan *protocol.InternalPackage) {
+                          c2s chan *internal.InternalPackage,
+                          s2c chan *internal.InternalPackage) {
     defer sAgent.OnClose()
     defer close(s2c)
 
     var sConn net.Conn;
-    for {
-        pkg, ok := <- c2s
-        if ok == false {
-            return
-        }
-//        if pkg.CMD != protocol.INTERNAL_PROTOCOL_CONNECT {
-//            /* 第一个指令必须是连接服务器 */
-//            continue
-//        }
-        addrinfo := strings.Split(string(pkg.Payload), ":")
-        if len(addrinfo) != 2 {
-            return
-        }
-        addr, port := sAgent.GetRemoteAddress(addrinfo[0], addrinfo[1])
-        conn, result := tcpConnect(addr, port)
-        s2c <- protocol.NewInternalPackage(protocol.INTERNAL_PROTOCOL_CONNECT_RESULT, []byte(result))
-        if result != protocol.CONNECT_OK {
-            return
-        }
-        sConn = conn
-        break
+
+    /* 获取服务器地址 */
+    pkg, ok := <- c2s
+    if ok == false {
+        return
     }
+    addrinfo := strings.Split(string(pkg.Payload), ":")
+    if len(addrinfo) != 2 {
+        return
+    }
+    addr, port := sAgent.GetRemoteAddress(addrinfo[0], addrinfo[1])
+    conn, result := utils.TcpConnect(addr, port)
+    s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT, result)
+    if result != internal.CONNECT_RESULT_OK {
+        return
+    }
+    sConn = conn
+
     defer sConn.Close()
     tdata, rdata, err := sAgent.OnConnected()
     if ! transferData(s2c, sConn, tdata, rdata, err) {
@@ -220,31 +192,30 @@ func startServerGoruntine(id uint, sAgent protocol.ServerAgent,
     log.DEBUG("%d %s CONNECTED",id, sConn.RemoteAddr())
 
     sChan := getConnectionChannel(sConn)
-    var running bool = true
-    for running == true {
+
+    RUNNING:
+    for {
         select {
-            case data, ok := <- sChan:
+            case data, ok := <-sChan:
                 /* 来自服务端的数据 */
                 if ok == false {
-                    running = false
                     log.INFO("%d CLOSED BY SERVER", id)
-                    break
+                    break RUNNING
                 }
                 log.DEBUG("%d read from server: %d", id, len(data))
                 tdata, rdata, err := sAgent.OnRead(data)
                 if ! transferData(s2c, sConn, tdata, rdata, err) {
-                    running = false
+                    break RUNNING
                 }
-            case pkg, ok := <- c2s:
+            case pkg, ok := <-c2s:
                 /* 来自客户端代理的数据 */
                 if ok == false {
-                    running = false
-                    break
+                    break RUNNING
                 }
-                if pkg.CMD == protocol.INTERNAL_PROTOCOL_TRANSFER {
+                if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
                     tdata, rdata, err := sAgent.OnWrite(pkg.Payload)
                     if ! transferData(s2c, sConn, tdata, rdata, err) {
-                        running = false
+                        break RUNNING
                     }
                 } else {
                     log.WARNING("unknown package from client agent")
@@ -252,38 +223,4 @@ func startServerGoruntine(id uint, sAgent protocol.ServerAgent,
         }
     }
     log.DEBUG("%d server exits", id)
-}
-
-/*
- * 将int、uint16类型的端口转化为字符串形式
- */
-func convertPort(port interface{}) string {
-    var portStr string
-    switch p := port.(type) {
-        case int:
-            portStr = strconv.Itoa(p)
-        case uint16:
-            portStr = strconv.Itoa(int(p))
-        case string:
-            portStr = p
-        default:
-            panic("")
-    }
-    return portStr
-}
-
-/*
- * 连接远程服务器，解析DNS会阻塞
- */
-func tcpConnect(host string, port interface{}) (net.Conn, string) {
-    ips, err := net.LookupIP(host)
-    if err != nil || len(ips) == 0 {
-        return nil, protocol.CONNECT_UNKNOWN_HOST
-    }
-    addr := ips[0].String() + ":" + convertPort(port)
-    conn, err := net.DialTimeout("tcp", addr, 10000000000)
-    if err != nil {
-        return nil, protocol.CONNECT_UNREACHABLE
-    }
-    return conn, protocol.CONNECT_OK
 }

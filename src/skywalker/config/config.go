@@ -15,14 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package shell
+package config
 
 import (
-    "os"
-    "fmt"
-    "flag"
-    "io/ioutil"
+    "skywalker/log"
     "encoding/json"
+    "io/ioutil"
+    "flag"
+    "os"
 )
 
 type LoggerConfig struct {
@@ -54,14 +54,12 @@ func init() {
     flag.Parse()
     data, err := ioutil.ReadFile(*configFile)
     if err != nil {
-        fmt.Printf("cannot open config file '%s': %s\n",
-                    *configFile, err.Error())
+        log.ERROR("Cannot open config file '%s': %s\n", *configFile, err.Error())
         os.Exit(1)
     }
     err = json.Unmarshal(data, &Config)
     if err != nil {
-        fmt.Printf("fail to load config file '%s': %s\n",
-                   *configFile, err.Error())
+        log.ERROR("Fail to load config file '%s': %s\n", *configFile, err.Error())
         os.Exit(2)
     }
 }

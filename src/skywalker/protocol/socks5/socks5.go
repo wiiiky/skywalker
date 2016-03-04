@@ -19,7 +19,7 @@ package socks5
 
 import (
     "strconv"
-    "skywalker/protocol"
+    "skywalker/internal"
 )
 
 /*
@@ -61,11 +61,11 @@ func (p *Socks5ClientAgent) OnStart(cfg map[string]interface{}) bool {
 /* 给客户端返回连接结果 */
 func (p *Socks5ClientAgent) OnConnectResult(result string) (interface{}, interface{}, error){
     var rep uint8 = REPLAY_GENERAL_FAILURE
-    if result == protocol.CONNECT_OK {
+    if result == internal.CONNECT_RESULT_OK {
         rep = REPLAY_SUCCEED
-    } else if result == protocol.CONNECT_UNKNOWN_HOST {
+    } else if result == internal.CONNECT_RESULT_UNKNOWN_HOST {
         rep = REPLAY_HOST_UNREACHABLE
-    } else if result == protocol.CONNECT_UNREACHABLE {
+    } else if result == internal.CONNECT_RESULT_UNREACHABLE {
         rep = REPLAY_NETWORK_UNREACHABLE
     }
     return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil
