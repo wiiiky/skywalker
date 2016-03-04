@@ -19,10 +19,10 @@ package utils
 
 import (
     "skywalker/internal"
+    "skywalker/config"
     "strconv"
     "net"
 )
-
 
 /*
  * 将int、uint16类型的转化为字符串形式
@@ -42,15 +42,28 @@ func ConvertToString(port interface{}) string {
     return portStr
 }
 
+var (
+    hostCache Cache
+)
+
+func init() {
+    hostCache = NewLRUCache(config.Config.CacheTimeout)
+}
+
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
 func TcpConnect(host string, port interface{}) (net.Conn, string) {
-    ips, err := net.LookupIP(host)
-    if err != nil || len(ips) == 0 {
-        return nil, internal.CONNECT_RESULT_UNKNOWN_HOST
+    ip := hostCache.GetString(host)
+    if len(ip) == 0 {
+        ips, err := net.LookupIP(host)
+        if err != nil || len(ips) == 0 {
+            return nil, internal.CONNECT_RESULT_UNKNOWN_HOST
+        }
+        ip = ips[0].String()
+        hostCache.Set(host, ip)
     }
-    addr := ips[0].String() + ":" + ConvertToString(port)
+    addr := ip + ":" + ConvertToString(port)
     conn, err := net.DialTimeout("tcp", addr, 10000000000)
     if err != nil {
         return nil, internal.CONNECT_RESULT_UNREACHABLE

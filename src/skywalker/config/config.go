@@ -43,10 +43,16 @@ type ProxyConfig struct {
     ServerConfig map[string]interface{}   `json:"serverConfig"`
 
     Logger []LoggerConfig       `json:"logger"`
+
+    CacheTimeout int64          `json:"cacheTimeout"`
 }
 
 var (
-    Config ProxyConfig
+    Config ProxyConfig = ProxyConfig{
+        BindAddr: "127.0.0.1",
+        BindPort: 12345,
+        CacheTimeout: 300,
+    }
 )
 
 func init() {
