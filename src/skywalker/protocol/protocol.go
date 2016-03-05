@@ -51,7 +51,7 @@ type ClientAgent interface {
      * 出错关闭链接
      * 对于入口协议，第一个有效的数据必须指明远程服务器地址
      */
-    OnRead([]byte) (interface{}, interface{}, error)
+    FromClient([]byte) (interface{}, interface{}, error)
 
     /* 关闭链接，释放资源，收尾工作 */
     OnClose()
@@ -86,11 +86,11 @@ type ServerAgent interface {
      * 数据可以是[]byte也可以是[][]byte。[][]byte回被看做多个[]byte
      * 出错关闭链接
      */
-    OnRead([]byte) (interface{}, interface{}, error)
+    FromServer([]byte) (interface{}, interface{}, error)
     /*
      * 写数据
      */
-    OnWrite([]byte) (interface{}, interface{}, error)
+    FromClientAgent([]byte) (interface{}, interface{}, error)
 
     /* 关闭链接，释放资源，收尾工作 */
     OnClose()

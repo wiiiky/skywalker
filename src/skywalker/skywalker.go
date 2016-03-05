@@ -133,7 +133,7 @@ func startClientGoruntine(id uint, cAgent protocol.ClientAgent,
                     break RUNNING
                 }
                 log.DEBUG("%d read from client: %d", id, len(data))
-                tdata, rdata, err := cAgent.OnRead(data)
+                tdata, rdata, err := cAgent.FromClient(data)
                 if ! transferData(c2s, cConn, tdata, rdata, err) {
                     break RUNNING
                 }
@@ -203,7 +203,7 @@ func startServerGoruntine(id uint, sAgent protocol.ServerAgent,
                     break RUNNING
                 }
                 log.DEBUG("%d read from server: %d", id, len(data))
-                tdata, rdata, err := sAgent.OnRead(data)
+                tdata, rdata, err := sAgent.FromServer(data)
                 if ! transferData(s2c, sConn, tdata, rdata, err) {
                     break RUNNING
                 }
@@ -213,7 +213,7 @@ func startServerGoruntine(id uint, sAgent protocol.ServerAgent,
                     break RUNNING
                 }
                 if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
-                    tdata, rdata, err := sAgent.OnWrite(pkg.Payload)
+                    tdata, rdata, err := sAgent.FromClientAgent(pkg.Payload)
                     if ! transferData(s2c, sConn, tdata, rdata, err) {
                         break RUNNING
                     }

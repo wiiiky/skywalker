@@ -153,7 +153,7 @@ func (p *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error)
     return nil, buf.Bytes() , nil
 }
 
-func (p *ShadowSocksServerAgent) OnRead(data []byte) (interface{}, interface{}, error) {
+func (p *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {
     if p.decrypter == nil {
         if len(data) < p.ivSize {
             return nil, nil, &ShadowSocksError{shadowsocks_error_invalid_package}
@@ -168,7 +168,7 @@ func (p *ShadowSocksServerAgent) OnRead(data []byte) (interface{}, interface{}, 
     return p.decrypt(data), nil, nil
 }
 
-func (p *ShadowSocksServerAgent) OnWrite(data []byte) (interface{}, interface{}, error) {
+func (p *ShadowSocksServerAgent) FromClientAgent(data []byte) (interface{}, interface{}, error) {
     return nil, p.encrypt(data), nil
 }
 

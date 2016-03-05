@@ -72,7 +72,7 @@ func (p *Socks5ClientAgent) OnConnectResult(result string) (interface{}, interfa
 }
 
 
-func (p *Socks5ClientAgent) OnRead(data []byte) (interface{}, interface{}, error) {
+func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
     switch p.state {
         case state_init:    /* 接收客户端的握手请求并返回响应 */
             ver, nmethods, methods, err := parseVersionMessage(data)
