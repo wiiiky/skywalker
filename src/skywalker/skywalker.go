@@ -143,7 +143,8 @@ func startClientGoruntine(id uint, cAgent protocol.ClientAgent,
                     break RUNNING
                 }
                 if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
-                    if ! transferData(c2s, cConn, nil, pkg.Payload, nil) {
+                    tdata, rdata, err := cAgent.FromServerAgent(pkg.Payload)
+                    if ! transferData(c2s, cConn, tdata, rdata, err) {
                         break RUNNING
                     }
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_CONNECT_RESULT {

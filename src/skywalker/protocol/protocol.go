@@ -30,6 +30,8 @@ package protocol
 /*
  * 客户端代理
  * 处理面向客户端的连接数据
+ *
+ * 数据处理接口返回三个参数分别是要转发的数据(转发给ServerAgent)，响应数据(返回给Client)，和错误对象
  */
 type ClientAgent interface {
     /* 返回协议名 */
@@ -44,22 +46,20 @@ type ClientAgent interface {
     /* 连接服务器结果 */
     OnConnectResult(string) (interface{}, interface{}, error)
 
-    /*
-     * 读取数据
-     * 返回的第一个值为转发数据，第二个值为响应数据，第三个值表示出错
-     * 数据可以是[]byte也可以是[][]byte。[][]byte回被看做多个[]byte
-     * 出错关闭链接
-     * 对于入口协议，第一个有效的数据必须指明远程服务器地址
-     */
+    /* 从客户端接收到数据 */
     FromClient([]byte) (interface{}, interface{}, error)
+    /* 从服务器接收到数据 */
+    FromServerAgent([]byte) (interface{}, interface{}, error)
 
     /* 关闭链接，释放资源，收尾工作 */
     OnClose()
 }
 
 /*
- * 服务器代理
+ * 客户端代理
  * 处理面向服务端的连接数据
+ *
+ * 数据处理接口返回三个参数分别是要转发的数据(转发给ClientAgent)，响应数据(返回给Server)，和错误对象
  */
 type ServerAgent interface {
     /* 返回协议名 */
@@ -80,16 +80,9 @@ type ServerAgent interface {
     /* 只有成功连接远程服务器才会被调用 */
     OnConnected() (interface{}, interface{}, error)
 
-    /*
-     * 读取数据
-     * 返回的第一个值为转发数据，第二个值为响应数据，第三个值表示出错
-     * 数据可以是[]byte也可以是[][]byte。[][]byte回被看做多个[]byte
-     * 出错关闭链接
-     */
+    /* 从服务器接收到数据 */
     FromServer([]byte) (interface{}, interface{}, error)
-    /*
-     * 写数据
-     */
+    /* 从客户端接收到数据 */
     FromClientAgent([]byte) (interface{}, interface{}, error)
 
     /* 关闭链接，释放资源，收尾工作 */
