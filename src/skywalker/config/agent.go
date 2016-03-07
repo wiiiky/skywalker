@@ -19,16 +19,16 @@ package config
 
 
 import (
-    "skywalker/protocol/shadowsocks"
-    "skywalker/protocol/socks5"
-    "skywalker/protocol"
+    "skywalker/agent/shadowsocks"
+    "skywalker/agent/socks5"
+    "skywalker/agent"
     "skywalker/log"
 )
 
 /*
  * 初始化客户端代理
  */
-func GetClientAgent() protocol.ClientAgent {
+func GetClientAgent() agent.ClientAgent {
     agent := socks5.NewSocks5ClientAgent()
     if agent.OnStart(Config.ClientConfig) {
         log.INFO("start '%s' as client agent successfully", agent.Name())
@@ -42,7 +42,7 @@ func GetClientAgent() protocol.ClientAgent {
 /*
  * 初始化服务器代理
  */
-func GetServerAgent() protocol.ServerAgent {
+func GetServerAgent() agent.ServerAgent {
     agent := shadowsocks.NewShadowSocksServerAgent()
     if agent.OnStart(Config.ServerConfig) {
         log.INFO("Start '%s' as server agent successfully", agent.Name())

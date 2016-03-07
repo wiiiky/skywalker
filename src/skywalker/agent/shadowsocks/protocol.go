@@ -34,7 +34,13 @@ type ShadowSocksError struct {
 }
 
 func (e *ShadowSocksError) Error() string {
-    return ""
+    switch e.errno {
+        case shadowsocks_error_invalid_target:
+            return "无效的目标地址"
+        case shadowsocks_error_invalid_package:
+            return "无效的数据包"
+    }
+    return "未知错误"
 }
 
 /* 生成KEY和IV */
@@ -65,6 +71,7 @@ func generateKey(password []byte, klen int, ilen int) ([]byte, []byte) {
     return keyiv[:klen], keyiv[klen:klen+ilen]
 }
 
+/* 生成连接请求 */
 func buildAddressRequest(addr string, port uint16) []byte {
     buf := bytes.Buffer{}
 

@@ -18,7 +18,7 @@
 package main
 
 import (
-    "skywalker/protocol"
+    "skywalker/agent"
     "skywalker/internal"
     "skywalker/config"
     "skywalker/utils"
@@ -113,7 +113,7 @@ func transferData(ic chan *internal.InternalPackage,
     return err == nil
 }
 
-func startClientGoruntine(id uint, cAgent protocol.ClientAgent,
+func startClientGoruntine(id uint, cAgent agent.ClientAgent,
                           c2s chan *internal.InternalPackage,
                           s2c chan *internal.InternalPackage,
                           cConn net.Conn) {
@@ -160,7 +160,7 @@ func startClientGoruntine(id uint, cAgent protocol.ClientAgent,
     log.DEBUG("%d client exits", id)
 }
 
-func startServerGoruntine(id uint, sAgent protocol.ServerAgent,
+func startServerGoruntine(id uint, sAgent agent.ServerAgent,
                           c2s chan *internal.InternalPackage,
                           s2c chan *internal.InternalPackage) {
     defer sAgent.OnClose()
