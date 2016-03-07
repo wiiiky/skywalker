@@ -17,6 +17,10 @@
 
 package internal
 
+import (
+    "net"
+)
+
 /*
  * Internal协议用于转化两个协议
  */
@@ -28,43 +32,27 @@ const (
 
 /* 连接远程服务器的结果 */
 const (
-    CONNECT_RESULT_OK = "OK"
-    CONNECT_RESULT_UNKNOWN_HOST = "UNKNOWN_HOST"
-    CONNECT_RESULT_UNREACHABLE = "UNREACHABLE"
-    CONNECT_RESULT_UNKNOWN_ERROR = "UNKNOWN_ERROR"
+    CONNECT_RESULT_OK = 0
+    CONNECT_RESULT_UNKNOWN_HOST = 1
+    CONNECT_RESULT_UNREACHABLE = 2
+    CONNECT_RESULT_UNKNOWN_ERROR = 3
 )
+
+type ConnectResult struct {
+    Result int
+    Hostname string
+    Address net.Addr
+}
+
+func NewConnectResult(result int, hostname string, address net.Addr) ConnectResult {
+    return ConnectResult{result, hostname, address}
+}
 
 type InternalPackage struct {
     CMD int           /* 命令 */
-    Payload []byte    /* 数据 */
-    Extra []byte      /* 额外数据 */
+    Data interface{}
 }
 
-func NewInternalPackage(cmd int, bytes interface{}) *InternalPackage {
-    var payload []byte;
-    switch data := bytes.(type) {
-        case string:
-            payload = []byte(data)
-        case []byte:
-            payload = data
-    }
-    return &InternalPackage{cmd, payload, nil}
-}
-
-func NewInternalPackageFull(cmd int, bytes interface{}, ext interface{}) *InternalPackage {
-    var payload []byte;
-    var extra []byte
-    switch data := bytes.(type) {
-        case string:
-            payload = []byte(data)
-        case []byte:
-            payload = data
-    }
-    switch data := ext.(type) {
-        case string:
-            extra = []byte(data)
-        case []byte:
-            extra = data
-    }
-    return &InternalPackage{cmd, payload, extra}
+func NewInternalPackage(cmd int, data interface{}) *InternalPackage {
+    return &InternalPackage{cmd, data}
 }

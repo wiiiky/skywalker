@@ -53,7 +53,7 @@ func init() {
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
-func TcpConnect(host string, port interface{}) (net.Conn, string) {
+func TcpConnect(host string, port interface{}) (net.Conn, int) {
     ip := hostCache.GetString(host)
     if len(ip) == 0 {
         ips, err := net.LookupIP(host)

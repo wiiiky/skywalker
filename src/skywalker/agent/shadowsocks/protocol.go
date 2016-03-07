@@ -26,20 +26,24 @@ import (
 )
 
 const (
-    shadowsocks_error_invalid_target = 1
-    shadowsocks_error_invalid_package = 2
+    shadowsocks_error_invalid_config = 1
+    shadowsocks_error_invalid_target = 2
+    shadowsocks_error_invalid_package = 3
 )
 
-type ShadowSocksError struct {
+type ShadowsocksError struct {
     errno int
+    msg string
 }
 
-func (e *ShadowSocksError) Error() string {
+func (e *ShadowsocksError) Error() string {
     switch e.errno {
+        case shadowsocks_error_invalid_config:
+            return "invalid config：" + e.msg
         case shadowsocks_error_invalid_target:
-            return "无效的目标地址"
+            return "invalid target address"
         case shadowsocks_error_invalid_package:
-            return "无效的数据包"
+            return "invalid package"
     }
     return "未知错误"
 }

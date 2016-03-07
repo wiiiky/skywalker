@@ -30,12 +30,12 @@ import (
  */
 func GetClientAgent() agent.ClientAgent {
     agent := socks5.NewSocks5ClientAgent()
-    if agent.OnStart(Config.ClientConfig) {
-        log.INFO("start '%s' as client agent successfully", agent.Name())
-    }else {
-        log.WARNING("fail to start '%s' as client agent", agent.Name())
+    err := agent.OnStart(Config.ClientConfig)
+    if err != nil {
+        log.WARNING("Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
         return nil
     }
+    log.INFO("[%s] Starts As Client Agent", agent.Name())
     return agent
 }
 
@@ -44,11 +44,11 @@ func GetClientAgent() agent.ClientAgent {
  */
 func GetServerAgent() agent.ServerAgent {
     agent := shadowsocks.NewShadowSocksServerAgent()
-    if agent.OnStart(Config.ServerConfig) {
-        log.INFO("Start '%s' as server agent successfully", agent.Name())
-    }else {
-        log.WARNING("Fail to start '%s' as server agent", agent.Name())
+    err := agent.OnStart(Config.ServerConfig)
+    if err != nil {
+        log.WARNING("Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())
         return nil
     }
+    log.INFO("[%s] Starts As Server Agent", agent.Name())
     return agent
 }

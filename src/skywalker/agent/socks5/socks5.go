@@ -54,18 +54,18 @@ func (p *Socks5ClientAgent) Name() string {
     return "Socks5"
 }
 
-func (p *Socks5ClientAgent) OnStart(cfg map[string]interface{}) bool {
-    return true
+func (p *Socks5ClientAgent) OnStart(cfg map[string]interface{}) error {
+    return nil
 }
 
 /* 给客户端返回连接结果 */
-func (p *Socks5ClientAgent) OnConnectResult(result string) (interface{}, interface{}, error){
+func (p *Socks5ClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error){
     var rep uint8 = REPLAY_GENERAL_FAILURE
-    if result == internal.CONNECT_RESULT_OK {
+    if result.Result == internal.CONNECT_RESULT_OK {
         rep = REPLAY_SUCCEED
-    } else if result == internal.CONNECT_RESULT_UNKNOWN_HOST {
+    } else if result.Result == internal.CONNECT_RESULT_UNKNOWN_HOST {
         rep = REPLAY_HOST_UNREACHABLE
-    } else if result == internal.CONNECT_RESULT_UNREACHABLE {
+    } else if result.Result == internal.CONNECT_RESULT_UNREACHABLE {
         rep = REPLAY_NETWORK_UNREACHABLE
     }
     return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil

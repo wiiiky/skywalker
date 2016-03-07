@@ -48,6 +48,7 @@ func main() {
     }
 }
 
+/* 启动数据转发流程 */
 func startTransfer(id uint, conn net.Conn) {
     cAgent := config.GetClientAgent()
     sAgent := config.GetServerAgent()
@@ -57,10 +58,14 @@ func startTransfer(id uint, conn net.Conn) {
     }
     c2s := make(chan *internal.InternalPackage, 100)
     s2c := make(chan *internal.InternalPackage, 100)
-    go startClientGoruntine(id, cAgent, c2s, s2c, conn)
-    go startServerGoruntine(id, sAgent, c2s, s2c)
+    go clientGoroutine(id, cAgent, c2s, s2c, conn)
+    go serverGoroutine(id, sAgent, c2s, s2c)
 }
 
+/*
+ * 启动一个goroutine来接收网络数据，并转发给一个channel
+ * 相当于将对网络数据的监听转化为对channel的监听
+ */
 func getConnectionChannel(conn net.Conn) chan []byte {
     channel := make(chan []byte)
     go func(conn net.Conn, channel chan []byte){
@@ -77,12 +82,19 @@ func getConnectionChannel(conn net.Conn) chan []byte {
     return channel
 }
 
+/*
+ * 发送数据
+ * @ic 转发数据的channel
+ * @conn 远程连接(client/server)
+ * @tdata 需要转发的数据(Transfer Data)，将发送给ic
+ * @rdata 需要返回给数据(Response Data)，将发送给conn
+ */
 func transferData(ic chan *internal.InternalPackage,
                   conn net.Conn, tdata interface{},
                   rdata interface{}, err error) bool {
     switch data := tdata.(type) {
         case string:
-            ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, data)
+            ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, []byte(data))
         case []byte:
             ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, data)
         case [][]byte:
@@ -113,7 +125,8 @@ func transferData(ic chan *internal.InternalPackage,
     return err == nil
 }
 
-func startClientGoruntine(id uint, cAgent agent.ClientAgent,
+/* 处理客户端连接的goroutine */
+func clientGoroutine(id uint, cAgent agent.ClientAgent,
                           c2s chan *internal.InternalPackage,
                           s2c chan *internal.InternalPackage,
                           cConn net.Conn) {
@@ -132,7 +145,6 @@ func startClientGoruntine(id uint, cAgent agent.ClientAgent,
                     log.INFO("%d CLOSED BY CLIENT", id)
                     break RUNNING
                 }
-                log.DEBUG("%d read from client: %d", id, len(data))
                 tdata, rdata, err := cAgent.FromClient(data)
                 if ! transferData(c2s, cConn, tdata, rdata, err) {
                     break RUNNING
@@ -141,26 +153,30 @@ func startClientGoruntine(id uint, cAgent agent.ClientAgent,
                 /* 来自服务端代理的数据 */
                 if ok == false {
                     break RUNNING
-                }
-                if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
-                    tdata, rdata, err := cAgent.FromServerAgent(pkg.Payload)
+                } else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
+                    tdata, rdata, err := cAgent.FromServerAgent(pkg.Data.([]byte))
                     if ! transferData(c2s, cConn, tdata, rdata, err) {
                         break RUNNING
                     }
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_CONNECT_RESULT {
-                    tdata, rdata, err := cAgent.OnConnectResult(string(pkg.Payload))
+                    result := pkg.Data.(internal.ConnectResult)
+                    if result.Result == internal.CONNECT_RESULT_OK {
+                        log.INFO("%s <==> %s CONNECTED", cConn.RemoteAddr(), result.Hostname)
+                    }
+                    tdata, rdata, err := cAgent.OnConnectResult(result)
                     if ! transferData(c2s, cConn, tdata, rdata, err) {
                         break RUNNING
                     }
                 } else {
-                    log.WARNING("unknown package from server agent")
+                    log.WARNING("Unknown Package From Server Agent, IGNORED!")
                 }
         }
     }
     log.DEBUG("%d client exits", id)
 }
 
-func startServerGoruntine(id uint, sAgent agent.ServerAgent,
+/* 处理服务器连接的goroutine */
+func serverGoroutine(id uint, sAgent agent.ServerAgent,
                           c2s chan *internal.InternalPackage,
                           s2c chan *internal.InternalPackage) {
     defer sAgent.OnClose()
@@ -173,16 +189,20 @@ func startServerGoruntine(id uint, sAgent agent.ServerAgent,
     if ok == false {
         return
     }
-    addrinfo := strings.Split(string(pkg.Payload), ":")
+    hostname := string(pkg.Data.([]byte))
+    addrinfo := strings.Split(hostname, ":")
     if len(addrinfo) != 2 {
         return
     }
     addr, port := sAgent.GetRemoteAddress(addrinfo[0], addrinfo[1])
     conn, result := utils.TcpConnect(addr, port)
-    s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT, result)
     if result != internal.CONNECT_RESULT_OK {
+        s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT,
+                                           internal.NewConnectResult(result, hostname, nil))
         return
     }
+    s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT,
+                                       internal.NewConnectResult(result, hostname, conn.RemoteAddr()))
     sConn = conn
 
     defer sConn.Close()
@@ -190,7 +210,6 @@ func startServerGoruntine(id uint, sAgent agent.ServerAgent,
     if ! transferData(s2c, sConn, tdata, rdata, err) {
         return
     }
-    log.DEBUG("%d %s CONNECTED",id, sConn.RemoteAddr())
 
     sChan := getConnectionChannel(sConn)
 
@@ -203,7 +222,6 @@ func startServerGoruntine(id uint, sAgent agent.ServerAgent,
                     log.INFO("%d CLOSED BY SERVER", id)
                     break RUNNING
                 }
-                log.DEBUG("%d read from server: %d", id, len(data))
                 tdata, rdata, err := sAgent.FromServer(data)
                 if ! transferData(s2c, sConn, tdata, rdata, err) {
                     break RUNNING
@@ -214,12 +232,12 @@ func startServerGoruntine(id uint, sAgent agent.ServerAgent,
                     break RUNNING
                 }
                 if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
-                    tdata, rdata, err := sAgent.FromClientAgent(pkg.Payload)
+                    tdata, rdata, err := sAgent.FromClientAgent(pkg.Data.([]byte))
                     if ! transferData(s2c, sConn, tdata, rdata, err) {
                         break RUNNING
                     }
                 } else {
-                    log.WARNING("unknown package from client agent")
+                    log.WARNING("Unknown Package From Client Agent, IGNORED!")
                 }
         }
     }

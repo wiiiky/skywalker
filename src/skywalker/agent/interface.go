@@ -17,6 +17,9 @@
 
 package agent
 
+import (
+    "skywalker/internal"
+)
 
 /*
  * 代理模型
@@ -38,13 +41,13 @@ type ClientAgent interface {
     Name() string
     /* 
      * 读取配置，初始化协议
-     * 初始化成功，返回true
-     * 初始化失败，返回false
+     * 初始化成功，返回nil
+     * 初始化失败，返回错误
      */
-    OnStart(map[string]interface{}) bool
+    OnStart(map[string]interface{}) error
 
     /* 连接服务器结果 */
-    OnConnectResult(string) (interface{}, interface{}, error)
+    OnConnectResult(internal.ConnectResult) (interface{}, interface{}, error)
 
     /* 从客户端接收到数据 */
     FromClient([]byte) (interface{}, interface{}, error)
@@ -66,10 +69,10 @@ type ServerAgent interface {
     Name() string
     /* 
      * 读取配置，初始化协议
-     * 初始化成功，返回true
-     * 初始化失败，返回false
+     * 初始化成功，返回nil
+     * 初始化失败，返回错误
      */
-    OnStart(map[string]interface{}) bool
+    OnStart(map[string]interface{}) error
 
     /* 
      * 获取远程地址，参数是入站协议传递过来的远程服务器地址
