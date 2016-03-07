@@ -115,7 +115,8 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) bool {
         }
     }
     
-    key, iv := generateKey([]byte(password), 32, 16)
+    key := generateKey([]byte(password), 32)
+    iv := generateIV(16)
 
     block, err := aes.NewCipher(key)
     if err != nil {

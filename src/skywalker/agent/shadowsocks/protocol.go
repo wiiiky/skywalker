@@ -22,6 +22,7 @@ import (
     "bytes"
     "encoding/binary"
     "crypto/md5"
+    "crypto/rand"
 )
 
 const (
@@ -43,32 +44,26 @@ func (e *ShadowSocksError) Error() string {
     return "未知错误"
 }
 
-/* 生成KEY和IV */
-func generateKey(password []byte, klen int, ilen int) ([]byte, []byte) {
-    var m [][]byte
+/* 根据密码生成KEY */
+func generateKey(password []byte, klen int) []byte {
+    var last []byte = nil
     total := 0
-    i := 0
-    for total < klen + ilen {
-        var data []byte
-        if i > 0 {
-            buf := bytes.Buffer{}
-            buf.Write(m[i-1])
-            buf.Write(password)
-            data = buf.Bytes()
-        } else {
-            data = password
-        }
-        checksum := md5.Sum(data)
-        m = append(m, checksum[:])
-        i += 1
-        total += len(checksum)
-    }
     buf := bytes.Buffer{}
-    for _, d := range m {
-        buf.Write(d)
+    for total < klen {
+        data := append(last, password...)
+        checksum := md5.Sum(data)
+        last = checksum[:]
+        total += len(last)
+        buf.Write(last)
     }
-    keyiv := buf.Bytes()
-    return keyiv[:klen], keyiv[klen:klen+ilen]
+    return buf.Bytes()[:klen]
+}
+
+/* 随机生成IV */
+func generateIV(ilen int) []byte {
+    iv := make([]byte, ilen)
+    rand.Read(iv)
+    return iv
 }
 
 /* 生成连接请求 */
