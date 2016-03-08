@@ -35,7 +35,6 @@ func GetClientAgent() agent.ClientAgent {
         log.WARNING("Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
         return nil
     }
-    log.INFO("[%s] Starts As Client Agent", agent.Name())
     return agent
 }
 
@@ -49,6 +48,5 @@ func GetServerAgent() agent.ServerAgent {
         log.WARNING("Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())
         return nil
     }
-    log.INFO("[%s] Starts As Server Agent", agent.Name())
     return agent
 }

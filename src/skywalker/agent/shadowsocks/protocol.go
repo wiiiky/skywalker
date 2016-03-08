@@ -31,12 +31,12 @@ const (
     shadowsocks_error_invalid_package = 3
 )
 
-type ShadowsocksError struct {
+type ShadowSocksError struct {
     errno int
     msg string
 }
 
-func (e *ShadowsocksError) Error() string {
+func (e *ShadowSocksError) Error() string {
     switch e.errno {
         case shadowsocks_error_invalid_config:
             return "invalid config：" + e.msg

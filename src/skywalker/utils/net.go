@@ -42,6 +42,7 @@ func ConvertToString(port interface{}) string {
     return portStr
 }
 
+/*  DNS缓存 */
 var (
     hostCache Cache
 )

@@ -136,13 +136,14 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
 
     cChan := getConnectionChannel(cConn)
 
+    chain := cConn.RemoteAddr().String() + " <==> "
+    closed_by := "Client"
     RUNNING:
     for {
         select {
             case data, ok := <- cChan:
                 /* 来自客户端的数据 */
                 if ok == false {
-                    log.INFO("%d CLOSED BY CLIENT", id)
                     break RUNNING
                 }
                 tdata, rdata, err := cAgent.FromClient(data)
@@ -152,6 +153,7 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
             case pkg, ok := <- s2c:
                 /* 来自服务端代理的数据 */
                 if ok == false {
+                    closed_by = "Server"
                     break RUNNING
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
                     tdata, rdata, err := cAgent.FromServerAgent(pkg.Data.([]byte))
@@ -161,7 +163,8 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_CONNECT_RESULT {
                     result := pkg.Data.(internal.ConnectResult)
                     if result.Result == internal.CONNECT_RESULT_OK {
-                        log.INFO("%s <==> %s CONNECTED", cConn.RemoteAddr(), result.Hostname)
+                        chain += result.Hostname
+                        log.INFO("%s Connected", chain)
                     }
                     tdata, rdata, err := cAgent.OnConnectResult(result)
                     if ! transferData(c2s, cConn, tdata, rdata, err) {
@@ -172,7 +175,7 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                 }
         }
     }
-    log.DEBUG("%d client exits", id)
+    log.INFO("%s Closed By %s", chain, closed_by)
 }
 
 /* 处理服务器连接的goroutine */
@@ -219,7 +222,6 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
             case data, ok := <-sChan:
                 /* 来自服务端的数据 */
                 if ok == false {
-                    log.INFO("%d CLOSED BY SERVER", id)
                     break RUNNING
                 }
                 tdata, rdata, err := sAgent.FromServer(data)
@@ -241,5 +243,4 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
                 }
         }
     }
-    log.DEBUG("%d server exits", id)
 }

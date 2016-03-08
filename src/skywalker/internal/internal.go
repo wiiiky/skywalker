@@ -30,6 +30,15 @@ const (
     INTERNAL_PROTOCOL_CONNECT_RESULT = 1
 )
 
+type InternalPackage struct {
+    CMD int           /* 命令 */
+    Data interface{}
+}
+
+func NewInternalPackage(cmd int, data interface{}) *InternalPackage {
+    return &InternalPackage{cmd, data}
+}
+
 /* 连接远程服务器的结果 */
 const (
     CONNECT_RESULT_OK = 0
@@ -38,6 +47,12 @@ const (
     CONNECT_RESULT_UNKNOWN_ERROR = 3
 )
 
+/*
+ * 连接结果数据结构
+ * @Result 表明了连接结果
+ * @Hostname 客户端请求的地址（可能是域名也可能是IP地址）
+ * @Address  连接成功后是IP地址，否则为空
+ */
 type ConnectResult struct {
     Result int
     Hostname string
@@ -46,13 +61,4 @@ type ConnectResult struct {
 
 func NewConnectResult(result int, hostname string, address net.Addr) ConnectResult {
     return ConnectResult{result, hostname, address}
-}
-
-type InternalPackage struct {
-    CMD int           /* 命令 */
-    Data interface{}
-}
-
-func NewInternalPackage(cmd int, data interface{}) *InternalPackage {
-    return &InternalPackage{cmd, data}
 }

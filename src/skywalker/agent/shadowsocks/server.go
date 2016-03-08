@@ -30,7 +30,11 @@ func NewShadowSocksServerAgent() *ShadowSocksServerAgent {
 }
 
 
-/* ShadowSocks 客户端协议 */
+/*
+ * ShadowSocks Server Agent
+ * 实现的其实是ShadowSocks的客户端协议，
+ * 其命名逻辑是面向服务器的代理
+ */
 type ShadowSocksServerAgent struct {
     serverAddr string
     serverPort string
@@ -70,6 +74,7 @@ func (p *ShadowSocksServerAgent) Name() string {
     return "ShadowSocks"
 }
 
+
 /* 初始化读取配置 */
 func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
     var serverAddr, serverPort, password, method string
@@ -77,15 +82,15 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
     var ok bool
     val, ok = cfg["serverAddr"]
     if ok == false {
-        return &ShadowsocksError{shadowsocks_error_invalid_config, "no server address"}
+        return &ShadowSocksError{shadowsocks_error_invalid_config, "no server address"}
     }
     serverAddr, ok = val.(string)
     if ok == false {
-        return &ShadowsocksError{shadowsocks_error_invalid_config, "no server address"}
+        return &ShadowSocksError{shadowsocks_error_invalid_config, "no server address"}
     }
     val, ok = cfg["serverPort"]
     if ok == false {
-        return &ShadowsocksError{shadowsocks_error_invalid_config, "no server port"}
+        return &ShadowSocksError{shadowsocks_error_invalid_config, "no server port"}
     }
     switch port := val.(type) {
         case int:
@@ -95,23 +100,23 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
         case float64:
             serverPort = strconv.Itoa(int(port))
         default:
-            return &ShadowsocksError{shadowsocks_error_invalid_config, "invalid server port"}
+            return &ShadowSocksError{shadowsocks_error_invalid_config, "invalid server port"}
     }
     val, ok = cfg["password"]
     if ok == false {
-        return &ShadowsocksError{shadowsocks_error_invalid_config, "no password specified"}
+        return &ShadowSocksError{shadowsocks_error_invalid_config, "no password specified"}
     }
     password, ok = val.(string)
     if ok == false {
-        return &ShadowsocksError{shadowsocks_error_invalid_config, "no password specified"}
+        return &ShadowSocksError{shadowsocks_error_invalid_config, "no password specified"}
     }
     val, ok = cfg["method"]
     if ok == false {
-        method = "aes-256-cfb"
+        method = "aes-256-cfb"      /* 默认加密方式 */
     }else{
         method, ok = val.(string)
         if ok == false {
-            return &ShadowsocksError{shadowsocks_error_invalid_config, "invalid method"}
+            return &ShadowSocksError{shadowsocks_error_invalid_config, "invalid method"}
         }
     }
     
@@ -142,7 +147,7 @@ func (p *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (str
 func (p *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error) {
     port, err := strconv.Atoi(p.targetPort)
     if err != nil {
-        return nil, nil, &ShadowsocksError{shadowsocks_error_invalid_target, ""}
+        return nil, nil, &ShadowSocksError{shadowsocks_error_invalid_target, ""}
     }
     plain := buildAddressRequest(p.targetAddr, uint16(port))
     buf := bytes.Buffer{}
@@ -154,7 +159,7 @@ func (p *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error)
 func (p *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {
     if p.decrypter == nil {
         if len(data) < p.ivSize {
-            return nil, nil, &ShadowsocksError{shadowsocks_error_invalid_package, ""}
+            return nil, nil, &ShadowSocksError{shadowsocks_error_invalid_package, ""}
         }
         iv := data[:p.ivSize]
         data = data[p.ivSize:]
