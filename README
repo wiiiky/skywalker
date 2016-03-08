@@ -9,7 +9,7 @@ SkyWalker(以下简称SW)是一个代理转发程序，可以配置传入和传�
 
 第一个SW配置成接受SOCKS5协议的数据，传出Shadowsocks协议的数据，
 
-第二SW配置成接受Shadowsocks协议的数据，传出纯数据。
+第二个SW配置成接受Shadowsocks协议的数据，传出纯数据。
 
 同样的，如果你想通过Shadowsocks使用HTTP代理，那么只要把第一个SW配置成接受HTTP代理数据就可以。
 
