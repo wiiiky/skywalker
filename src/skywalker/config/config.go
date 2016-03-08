@@ -60,12 +60,12 @@ func init() {
     flag.Parse()
     data, err := ioutil.ReadFile(*configFile)
     if err != nil {
-        log.ERROR("Cannot open config file '%s': %s\n", *configFile, err.Error())
+        log.ERROR("Cannot Open Config File '%s': %s\n", *configFile, err.Error())
         os.Exit(1)
     }
     err = json.Unmarshal(data, &Config)
     if err != nil {
-        log.ERROR("Fail to load config file '%s': %s\n", *configFile, err.Error())
+        log.ERROR("Fail To Load Config File '%s': %s\n", *configFile, err.Error())
         os.Exit(2)
     }
 }

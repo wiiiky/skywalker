@@ -21,23 +21,16 @@ import (
     "strconv"
     "crypto/aes"
     "crypto/cipher"
-    "bytes"
+    "skywalker/internal"
 )
 
 
-func NewShadowSocksServerAgent() *ShadowSocksServerAgent {
-    return &ShadowSocksServerAgent{}
+func NewShadowSocksClientAgent() *ShadowSocksClientAgent {
+    return &ShadowSocksClientAgent{}
 }
 
 
-/*
- * ShadowSocks Server Agent
- * 实现的其实是ShadowSocks的客户端协议，
- * 其命名逻辑是面向服务器的代理
- */
-type ShadowSocksServerAgent struct {
-    serverAddr string
-    serverPort string
+type ShadowSocksClientAgent struct {
     password string
     method string
     encrypter cipher.Stream
@@ -50,9 +43,11 @@ type ShadowSocksServerAgent struct {
 
     ivSize int
     keySize int
+
+    connected bool
 }
 
-func (p *ShadowSocksServerAgent) encrypt(plain []byte) []byte {
+func (p *ShadowSocksClientAgent) encrypt(plain []byte) []byte {
     if plain == nil || len(plain) == 0 {
         return nil
     }
@@ -61,7 +56,7 @@ func (p *ShadowSocksServerAgent) encrypt(plain []byte) []byte {
     return encrypted
 }
 
-func (p *ShadowSocksServerAgent) decrypt(encrypted []byte) []byte {
+func (p *ShadowSocksClientAgent) decrypt(encrypted []byte) []byte {
     if encrypted == nil || len(encrypted) == 0 {
         return nil
     }
@@ -70,38 +65,14 @@ func (p *ShadowSocksServerAgent) decrypt(encrypted []byte) []byte {
     return plain
 }
 
-func (p *ShadowSocksServerAgent) Name() string {
+func (p *ShadowSocksClientAgent) Name() string {
     return "ShadowSocks"
 }
 
-
-/* 初始化读取配置 */
-func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
-    var serverAddr, serverPort, password, method string
+func (p *ShadowSocksClientAgent) OnStart(cfg map[string]interface{}) error {
+    var password, method string
     var val interface{}
     var ok bool
-    val, ok = cfg["serverAddr"]
-    if ok == false {
-        return &ShadowSocksError{shadowsocks_error_invalid_config, "no server address"}
-    }
-    serverAddr, ok = val.(string)
-    if ok == false {
-        return &ShadowSocksError{shadowsocks_error_invalid_config, "no server address"}
-    }
-    val, ok = cfg["serverPort"]
-    if ok == false {
-        return &ShadowSocksError{shadowsocks_error_invalid_config, "no server port"}
-    }
-    switch port := val.(type) {
-        case int:
-            serverPort = strconv.Itoa(port)
-        case string:
-            serverPort = port
-        case float64:
-            serverPort = strconv.Itoa(int(port))
-        default:
-            return &ShadowSocksError{shadowsocks_error_invalid_config, "invalid server port"}
-    }
     val, ok = cfg["password"]
     if ok == false {
         return &ShadowSocksError{shadowsocks_error_invalid_config, "no password specified"}
@@ -119,14 +90,12 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
             return &ShadowSocksError{shadowsocks_error_invalid_config, "invalid method"}
         }
     }
-    
+
     key := generateKey([]byte(password), 32)
     iv := generateIV(16)
 
     block, _ := aes.NewCipher(key)
 
-    p.serverAddr = serverAddr
-    p.serverPort = serverPort
     p.password = password
     p.method = method
     p.block = block
@@ -135,42 +104,52 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
     p.iv = iv
     p.ivSize = 16
     p.keySize = 32
+    p.connected = false
+
     return nil
 }
 
-func (p *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (string, string) {
-    p.targetAddr = addr
-    p.targetPort = port
-    return p.serverAddr, p.serverPort
+func (p *ShadowSocksClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
+    return nil, nil, nil
 }
 
-func (p *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error) {
-    port, err := strconv.Atoi(p.targetPort)
-    if err != nil {
-        return nil, nil, &ShadowSocksError{shadowsocks_error_invalid_target, ""}
-    }
-    plain := buildAddressRequest(p.targetAddr, uint16(port))
-    buf := bytes.Buffer{}
-    buf.Write(p.iv)
-    buf.Write(p.encrypt(plain))
-    return nil, buf.Bytes() , nil
-}
-
-func (p *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {
+func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
     if p.decrypter == nil {
+        /* 第一个数据包，应该包含IV和请求数据 */
         if len(data) < p.ivSize {
             return nil, nil, &ShadowSocksError{shadowsocks_error_invalid_package, ""}
         }
         iv := data[:p.ivSize]
-        data = data[p.ivSize:]
         p.decrypter = cipher.NewCFBDecrypter(p.block, iv)
+        data = data[p.ivSize:]
     }
-    return p.decrypt(data), nil, nil
+
+    /* 解密数据 */
+    data = p.decrypt(data)
+    if data == nil {
+        return nil, nil, nil
+    }
+
+    var tdata [][]byte
+    if p.connected == false {
+        /* 还没有收到客户端的连接请求包，解析 */
+        addr, port, left := parseAddressRequest(data)
+        if len(addr) == 0 {
+            return nil, nil, &ShadowSocksError{shadowsocks_error_invalid_package, "invalid request"}
+        }
+        p.connected = true
+        tdata = append(tdata, []byte(addr+":"+strconv.Itoa(int(port))))
+        data = left
+    }
+    if len(data) > 0 {
+        tdata = append(tdata, data)
+    }
+    return tdata, nil, nil
 }
 
-func (p *ShadowSocksServerAgent) FromClientAgent(data []byte) (interface{}, interface{}, error) {
-    return nil, p.encrypt(data), nil
+func (p *ShadowSocksClientAgent) FromServerAgent(data []byte) (interface{}, interface{}, error) {
+    return p.encrypt(data), nil, nil
 }
 
-func (p *ShadowSocksServerAgent) OnClose() {
+func (p *ShadowSocksClientAgent) OnClose() {
 }

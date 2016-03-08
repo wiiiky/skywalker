@@ -90,3 +90,45 @@ func buildAddressRequest(addr string, port uint16) []byte {
     binary.Write(&buf, binary.BigEndian, port)
     return buf.Bytes()
 }
+
+/* 解析连接请求 */
+func parseAddressRequest(data []byte) (string, uint16, []byte) {
+    if data == nil || len(data) < 7 {
+        return "", 0, nil
+    }
+    atype := data[0]
+    var addr string
+    var port uint16
+
+    if atype == byte(3) {   /* 域名 */
+        length := int(data[1])
+        if len(data) < length + 4 {
+            return "", 0, nil
+        }
+        addr = string(data[2:2+length])
+        data = data[2+length:]
+    } else if atype == byte(1) {    /* IPv4 */
+        ip := net.ParseIP(string(data[1:5]))
+        if ip == nil {
+            return "", 0, nil
+        }
+        addr = ip.String()
+        data = data[5:]
+    } else if atype == byte(4) {    /* IPv6 */
+        if len(data) < 19 {
+            return "", 0, nil
+        }
+        ip := net.ParseIP(string(data[1:17]))
+        if ip == nil {
+            return "", 0, nil
+        }
+        addr = ip.String()
+        data = data[17:]
+    } else {
+        return "", 0, nil
+    }
+    buf := bytes.NewReader(data)
+    binary.Read(buf, binary.BigEndian, &port)
+
+    return addr, port, data[2:]
+}
