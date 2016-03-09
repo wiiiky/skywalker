@@ -17,10 +17,14 @@
 
 package direct
 
+import (
+    "skywalker/agent"
+)
+
 type DirectAgent struct {
 }
 
-func NewDirectAgent() *DirectAgent {
+func NewDirectAgent() agent.ServerAgent {
     return &DirectAgent{}
 }
 

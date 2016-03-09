@@ -19,6 +19,7 @@ package socks5
 
 import (
     "strconv"
+    "skywalker/agent"
     "skywalker/internal"
 )
 
@@ -34,7 +35,7 @@ const (
     state_transfer = 2      /* 转发数据 */
 )
 
-func NewSocks5ClientAgent() *Socks5ClientAgent {
+func NewSocks5ClientAgent() agent.ClientAgent {
     return &Socks5ClientAgent{}
 }
 

@@ -21,11 +21,12 @@ import (
     "strconv"
     "crypto/aes"
     "crypto/cipher"
+    "skywalker/agent"
     "skywalker/internal"
 )
 
 
-func NewShadowSocksClientAgent() *ShadowSocksClientAgent {
+func NewShadowSocksClientAgent() agent.ClientAgent {
     return &ShadowSocksClientAgent{}
 }
 

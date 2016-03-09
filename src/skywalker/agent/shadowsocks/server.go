@@ -18,14 +18,15 @@
 package shadowsocks
 
 import (
+    "bytes"
     "strconv"
     "crypto/aes"
     "crypto/cipher"
-    "bytes"
+    "skywalker/agent"
 )
 
 
-func NewShadowSocksServerAgent() *ShadowSocksServerAgent {
+func NewShadowSocksServerAgent() agent.ServerAgent {
     return &ShadowSocksServerAgent{}
 }
 
