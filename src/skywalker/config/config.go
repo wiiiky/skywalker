@@ -48,7 +48,7 @@ type ProxyConfig struct {
 }
 
 var (
-    Config ProxyConfig = ProxyConfig{
+    Config = ProxyConfig{
         BindAddr: "127.0.0.1",
         BindPort: 12345,
         CacheTimeout: 300,

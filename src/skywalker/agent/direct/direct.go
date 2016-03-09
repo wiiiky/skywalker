@@ -49,7 +49,7 @@ func (a *DirectAgent) FromServer(data []byte) (interface{}, interface{}, error){
 }
 
 func (a *DirectAgent) FromClientAgent(data []byte) (interface{}, interface{}, error) {
-    return data, nil, nil
+    return nil, data, nil
 }
 
 func (a *DirectAgent) OnClose() {

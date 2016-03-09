@@ -38,6 +38,7 @@ type ShadowSocksClientAgent struct {
     decrypter cipher.Stream
     block cipher.Block
     iv []byte
+    ivSent bool
 
     targetAddr string
     targetPort string
@@ -104,6 +105,7 @@ func (p *ShadowSocksClientAgent) OnStart(cfg map[string]interface{}) error {
     p.decrypter = nil
     p.iv = iv
     p.ivSize = 16
+    p.ivSent = false
     p.keySize = 32
     p.connected = false
 
@@ -115,6 +117,8 @@ func (p *ShadowSocksClientAgent) OnConnectResult(result internal.ConnectResult) 
 }
 
 func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
+    var tdata [][]byte
+
     if p.decrypter == nil {
         /* 第一个数据包，应该包含IV和请求数据 */
         if len(data) < p.ivSize {
@@ -127,12 +131,7 @@ func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface
 
     /* 解密数据 */
     data = p.decrypt(data)
-    if data == nil {
-        return nil, nil, nil
-    }
-
-    var tdata [][]byte
-    if p.connected == false {
+    if data != nil && p.connected == false {
         /* 还没有收到客户端的连接请求包，解析 */
         addr, port, left := parseAddressRequest(data)
         if len(addr) == 0 {
@@ -142,14 +141,20 @@ func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface
         tdata = append(tdata, []byte(addr+":"+strconv.Itoa(int(port))))
         data = left
     }
-    if len(data) > 0 {
+    if data !=nil && len(data) > 0 {
         tdata = append(tdata, data)
     }
     return tdata, nil, nil
 }
 
 func (p *ShadowSocksClientAgent) FromServerAgent(data []byte) (interface{}, interface{}, error) {
-    return p.encrypt(data), nil, nil
+    var rdata [][]byte
+    if p.ivSent == false {
+        rdata = append(rdata, p.iv)
+        p.ivSent = true
+    }
+    rdata = append(rdata, p.encrypt(data))
+    return nil, rdata, nil
 }
 
 func (p *ShadowSocksClientAgent) OnClose() {

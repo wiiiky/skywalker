@@ -34,7 +34,7 @@ import (
  * 客户端代理
  * 处理面向客户端的连接数据
  *
- * 数据处理接口返回三个参数分别是要转发的数据(转发给ServerAgent)，响应数据(返回给Client)，和错误对象
+ * 数据处理接口返回三个参数分别是要转发给代理(这里对应的代理是ServerAgent)的数据，发送给远程连接(这里对应的连接是Client)的数据，和错误对象
  */
 type ClientAgent interface {
     /* 返回协议名 */
@@ -62,7 +62,7 @@ type ClientAgent interface {
  * 客户端代理
  * 处理面向服务端的连接数据
  *
- * 数据处理接口返回三个参数分别是要转发的数据(转发给ClientAgent)，响应数据(返回给Server)，和错误对象
+ * 数据处理接口返回三个参数分别是要转发给代理(这里对应的代理是ClientAgent)的数据，发送给远程连接(这里对应的连接是Server)的数据，和错误对象
  */
 type ServerAgent interface {
     /* 返回协议名 */
