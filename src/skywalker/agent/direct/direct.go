@@ -21,6 +21,9 @@ import (
     "skywalker/agent"
 )
 
+/*
+ * 直连代理只能用作ServerAgent
+ */
 type DirectAgent struct {
 }
 
