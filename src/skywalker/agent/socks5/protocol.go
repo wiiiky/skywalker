@@ -28,6 +28,8 @@ const (
     socks5_error_invalid_message_size = 2
     socks5_error_unsupported_cmd = 3
     socks5_error_unsupported_version = 4
+    socks5_error_unsupported_method = 5
+    socks5_error_error_reply = 6
 )
 
 /* 方法常量 */
@@ -47,15 +49,15 @@ const (
 
 /* 返回结果 */
 const (
-    REPLAY_SUCCEED = 0
-    REPLAY_GENERAL_FAILURE = 1
-    REPLAY_CONNECTION_NOW_ALLOWED = 2
-    REPLAY_NETWORK_UNREACHABLE = 3
-    REPLAY_HOST_UNREACHABLE = 4
-    REPLAY_CONNECTION_REFUSED = 5
-    REPLAY_TTL_EXPIRED = 6
-    REPLAY_COMMAND_NOT_SUPPORTED = 7
-    REPLAY_ADDRESS_TYPE_NOT_SUPPORTED = 8
+    REPLY_SUCCEED = 0
+    REPLY_GENERAL_FAILURE = 1
+    REPLY_CONNECTION_NOW_ALLOWED = 2
+    REPLY_NETWORK_UNREACHABLE = 3
+    REPLY_HOST_UNREACHABLE = 4
+    REPLY_CONNECTION_REFUSED = 5
+    REPLY_TTL_EXPIRED = 6
+    REPLY_COMMAND_NOT_SUPPORTED = 7
+    REPLY_ADDRESS_TYPE_NOT_SUPPORTED = 8
 )
 
 const (
@@ -77,13 +79,24 @@ func (e *Socks5Error) Error() string {
             return "Invalid nmethods Field"
         case socks5_error_invalid_message_size:
             return "Invalid Message Size"
+        case socks5_error_unsupported_method:
+            return "Unsupported Method"
         default:
             return "Unknown Error"
     }
 }
 
+/* 生成握手请求 */
+func buildVersionRequest(version uint8, nmethods uint8, methods []byte) []byte {
+    buf := bytes.Buffer{}
+    binary.Write(&buf, binary.BigEndian, version)
+    binary.Write(&buf, binary.BigEndian, nmethods)
+    binary.Write(&buf, binary.BigEndian, methods)
+    return buf.Bytes()
+}
+
 /* 解析握手请求 */
-func parseVersionMessage(data []byte) (uint8, uint8, []uint8, *Socks5Error) {
+func parseVersionRequest(data []byte) (uint8, uint8, []uint8, *Socks5Error) {
     if len(data) < 3 {
         return 0, 0, nil, &Socks5Error{socks5_error_invalid_message_size}
     }
@@ -97,6 +110,7 @@ func parseVersionMessage(data []byte) (uint8, uint8, []uint8, *Socks5Error) {
     return version, nmethods, []uint8(data[2:]), nil
 }
 
+
 func buildVersionReply(ver uint8, method uint8) []byte {
     buf := bytes.Buffer{}
     binary.Write(&buf, binary.BigEndian, ver)
@@ -104,8 +118,37 @@ func buildVersionReply(ver uint8, method uint8) []byte {
     return buf.Bytes()
 }
 
+func parseVersionReply(data []byte) (uint8, uint8, error) {
+    if len(data) != 2 {
+        return 0, 0, &Socks5Error{socks5_error_invalid_message_size}
+    }
+    return data[0], data[1], nil
+}
+
+
+/* 生成连接请求 */
+func buildAddressRequest(ver uint8, cmd uint8, atype uint8, address string, port uint16) []byte{
+    buf := bytes.Buffer{}
+    binary.Write(&buf, binary.BigEndian, ver)
+    binary.Write(&buf, binary.BigEndian, cmd)
+    binary.Write(&buf, binary.BigEndian, uint8(0))
+    binary.Write(&buf, binary.BigEndian, atype)
+    if atype == ATYPE_DOMAINNAME {
+        binary.Write(&buf, binary.BigEndian, uint8(len(address)))
+        binary.Write(&buf, binary.BigEndian, []byte(address))
+    }else{
+        ip := net.ParseIP(address)
+        if ip == nil {
+            return nil
+        }
+        binary.Write(&buf, binary.BigEndian, []byte(ip))
+    }
+    binary.Write(&buf, binary.BigEndian, port)
+    return buf.Bytes()
+}
+
 /* 解析连接请求 */
-func parseAddressMessage(data []byte) (uint8, uint8, uint8, string, uint16, []byte, *Socks5Error) {
+func parseAddressRequest(data []byte) (uint8, uint8, uint8, string, uint16, []byte, *Socks5Error) {
     if len(data) < 6 {
         return 0, 0, 0, "", 0, nil, &Socks5Error{socks5_error_invalid_message_size}
     }
@@ -162,4 +205,39 @@ func buildAddressReply(ver uint8, rep uint8, atype uint8, addr string, port uint
     }
     binary.Write(&buf, binary.BigEndian, port)
     return buf.Bytes()
+}
+
+func parseAddressReply(data []byte) (uint8, uint8, uint8, string, uint16, error) {
+    if len(data) < 10 {
+        return 0,0,0,"",0,&Socks5Error{socks5_error_invalid_message_size}
+    }
+    ver := data[0]
+    rep := data[1]
+    atype := data[3]
+    var address string
+    var port uint16
+    var left []byte
+    if atype == ATYPE_IPV4 {
+        if len(data) != 10 {
+            return 0,0,0,"",0,&Socks5Error{socks5_error_invalid_message_size}
+        }
+        address = net.IP(data[4:8]).String()
+        left = data[8:]
+    } else if atype == ATYPE_IPV6 {
+        if len(data) != 22 {
+            return 0,0,0,"",0,&Socks5Error{socks5_error_invalid_message_size}
+        }
+        address = net.IP(data[4:20]).String()
+        left = data[20:]
+    } else {
+        length := data[4]
+        if len(data) != int(length + 7) {
+            return 0,0,0,"",0,&Socks5Error{socks5_error_invalid_message_size}
+        }
+        address = string(data[5:(5+length)])
+        left = data[(5+length):]
+    }
+    buf := bytes.NewReader(left)
+    binary.Read(buf, binary.BigEndian, &port)
+    return ver, rep, atype, address, port, nil
 }

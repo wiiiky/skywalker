@@ -61,13 +61,13 @@ func (p *Socks5ClientAgent) OnStart(cfg map[string]interface{}) error {
 
 /* 给客户端返回连接结果 */
 func (p *Socks5ClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error){
-    var rep uint8 = REPLAY_GENERAL_FAILURE
+    var rep uint8 = REPLY_GENERAL_FAILURE
     if result.Result == internal.CONNECT_RESULT_OK {
-        rep = REPLAY_SUCCEED
+        rep = REPLY_SUCCEED
     } else if result.Result == internal.CONNECT_RESULT_UNKNOWN_HOST {
-        rep = REPLAY_HOST_UNREACHABLE
+        rep = REPLY_HOST_UNREACHABLE
     } else if result.Result == internal.CONNECT_RESULT_UNREACHABLE {
-        rep = REPLAY_NETWORK_UNREACHABLE
+        rep = REPLY_NETWORK_UNREACHABLE
     }
     return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil
 }
@@ -76,7 +76,7 @@ func (p *Socks5ClientAgent) OnConnectResult(result internal.ConnectResult) (inte
 func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
     switch p.state {
         case state_init:    /* 接收客户端的握手请求并返回响应 */
-            ver, nmethods, methods, err := parseVersionMessage(data)
+            ver, nmethods, methods, err := parseVersionRequest(data)
             if err != nil {
                 return nil, nil, err
             } else if ver != 5 {
@@ -88,7 +88,7 @@ func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, e
             p.state = state_addr
             return nil, buildVersionReply(ver, 0), nil
         case state_addr:    /* 接收客户端的地址请求，等待连接结果 */
-            ver, cmd, atype, address, port, left, err := parseAddressMessage(data)
+            ver, cmd, atype, address, port, left, err := parseAddressRequest(data)
             if err != nil {
                 return nil, nil, err
             } else if ver != p.version {
