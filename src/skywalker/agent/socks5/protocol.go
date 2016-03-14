@@ -78,7 +78,7 @@ func buildVersionRequest(version uint8, nmethods uint8, methods []byte) []byte {
 }
 
 /* 解析握手请求 */
-func parseVersionRequest(data []byte) (uint8, uint8, []uint8, *agent.AgentError) {
+func parseVersionRequest(data []byte) (uint8, uint8, []uint8, error) {
     if len(data) < 3 {
         return 0, 0, nil, agent.NewAgentError(socks5_error_invalid_message_size, "version request message is too short")
     }
@@ -100,7 +100,7 @@ func buildVersionReply(ver uint8, method uint8) []byte {
     return buf.Bytes()
 }
 
-func parseVersionReply(data []byte) (uint8, uint8, *agent.AgentError) {
+func parseVersionReply(data []byte) (uint8, uint8, error) {
     if len(data) != 2 {
         return 0, 0, agent.NewAgentError(socks5_error_invalid_message_size, "unexpected version reply message size")
     }
@@ -130,7 +130,7 @@ func buildAddressRequest(ver uint8, cmd uint8, atype uint8, address string, port
 }
 
 /* 解析连接请求 */
-func parseAddressRequest(data []byte) (uint8, uint8, uint8, string, uint16, []byte, *agent.AgentError) {
+func parseAddressRequest(data []byte) (uint8, uint8, uint8, string, uint16, []byte, error) {
     if len(data) < 6 {
         return 0, 0, 0, "", 0, nil, agent.NewAgentError(socks5_error_invalid_message_size, "address request message size is too short")
     }
@@ -189,7 +189,7 @@ func buildAddressReply(ver uint8, rep uint8, atype uint8, addr string, port uint
     return buf.Bytes()
 }
 
-func parseAddressReply(data []byte) (uint8, uint8, uint8, string, uint16, *agent.AgentError) {
+func parseAddressReply(data []byte) (uint8, uint8, uint8, string, uint16, error) {
     if len(data) < 10 {
         return 0,0,0,"",0, agent.NewAgentError(socks5_error_invalid_message_size, "address reply message size is too short")
     }

@@ -31,11 +31,7 @@ type AgentError struct {
 }
 
 func (e *AgentError) Error() string {
-    return e.message
-}
-
-func (e *AgentError) Errcode() int {
-    return e.errcode
+    return fmt.Sprintf("[%d]%s", e.errcode, e.message)
 }
 
 func NewAgentError(errcode int, format string, params ...interface{}) *AgentError {

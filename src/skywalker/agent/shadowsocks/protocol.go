@@ -78,7 +78,7 @@ func buildAddressRequest(addr string, port uint16) []byte {
 }
 
 /* 解析连接请求 */
-func parseAddressRequest(data []byte) (string, uint16, []byte, *agent.AgentError) {
+func parseAddressRequest(data []byte) (string, uint16, []byte, error) {
     if data == nil || len(data) < 7 {
         return "", 0, nil, agent.NewAgentError(shadowsocks_error_invalid_package_size, "address request size is too short")
     }

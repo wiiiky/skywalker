@@ -31,7 +31,7 @@ func main() {
     cfg := config.Config
     listener, err := net.Listen("tcp", cfg.BindAddr + ":" + utils.ConvertToString(cfg.BindPort))
     if err != nil {
-        panic("couldn't start listening: " + err.Error())
+        log.ERROR("Couldn't Start Listening: %s", err.Error())
     }
     defer listener.Close()
     log.INFO("listen on %s:%d\n", cfg.BindAddr, cfg.BindPort)
@@ -40,7 +40,7 @@ func main() {
     for {
         conn, err := listener.Accept()
         if err != nil {
-            log.WARNING("Couldn't accept: %s", err.Error())
+            log.WARNING("Couldn't Accept: %s", err.Error())
             continue
         }
         startTransfer(id, conn)
