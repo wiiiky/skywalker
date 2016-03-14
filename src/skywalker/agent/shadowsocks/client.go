@@ -77,11 +77,11 @@ func (p *ShadowSocksClientAgent) OnStart(cfg map[string]interface{}) error {
     var ok bool
     val, ok = cfg["password"]
     if ok == false {
-        return &ShadowSocksError{shadowsocks_error_invalid_config, "no password specified"}
+        return agent.NewAgentError(shadowsocks_error_invalid_config, "password not found")
     }
     password, ok = val.(string)
     if ok == false {
-        return &ShadowSocksError{shadowsocks_error_invalid_config, "no password specified"}
+        return agent.NewAgentError(shadowsocks_error_invalid_config, "password must be type of string")
     }
     val, ok = cfg["method"]
     if ok == false {
@@ -89,7 +89,7 @@ func (p *ShadowSocksClientAgent) OnStart(cfg map[string]interface{}) error {
     }else{
         method, ok = val.(string)
         if ok == false {
-            return &ShadowSocksError{shadowsocks_error_invalid_config, "invalid method"}
+            agent.NewAgentError(shadowsocks_error_invalid_config, "method must be type of string")
         }
     }
 
@@ -122,7 +122,7 @@ func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface
     if p.decrypter == nil {
         /* 第一个数据包，应该包含IV和请求数据 */
         if len(data) < p.ivSize {
-            return nil, nil, &ShadowSocksError{shadowsocks_error_invalid_package, ""}
+            return nil, nil, agent.NewAgentError(shadowsocks_error_invalid_package, "invalid package")
         }
         iv := data[:p.ivSize]
         p.decrypter = cipher.NewCFBDecrypter(p.block, iv)
@@ -133,9 +133,9 @@ func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface
     data = p.decrypt(data)
     if data != nil && p.connected == false {
         /* 还没有收到客户端的连接请求包，解析 */
-        addr, port, left := parseAddressRequest(data)
-        if len(addr) == 0 {
-            return nil, nil, &ShadowSocksError{shadowsocks_error_invalid_package, "invalid request"}
+        addr, port, left, err := parseAddressRequest(data)
+        if err != nil {
+            return nil, nil, err
         }
         p.connected = true
         tdata = append(tdata, []byte(addr+":"+strconv.Itoa(int(port))))

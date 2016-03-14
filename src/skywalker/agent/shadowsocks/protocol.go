@@ -20,33 +20,19 @@ package shadowsocks
 import (
     "net"
     "bytes"
-    "encoding/binary"
     "crypto/md5"
     "crypto/rand"
+    "encoding/binary"
+    "skywalker/agent"
 )
 
 const (
     shadowsocks_error_invalid_config = 1
     shadowsocks_error_invalid_target = 2
     shadowsocks_error_invalid_package = 3
+    shadowsocks_error_invalid_package_size = 4
+    shadowsocks_error_invalid_address_type = 5
 )
-
-type ShadowSocksError struct {
-    errno int
-    msg string
-}
-
-func (e *ShadowSocksError) Error() string {
-    switch e.errno {
-        case shadowsocks_error_invalid_config:
-            return "invalid config：" + e.msg
-        case shadowsocks_error_invalid_target:
-            return "invalid target address"
-        case shadowsocks_error_invalid_package:
-            return "invalid package"
-    }
-    return "未知错误"
-}
 
 /* 根据密码生成KEY */
 func generateKey(password []byte, klen int) []byte {
@@ -92,9 +78,9 @@ func buildAddressRequest(addr string, port uint16) []byte {
 }
 
 /* 解析连接请求 */
-func parseAddressRequest(data []byte) (string, uint16, []byte) {
+func parseAddressRequest(data []byte) (string, uint16, []byte, *agent.AgentError) {
     if data == nil || len(data) < 7 {
-        return "", 0, nil
+        return "", 0, nil, agent.NewAgentError(shadowsocks_error_invalid_package_size, "address request size is too short")
     }
     atype := data[0]
     var addr string
@@ -103,32 +89,32 @@ func parseAddressRequest(data []byte) (string, uint16, []byte) {
     if atype == byte(3) {   /* 域名 */
         length := int(data[1])
         if len(data) < length + 4 {
-            return "", 0, nil
+            return "", 0, nil, agent.NewAgentError(shadowsocks_error_invalid_package_size, "address request size is too short")
         }
         addr = string(data[2:2+length])
         data = data[2+length:]
     } else if atype == byte(1) {    /* IPv4 */
         ip := net.ParseIP(string(data[1:5]))
         if ip == nil {
-            return "", 0, nil
+            return "", 0, nil, agent.NewAgentError(shadowsocks_error_invalid_package_size, "address request size is too short")
         }
         addr = ip.String()
         data = data[5:]
     } else if atype == byte(4) {    /* IPv6 */
         if len(data) < 19 {
-            return "", 0, nil
+            return "", 0, nil, agent.NewAgentError(shadowsocks_error_invalid_package_size, "address request size is too short")
         }
         ip := net.ParseIP(string(data[1:17]))
         if ip == nil {
-            return "", 0, nil
+            return "", 0, nil, agent.NewAgentError(shadowsocks_error_invalid_package_size, "address request size is too short")
         }
         addr = ip.String()
         data = data[17:]
     } else {
-        return "", 0, nil
+        return "", 0, nil,  agent.NewAgentError(shadowsocks_error_invalid_address_type, "invalid address type %d", atype)
     }
     buf := bytes.NewReader(data)
     binary.Read(buf, binary.BigEndian, &port)
 
-    return addr, port, data[2:]
+    return addr, port, data[2:], nil
 }
