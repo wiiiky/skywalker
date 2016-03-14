@@ -18,20 +18,15 @@
 package config
 
 import (
-    "skywalker/log"
-    "encoding/json"
-    "io/ioutil"
-    "flag"
     "os"
+    "fmt"
+    "flag"
+    "io/ioutil"
+    "encoding/json"
+    "skywalker/log"
 )
 
-type LoggerConfig struct {
-    /* 日志等级，可以用|连接多个，如DEBUG|INFO */
-    Level string    `json:"level"`
-    /* 日志记录文件，如果是标准输出，则是STDOUT，标准错误输出STDERR */
-    File string     `json:"file"`
-}
-
+/* 服务配置 */
 type ProxyConfig struct {
     BindAddr string      `json:"bindAddr"`
     BindPort uint16      `json:"bindPort"`
@@ -42,7 +37,7 @@ type ProxyConfig struct {
     ServerProtocol string                 `json:"serverProtocol"`
     ServerConfig map[string]interface{}   `json:"serverConfig"`
 
-    Logger []LoggerConfig       `json:"logger"`
+    Logger []log.LoggerConfig       `json:"logger"`
 
     CacheTimeout int64          `json:"cacheTimeout"`
 }
@@ -52,6 +47,8 @@ var (
         BindAddr: "127.0.0.1",
         BindPort: 12345,
         CacheTimeout: 300,
+        /* 默认的日志输出 */
+        Logger: []log.LoggerConfig{log.LoggerConfig{"INFO", "STDOUT"},log.LoggerConfig{"WARNING", "STDOUT"},log.LoggerConfig{"ERROR", "STDOUT"}},
     }
 )
 
@@ -60,12 +57,13 @@ func init() {
     flag.Parse()
     data, err := ioutil.ReadFile(*configFile)
     if err != nil {
-        log.ERROR("Cannot Open Config File '%s': %s\n", *configFile, err.Error())
+        fmt.Printf("*ERROR* Cannot Open Config File '%s': %s\n", *configFile, err.Error())
         os.Exit(1)
     }
     err = json.Unmarshal(data, &Config)
     if err != nil {
-        log.ERROR("Fail To Load Config File '%s': %s\n", *configFile, err.Error())
+        fmt.Printf("*ERROR* Fail To Load Config File '%s': %s\n", *configFile, err.Error())
         os.Exit(2)
     }
+    log.Initialize(Config.Logger);
 }
