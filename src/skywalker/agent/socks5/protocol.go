@@ -29,7 +29,8 @@ const (
     socks5_error_unsupported_cmd = 3
     socks5_error_unsupported_version = 4
     socks5_error_unsupported_method = 5
-    socks5_error_error_reply = 6
+    socks5_error_invalid_reply = 6
+    socks5_error_invalid_config = 7
 )
 
 /* 方法常量 */

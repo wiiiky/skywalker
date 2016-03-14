@@ -36,6 +36,7 @@ var (
         "shadowsocks": shadowsocks.NewShadowSocksClientAgent,
     }
     serverMap = map[string] newServerAgentFunc{
+        "socks5": socks5.NewSocks5ServerAgent,
         "direct": direct.NewDirectAgent,
         "shadowsocks": shadowsocks.NewShadowSocksServerAgent,
     }

@@ -51,7 +51,32 @@ func (a *Socks5ServerAgent) Name() string {
 
 func (a *Socks5ServerAgent) OnStart(cfg map[string]interface{}) error {
     var serverAddr, serverPort string
+    var ok bool
+    var val interface{}
 
+    val, ok = cfg["serverAddr"]
+    if ok == false {
+        return &Socks5Error{socks5_error_invalid_config};
+    }
+    serverAddr, ok = val.(string);
+    if ok == false {
+        return &Socks5Error{socks5_error_invalid_config};
+    }
+
+    val, ok = cfg["serverPort"]
+    if ok == false {
+        return &Socks5Error{socks5_error_invalid_config}
+    }
+    switch port := val.(type) {
+        case int:
+            serverPort = strconv.Itoa(port)
+        case string:
+            serverPort = port
+        case float64:
+            serverPort = strconv.Itoa(int(port))
+        default:
+            return &Socks5Error{socks5_error_invalid_config}
+    }
 
     a.serverAddr = serverAddr
     a.serverPort = serverPort
@@ -100,7 +125,7 @@ func (a *Socks5ServerAgent) FromServer(data []byte) (interface{}, interface{}, e
         if err != nil {
             return nil, nil, err
         } else if rep != REPLY_SUCCEED {
-            return nil, nil, &Socks5Error{socks5_error_error_reply}
+            return nil, nil, &Socks5Error{socks5_error_invalid_reply}
         } else if ver != a.version {
             return nil, nil, &Socks5Error{socks5_error_unsupported_version}
         }
