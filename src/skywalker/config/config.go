@@ -52,18 +52,34 @@ var (
     }
 )
 
+func fatalError(format string, params ...interface{}) {
+    fmt.Printf("*ERROR* " + format + "\n", params...)
+    os.Exit(1)
+}
+
 func init() {
     configFile := flag.String("c", "./config.json", "the config file path")
     flag.Parse()
     data, err := ioutil.ReadFile(*configFile)
     if err != nil {
-        fmt.Printf("*ERROR* Cannot Open Config File '%s': %s\n", *configFile, err.Error())
-        os.Exit(1)
+        fatalError("Cannot Cannot Open Config File '%s': %s", *configFile, err.Error())
     }
     err = json.Unmarshal(data, &Config)
     if err != nil {
-        fmt.Printf("*ERROR* Fail To Load Config File '%s': %s\n", *configFile, err.Error())
-        os.Exit(2)
+        fatalError("Fail To Load Config File '%s': %s", *configFile, err.Error())
     }
+
+    /* 初始化代理 */
+    clientAgent := getClientAgent()
+    if clientAgent == nil {
+        fatalError("Client Protocol [%s] Not Found!", Config.ClientProtocol)
+    }
+    serverAgent := getServerAgent()
+    if serverAgent == nil {
+        fatalError("Server Protocol [%s] Not Found!", Config.ServerProtocol)
+    } else if err := serverAgent.OnInit(Config.ServerConfig); err != nil {
+        fatalError("Fail To Initialize [%s]:%s", serverAgent.Name(), err.Error())
+    }
+
     log.Initialize(Config.Logger);
 }

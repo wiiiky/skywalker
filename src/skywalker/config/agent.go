@@ -42,17 +42,34 @@ var (
     }
 )
 
+
+func getClientAgent() agent.ClientAgent {
+    protocol := strings.ToLower(Config.ClientProtocol)
+    newAgentFunc := clientMap[protocol]
+    if newAgentFunc == nil {
+        return nil
+    }
+    return newAgentFunc()
+}
+
+func getServerAgent() agent.ServerAgent {
+    protocol := strings.ToLower(Config.ServerProtocol)
+    newAgentFunc := serverMap[protocol]
+    if newAgentFunc == nil {
+        return nil
+    }
+    return newAgentFunc()
+}
+
 /*
  * 初始化客户端代理
  */
 func GetClientAgent() agent.ClientAgent {
-    protocol := strings.ToLower(Config.ClientProtocol)
-    newAgentFunc := clientMap[protocol]
-    if newAgentFunc == nil {
+    agent := getClientAgent()
+    if agent == nil {
         log.ERROR("Client Protocol [%s] Not Found!", Config.ClientProtocol)
         return nil
     }
-    agent := newAgentFunc()
     err := agent.OnStart(Config.ClientConfig)
     if err != nil {
         log.WARNING("Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
@@ -66,13 +83,11 @@ func GetClientAgent() agent.ClientAgent {
  * 初始化服务器代理
  */
 func GetServerAgent() agent.ServerAgent {
-    protocol := strings.ToLower(Config.ServerProtocol)
-    newAgentFunc := serverMap[protocol]
-    if newAgentFunc == nil {
+    agent := getServerAgent()
+    if agent == nil {
         log.ERROR("Server Protocol [%s] Not Found!", Config.ServerProtocol)
         return nil
     }
-    agent := newAgentFunc()
     err := agent.OnStart(Config.ServerConfig)
     if err != nil {
         log.WARNING("Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())

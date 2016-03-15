@@ -37,10 +37,6 @@ func NewShadowSocksServerAgent() agent.ServerAgent {
  * 其命名逻辑是面向服务器的代理
  */
 type ShadowSocksServerAgent struct {
-    serverAddr string
-    serverPort string
-    password string
-    method string
     encrypter cipher.Stream
     decrypter cipher.Stream
     block cipher.Block
@@ -52,6 +48,19 @@ type ShadowSocksServerAgent struct {
     ivSize int
     keySize int
 }
+
+/* 配置参数 */
+type shadowSocksConfig struct {
+    serverAddr string
+    serverPort string
+    password string
+    method string
+}
+
+/* 保存全局的配置，配置只读取一次 */
+var (
+    ssConfig shadowSocksConfig
+)
 
 func (p *ShadowSocksServerAgent) encrypt(plain []byte) []byte {
     if plain == nil || len(plain) == 0 {
@@ -75,9 +84,7 @@ func (p *ShadowSocksServerAgent) Name() string {
     return "ShadowSocks"
 }
 
-
-/* 初始化读取配置 */
-func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
+func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
     var serverAddr, serverPort, password, method string
     var val interface{}
     var ok bool
@@ -120,16 +127,21 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
             return agent.NewAgentError(shadowsocks_error_invalid_config, "method must be type of string")
         }
     }
-    
-    key := generateKey([]byte(password), 32)
+    ssConfig.serverAddr=serverAddr
+    ssConfig.serverPort=serverPort
+    ssConfig.password=password
+    ssConfig.method=method
+    return nil
+}
+
+
+/* 初始化读取配置 */
+func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
+    key := generateKey([]byte(ssConfig.password), 32)
     iv := generateIV(16)
 
     block, _ := aes.NewCipher(key)
 
-    p.serverAddr = serverAddr
-    p.serverPort = serverPort
-    p.password = password
-    p.method = method
     p.block = block
     p.encrypter = cipher.NewCFBEncrypter(block, iv)
     p.decrypter = nil
@@ -142,7 +154,7 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
 func (p *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (string, string) {
     p.targetAddr = addr
     p.targetPort = port
-    return p.serverAddr, p.serverPort
+    return ssConfig.serverAddr, ssConfig.serverPort
 }
 
 func (p *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error) {

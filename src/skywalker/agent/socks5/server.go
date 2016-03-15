@@ -36,20 +36,27 @@ type Socks5ServerAgent struct {
     address string
     port uint16
 
-    serverAddr string
-    serverPort string
-
     state uint8;
 
     buf [][]byte;
 }
+
+type socks5Config struct {
+    serverAddr string
+    serverPort string
+}
+
+var (
+    s5Config socks5Config
+)
 
 
 func (a *Socks5ServerAgent) Name() string {
     return "Socks5"
 }
 
-func (a *Socks5ServerAgent) OnStart(cfg map[string]interface{}) error {
+/* 初始化，读取配置 */
+func (a *Socks5ServerAgent) OnInit(cfg map[string]interface{}) error {
     var serverAddr, serverPort string
     var ok bool
     var val interface{}
@@ -77,10 +84,12 @@ func (a *Socks5ServerAgent) OnStart(cfg map[string]interface{}) error {
         default:
             return agent.NewAgentError(socks5_error_invalid_config, "serverPort is illegal")
     }
+    s5Config.serverAddr = serverAddr
+    s5Config.serverPort = serverPort
+    return nil
+}
 
-    a.serverAddr = serverAddr
-    a.serverPort = serverPort
-
+func (a *Socks5ServerAgent) OnStart(cfg map[string]interface{}) error {
     a.version = 5
     a.nmethods = 1
     a.methods = []byte{0x00}
@@ -101,7 +110,7 @@ func (a *Socks5ServerAgent) GetRemoteAddress(addr string, port string) (string, 
     } else {
         a.atype = ATYPE_IPV6
     }
-    return a.serverAddr, a.serverPort
+    return s5Config.serverAddr, s5Config.serverPort
 }
 
 func (a *Socks5ServerAgent) OnConnected() (interface{}, interface{}, error) {
