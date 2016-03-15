@@ -55,6 +55,11 @@ func (p *Socks5ClientAgent) Name() string {
     return "Socks5"
 }
 
+
+func (a *Socks5ClientAgent) OnInit(map[string]interface{}) error {
+    return nil
+}
+
 func (p *Socks5ClientAgent) OnStart(cfg map[string]interface{}) error {
     return nil
 }

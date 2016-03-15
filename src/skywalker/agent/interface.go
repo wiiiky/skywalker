@@ -39,6 +39,10 @@ import (
 type ClientAgent interface {
     /* 返回协议名 */
     Name() string
+   /*
+     * 程序初始化时调用
+     */
+    OnInit(map[string]interface{}) error
     /* 
      * 读取配置，初始化协议
      * 初始化成功，返回nil

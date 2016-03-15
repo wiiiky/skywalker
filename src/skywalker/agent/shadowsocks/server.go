@@ -50,7 +50,7 @@ type ShadowSocksServerAgent struct {
 }
 
 /* 配置参数 */
-type shadowSocksConfig struct {
+type ssServerConfig struct {
     serverAddr string
     serverPort string
     password string
@@ -59,7 +59,7 @@ type shadowSocksConfig struct {
 
 /* 保存全局的配置，配置只读取一次 */
 var (
-    ssConfig shadowSocksConfig
+    serverConfig ssServerConfig
 )
 
 func (p *ShadowSocksServerAgent) encrypt(plain []byte) []byte {
@@ -127,17 +127,17 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
             return agent.NewAgentError(shadowsocks_error_invalid_config, "method must be type of string")
         }
     }
-    ssConfig.serverAddr=serverAddr
-    ssConfig.serverPort=serverPort
-    ssConfig.password=password
-    ssConfig.method=method
+    serverConfig.serverAddr=serverAddr
+    serverConfig.serverPort=serverPort
+    serverConfig.password=password
+    serverConfig.method=method
     return nil
 }
 
 
 /* 初始化读取配置 */
 func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
-    key := generateKey([]byte(ssConfig.password), 32)
+    key := generateKey([]byte(serverConfig.password), 32)
     iv := generateIV(16)
 
     block, _ := aes.NewCipher(key)
@@ -154,7 +154,7 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
 func (p *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (string, string) {
     p.targetAddr = addr
     p.targetPort = port
-    return ssConfig.serverAddr, ssConfig.serverPort
+    return serverConfig.serverAddr, serverConfig.serverPort
 }
 
 func (p *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error) {

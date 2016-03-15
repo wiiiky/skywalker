@@ -32,8 +32,6 @@ func NewShadowSocksClientAgent() agent.ClientAgent {
 
 
 type ShadowSocksClientAgent struct {
-    password string
-    method string
     encrypter cipher.Stream
     decrypter cipher.Stream
     block cipher.Block
@@ -48,6 +46,15 @@ type ShadowSocksClientAgent struct {
 
     connected bool
 }
+
+type ssClientConfig struct {
+    password string
+    method string
+}
+
+var (
+    clientConfig ssClientConfig
+)
 
 func (p *ShadowSocksClientAgent) encrypt(plain []byte) []byte {
     if plain == nil || len(plain) == 0 {
@@ -71,7 +78,7 @@ func (p *ShadowSocksClientAgent) Name() string {
     return "ShadowSocks"
 }
 
-func (p *ShadowSocksClientAgent) OnStart(cfg map[string]interface{}) error {
+func (a *ShadowSocksClientAgent) OnInit(cfg map[string]interface{}) error {
     var password, method string
     var val interface{}
     var ok bool
@@ -92,14 +99,17 @@ func (p *ShadowSocksClientAgent) OnStart(cfg map[string]interface{}) error {
             agent.NewAgentError(shadowsocks_error_invalid_config, "method must be type of string")
         }
     }
+    clientConfig.password = password
+    clientConfig.method = method
+    return nil
+}
 
-    key := generateKey([]byte(password), 32)
+func (p *ShadowSocksClientAgent) OnStart(cfg map[string]interface{}) error {
+    key := generateKey([]byte(clientConfig.password), 32)
     iv := generateIV(16)
 
     block, _ := aes.NewCipher(key)
 
-    p.password = password
-    p.method = method
     p.block = block
     p.encrypter = cipher.NewCFBEncrypter(block, iv)
     p.decrypter = nil
