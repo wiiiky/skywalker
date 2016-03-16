@@ -18,13 +18,13 @@
 package main
 
 import (
-    "skywalker/agent"
-    "skywalker/internal"
-    "skywalker/config"
-    "skywalker/utils"
-    "skywalker/log"
-    "strings"
     "net"
+    "strings"
+    "skywalker/log"
+    "skywalker/utils"
+    "skywalker/agent"
+    "skywalker/config"
+    "skywalker/internal"
 )
 
 func main() {

@@ -13,6 +13,66 @@ SkyWalker(以下简称SW)是一个代理转发程序，可以配置传入和传�
 
 同样的，如果你想通过Shadowsocks使用HTTP代理，那么只要把第一个SW配置成接受HTTP代理数据就可以。
 
+### Protocol
+
+目前支持的协议有
+
+*   sock5
+*   shadowsocks
+
+### Usage
+
+SW可以通过配置达到不同的代理效果，不过目前支持的协议还有限。
+
+*   sock5代理的配置：
+
+    {
+        "bindAddr": "0.0.0.0",
+        "bindPort": 23455,
+        "clientProtocol": "socks5",
+        "clientConfig": {
+        },
+        "serverProtocol": "direct",
+        "serverConfig": {
+        }
+    }
+
+*   shadowsocks本地代理的配置：
+
+    {
+        "bindAddr": "0.0.0.0",
+        "bindPort": 12345,
+        "clientProtocol": "socks5",
+        "clientConfig": {
+        },
+        "serverProtocol": "shadowsocks",
+        "serverConfig": {
+            "serverAddr": "example.com",
+            "serverPort": 23456,
+            "password": "sspassword",
+            "method": "aes-256-cfb"
+        }
+    }
+
+
+*   shadowsocks服务端代理的配置
+
+    {
+        "bindAddr": "0.0.0.0",
+        "bindPort": 23456,
+        "clientProtocol": "shadowsocks",
+        "clientConfig": {
+            "password": "sspassword",
+            "method": "aes-256-cfb"
+        },
+        "serverProtocol": "direct",
+        "serverConfig": {
+        }
+    }
+
+    目前SS的加密方式只支持aes-256-cfb。
+
+
 ### Development
 
-项目还在开发中
+项目还在开发中，后续会增加支持的协议，以及完善现有的协议。
