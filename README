@@ -25,7 +25,7 @@ SkyWalker(以下简称SW)是一个代理转发程序，可以配置传入和传�
 SW可以通过配置达到不同的代理效果，不过目前支持的协议还有限。
 
 *   sock5代理的配置：
-
+```javascript
     {
         "bindAddr": "0.0.0.0",
         "bindPort": 23455,
@@ -36,9 +36,10 @@ SW可以通过配置达到不同的代理效果，不过目前支持的协议还
         "serverConfig": {
         }
     }
+```
 
 *   shadowsocks本地代理的配置：
-
+```javascript
     {
         "bindAddr": "0.0.0.0",
         "bindPort": 12345,
@@ -53,10 +54,10 @@ SW可以通过配置达到不同的代理效果，不过目前支持的协议还
             "method": "aes-256-cfb"
         }
     }
-
+```
 
 *   shadowsocks服务端代理的配置
-
+```javascript
     {
         "bindAddr": "0.0.0.0",
         "bindPort": 23456,
@@ -69,7 +70,7 @@ SW可以通过配置达到不同的代理效果，不过目前支持的协议还
         "serverConfig": {
         }
     }
-
+```
     目前SS的加密方式只支持aes-256-cfb。
 
 
