@@ -1,0 +1,66 @@
+/*
+ * Copyright (C) 2015 Wiky L
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
+ */
+
+package cipher
+
+
+import (
+    "crypto/aes"
+    _cipher "crypto/cipher"
+)
+
+/* AES CFB模式 加密 */
+type aesCFBEncrypter struct {
+    stream _cipher.Stream
+}
+
+func (e *aesCFBEncrypter) Encrypt(plain []byte) []byte {
+    if plain == nil || len(plain) == 0 {
+        return nil
+    }
+    encrypted := make([]byte, len(plain))
+    e.stream.XORKeyStream(encrypted, plain)
+    return encrypted
+}
+
+func newAESCFBEncrypter(key, iv []byte) Encrypter {
+    block, _ := aes.NewCipher(key)
+
+    stream := _cipher.NewCFBEncrypter(block, iv)
+    return &aesCFBEncrypter{stream}
+}
+
+/* AES CFB模式 解密 */
+type aesCFBDecrypter struct {
+    stream _cipher.Stream
+}
+
+func (e *aesCFBDecrypter) Decrypt(encrypted []byte) []byte {
+    if encrypted == nil || len(encrypted) == 0 {
+        return nil
+    }
+    plain := make([]byte, len(encrypted))
+    e.stream.XORKeyStream(plain, encrypted)
+    return plain
+}
+
+func newAESCFBDecrypter(key, iv []byte) Decrypter {
+    block, _ := aes.NewCipher(key)
+
+    stream := _cipher.NewCFBDecrypter(block, iv)
+    return &aesCFBDecrypter{stream}
+}

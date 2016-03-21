@@ -20,9 +20,9 @@ package shadowsocks
 import (
     "bytes"
     "strconv"
-    "crypto/aes"
-    "crypto/cipher"
+    "strings"
     "skywalker/agent"
+    "skywalker/cipher"
 )
 
 
@@ -37,16 +37,13 @@ func NewShadowSocksServerAgent() agent.ServerAgent {
  * 其命名逻辑是面向服务器的代理
  */
 type ShadowSocksServerAgent struct {
-    encrypter cipher.Stream
-    decrypter cipher.Stream
-    block cipher.Block
+    encrypter cipher.Encrypter
+    decrypter cipher.Decrypter
+    key []byte
     iv []byte
 
     targetAddr string
     targetPort string
-
-    ivSize int
-    keySize int
 }
 
 /* 配置参数 */
@@ -55,6 +52,8 @@ type ssServerConfig struct {
     serverPort string
     password string
     method string
+
+    cipherInfo *cipher.CipherInfo
 }
 
 /* 保存全局的配置，配置只读取一次 */
@@ -62,23 +61,6 @@ var (
     serverConfig ssServerConfig
 )
 
-func (p *ShadowSocksServerAgent) encrypt(plain []byte) []byte {
-    if plain == nil || len(plain) == 0 {
-        return nil
-    }
-    encrypted := make([]byte, len(plain))
-    p.encrypter.XORKeyStream(encrypted, plain)
-    return encrypted
-}
-
-func (p *ShadowSocksServerAgent) decrypt(encrypted []byte) []byte {
-    if encrypted == nil || len(encrypted) == 0 {
-        return nil
-    }
-    plain := make([]byte, len(encrypted))
-    p.decrypter.XORKeyStream(plain, encrypted)
-    return plain
-}
 
 func (p *ShadowSocksServerAgent) Name() string {
     return "ShadowSocks"
@@ -127,27 +109,31 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
             return agent.NewAgentError(shadowsocks_error_invalid_config, "method must be type of string")
         }
     }
+
+    /* 验证加密方式 */
+    info := cipher.GetCipherInfo(strings.ToLower(method))
+    if info == nil {
+        return agent.NewAgentError(shadowsocks_error_invalid_config, "unknown cipher method")
+    }
+
     serverConfig.serverAddr=serverAddr
     serverConfig.serverPort=serverPort
     serverConfig.password=password
-    serverConfig.method=method
+    serverConfig.method=strings.ToLower(method)
+    serverConfig.cipherInfo=info
     return nil
 }
 
 
 /* 初始化读取配置 */
 func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
-    key := generateKey([]byte(serverConfig.password), 32)
-    iv := generateIV(16)
+    key := generateKey([]byte(serverConfig.password), serverConfig.cipherInfo.KeySize)
+    iv := generateIV(serverConfig.cipherInfo.IvSize)
 
-    block, _ := aes.NewCipher(key)
-
-    p.block = block
-    p.encrypter = cipher.NewCFBEncrypter(block, iv)
+    p.encrypter = serverConfig.cipherInfo.EncrypterFunc(key, iv)
     p.decrypter = nil
+    p.key = key
     p.iv = iv
-    p.ivSize = 16
-    p.keySize = 32
     return nil
 }
 
@@ -157,33 +143,33 @@ func (p *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (str
     return serverConfig.serverAddr, serverConfig.serverPort
 }
 
-func (p *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error) {
-    port, err := strconv.Atoi(p.targetPort)
+func (a *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error) {
+    port, err := strconv.Atoi(a.targetPort)
     if err != nil {
         return nil, nil, agent.NewAgentError(shadowsocks_error_invalid_target, "invalid target port")
     }
-    plain := buildAddressRequest(p.targetAddr, uint16(port))
+    plain := buildAddressRequest(a.targetAddr, uint16(port))
     buf := bytes.Buffer{}
-    buf.Write(p.iv)
-    buf.Write(p.encrypt(plain))
+    buf.Write(a.iv)
+    buf.Write(a.encrypter.Encrypt(plain))
     return nil, buf.Bytes() , nil
 }
 
-func (p *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {
-    if p.decrypter == nil {
-        if len(data) < p.ivSize {
+func (a *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {
+    if a.decrypter == nil {
+        if len(data) < serverConfig.cipherInfo.IvSize {
             return nil, nil, agent.NewAgentError(shadowsocks_error_invalid_package, "invalid package")
         }
-        iv := data[:p.ivSize]
-        data = data[p.ivSize:]
-        p.decrypter = cipher.NewCFBDecrypter(p.block, iv)
+        iv := data[:serverConfig.cipherInfo.IvSize]
+        data = data[serverConfig.cipherInfo.IvSize:]
+        a.decrypter = serverConfig.cipherInfo.DecrypterFunc(a.key, iv)
     }
-    return p.decrypt(data), nil, nil
+    return a.decrypter.Decrypt(data), nil, nil
 }
 
-func (p *ShadowSocksServerAgent) FromClientAgent(data []byte) (interface{}, interface{}, error) {
-    return nil, p.encrypt(data), nil
+func (a *ShadowSocksServerAgent) FromClientAgent(data []byte) (interface{}, interface{}, error) {
+    return nil, a.encrypter.Encrypt(data), nil
 }
 
-func (p *ShadowSocksServerAgent) OnClose() {
+func (a *ShadowSocksServerAgent) OnClose() {
 }
