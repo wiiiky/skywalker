@@ -76,6 +76,7 @@ func init() {
     } else if err := clientAgent.OnInit(Config.ClientConfig); err != nil {
         fatalError("Fail To Initialize [%s]:%s", clientAgent.Name(), err.Error())
     }
+
     serverAgent := getServerAgent()
     if serverAgent == nil {
         fatalError("Server Protocol [%s] Not Found!", Config.ServerProtocol)

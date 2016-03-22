@@ -33,9 +33,9 @@ type LoggerConfig struct {
 
 var (
     debugLogger *log.Logger = nil
-    infoLogger *log.Logger = nil
-    warningLogger *log.Logger = nil
-    errorLogger *log.Logger = nil
+    infoLogger *log.Logger = log.New(os.Stdout, "[INFO]", log.Ldate|log.Ltime)
+    warningLogger *log.Logger = log.New(os.Stdout, "[WARNING]", log.Ldate|log.Ltime)
+    errorLogger *log.Logger = log.New(os.Stdout, "[ERROR]", log.Ldate|log.Ltime)
 )
 
 /* 初始化日志模块 */
@@ -50,12 +50,15 @@ func Initialize(loggers []LoggerConfig) {
         } else if file == "STDERR" {
             fd = os.Stderr
         } else {
+            if len(file) == 0 {
+                file = "/dev/null"
+            }
             fd, err = os.Create(file)
             if err !=nil {
                 fmt.Printf("Cannot open %s for logging", file)
                 continue
             }
-        }
+        } 
         switch level {
             case "DEBUG":
                 debugLogger = log.New(fd, "[DEBUG]", log.Ldate|log.Ltime)
