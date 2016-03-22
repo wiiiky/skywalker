@@ -18,10 +18,9 @@
 package utils
 
 import (
-    "skywalker/internal"
-    "skywalker/config"
-    "strconv"
     "net"
+    "strconv"
+    "skywalker/internal"
 )
 
 /*
@@ -47,22 +46,32 @@ var (
     hostCache Cache
 )
 
-func init() {
-    hostCache = NewLRUCache(config.Config.CacheTimeout)
+func Initialize(timeout int64) {
+    hostCache = NewLRUCache(timeout)
+}
+
+
+/* 从缓存中获取DNS结果，如果没找到则发起解析 */
+func GetHostAddress(host string) string {
+    ip := hostCache.GetString(host)
+    if len(ip) == 0 {
+        ips, err := net.LookupIP(host)
+        if err != nil || len(ips) == 0 {
+            return ""
+        }
+        ip = ips[0].String()
+        hostCache.Set(host, ip)
+    }
+    return ip
 }
 
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
 func TcpConnect(host string, port interface{}) (net.Conn, int) {
-    ip := hostCache.GetString(host)
+    ip := GetHostAddress(host)
     if len(ip) == 0 {
-        ips, err := net.LookupIP(host)
-        if err != nil || len(ips) == 0 {
-            return nil, internal.CONNECT_RESULT_UNKNOWN_HOST
-        }
-        ip = ips[0].String()
-        hostCache.Set(host, ip)
+        return nil, internal.CONNECT_RESULT_UNKNOWN_HOST
     }
     addr := ip + ":" + ConvertToString(port)
     conn, err := net.DialTimeout("tcp", addr, 10000000000)

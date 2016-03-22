@@ -21,6 +21,7 @@ import (
     "bytes"
     "strconv"
     "strings"
+    "skywalker/utils"
     "skywalker/agent"
     "skywalker/cipher"
 )
@@ -115,6 +116,9 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
     if info == nil {
         return agent.NewAgentError(shadowsocks_error_invalid_config, "unknown cipher method")
     }
+
+    /* 预先解析DNS */
+    go utils.GetHostAddress(serverAddr)
 
     serverConfig.serverAddr=serverAddr
     serverConfig.serverPort=serverPort
