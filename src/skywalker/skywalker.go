@@ -113,7 +113,7 @@ func transferData(ic chan *internal.InternalPackage,
             }
         case []byte:
             if _, _err := conn.Write(data); _err != nil {
-                return err
+                return _err
             }
         case [][]byte:
             for _, d := range data {
@@ -143,12 +143,12 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
         select {
             case data, ok := <- cChan:
                 /* 来自客户端的数据 */
-                if ok == false {
+                if ok == false{
                     break RUNNING
                 }
                 tdata, rdata, err := cAgent.FromClient(data)
                 if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
-                    log.DEBUG("transfer data from client agent to server agent error, %s", _err.Error())
+                    log.DEBUG("transfer data from client agent to server agent error, %s",  _err.Error())
                     break RUNNING
                 }
             case pkg, ok := <- s2c:
@@ -167,9 +167,12 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                     if result.Result == internal.CONNECT_RESULT_OK {
                         chain += result.Hostname
                         log.INFO("%s Connected", chain)
+                    } else {
+                        closed_by = "Server"
                     }
                     tdata, rdata, err := cAgent.OnConnectResult(result)
-                    if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
+                    err = transferData(c2s, cConn, tdata, rdata, err)
+                    if result.Result != internal.CONNECT_RESULT_OK || err != nil {
                         break RUNNING
                     }
                 } else {
@@ -213,7 +216,6 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
     defer sConn.Close()
     tdata, rdata, err := sAgent.OnConnected()
     if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
-        log.DEBUG("server agent onConnected error, %s", _err.Error())
         return
     }
 

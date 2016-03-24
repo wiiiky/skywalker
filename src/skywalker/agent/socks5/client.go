@@ -33,6 +33,7 @@ const (
     state_init = 0          /* 初始化状态，等待客户端发送握手请求 */
     state_addr = 1          /* 等待客户端发送链接请求 */
     state_transfer = 2      /* 转发数据 */
+    state_error = 3         /* 已经出错 */
 )
 
 func NewSocks5ClientAgent() agent.ClientAgent {
@@ -60,7 +61,8 @@ func (a *Socks5ClientAgent) OnInit(map[string]interface{}) error {
     return nil
 }
 
-func (p *Socks5ClientAgent) OnStart(cfg map[string]interface{}) error {
+func (a *Socks5ClientAgent) OnStart(cfg map[string]interface{}) error {
+    a.state = state_init
     return nil
 }
 
@@ -83,8 +85,10 @@ func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, e
         case state_init:    /* 接收客户端的握手请求并返回响应 */
             ver, nmethods, methods, err := parseVersionRequest(data)
             if err != nil {
+                p.state = state_error
                 return nil, nil, err
             } else if ver != 5 {
+                p.state = state_error
                 return nil, nil, agent.NewAgentError(socks5_error_unsupported_version, "unsupported protocol version %d", ver)
             }
             p.version = ver
@@ -95,10 +99,13 @@ func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, e
         case state_addr:    /* 接收客户端的地址请求，等待连接结果 */
             ver, cmd, atype, address, port, left, err := parseAddressRequest(data)
             if err != nil {
+                p.state = state_error
                 return nil, nil, err
             } else if ver != p.version {
+                p.state = state_error
                 return nil, nil, agent.NewAgentError(socks5_error_unsupported_version, "unsupported protocol version %d", ver)
             } else if cmd != CMD_CONNECT {
+                p.state = state_error
                 return nil, nil,agent.NewAgentError(socks5_error_unsupported_cmd, "unsupported protocol command %d", cmd)
             }
             p.atype = atype
