@@ -24,6 +24,7 @@ import (
     "io/ioutil"
     "encoding/json"
     "skywalker/log"
+    "skywalker/utils"
 )
 
 /* 服务配置 */
@@ -84,5 +85,6 @@ func init() {
         fatalError("Fail To Initialize [%s]:%s", serverAgent.Name(), err.Error())
     }
 
-    log.Initialize(Config.Logger);
+    log.Initialize(Config.Logger)
+    utils.Initialize(Config.CacheTimeout)
 }

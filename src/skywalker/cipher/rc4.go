@@ -19,38 +19,39 @@ package cipher
 
 
 import (
-    "crypto/aes"
+    "crypto/rc4"
+    "crypto/md5"
     _cipher "crypto/cipher"
 )
 
-/* AES CFB模式 加密 */
-type aesCFBEncrypter struct {
+type rc4MD5Stream struct {
     stream _cipher.Stream
 }
 
-func (e *aesCFBEncrypter) Encrypt(plain []byte) []byte {
+func (e *rc4MD5Stream) Encrypt(plain []byte) []byte {
     return cipherStreamXOR(e.stream, plain)
 }
 
-func newAESCFBEncrypter(key, iv []byte) Encrypter {
-    block, _ := aes.NewCipher(key)
-
-    stream := _cipher.NewCFBEncrypter(block, iv)
-    return &aesCFBEncrypter{stream}
+func (e *rc4MD5Stream) Decrypt(plain []byte) []byte {
+    return cipherStreamXOR(e.stream, plain)
 }
 
-/* AES CFB模式 解密 */
-type aesCFBDecrypter struct {
-    stream _cipher.Stream
+
+func newRC4MD5Stream(key, iv []byte) *rc4MD5Stream{
+	h := md5.New()
+	h.Write(key)
+	h.Write(iv)
+	rc4key := h.Sum(nil)
+
+    stream, _ := rc4.NewCipher(rc4key)
+	return &rc4MD5Stream{stream}
 }
 
-func (e *aesCFBDecrypter) Decrypt(encrypted []byte) []byte {
-    return cipherStreamXOR(e.stream, encrypted)
+
+func newRC4MD5Encrypter(key, iv []byte) Encrypter {
+    return newRC4MD5Stream(key, iv)
 }
 
-func newAESCFBDecrypter(key, iv []byte) Decrypter {
-    block, _ := aes.NewCipher(key)
-
-    stream := _cipher.NewCFBDecrypter(block, iv)
-    return &aesCFBDecrypter{stream}
+func newRC4MD5Decrypter(key, iv []byte) Decrypter {
+    return newRC4MD5Stream(key, iv)
 }
