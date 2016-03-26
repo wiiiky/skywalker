@@ -34,6 +34,7 @@ var (
         "aes-192-cfb": &CipherInfo{24, 16, newAESCFBEncrypter, newAESCFBDecrypter},
         "aes-256-cfb": &CipherInfo{32, 16, newAESCFBEncrypter, newAESCFBDecrypter},
         "rc4-md5": &CipherInfo{16, 16, newRC4MD5Encrypter, newRC4MD5Decrypter},
+        "salsa20": &CipherInfo{32, 8, newSalsa20Encrypter, newSalsa20Decrypter},
     }
 )
 
