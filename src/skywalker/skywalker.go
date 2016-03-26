@@ -32,6 +32,7 @@ func main() {
     listener, err := net.Listen("tcp", cfg.BindAddr + ":" + utils.ConvertToString(cfg.BindPort))
     if err != nil {
         log.ERROR("Couldn't Start Listening: %s", err.Error())
+        return
     }
     defer listener.Close()
     log.INFO("listen on %s:%d\n", cfg.BindAddr, cfg.BindPort)
