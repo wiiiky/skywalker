@@ -2,4 +2,4 @@
 all: skywalker
 
 skywalker:
-	GOPATH=`pwd` go build -o bin/skwer src/skywalker/skywalker.go
+	GOPATH=`pwd` go build -o bin/luker src/skywalker/skywalker.go

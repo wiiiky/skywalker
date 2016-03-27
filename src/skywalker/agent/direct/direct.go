@@ -19,6 +19,7 @@ package direct
 
 import (
     "skywalker/agent"
+    "skywalker/internal"
 )
 
 /*
@@ -47,7 +48,7 @@ func (a *DirectAgent) GetRemoteAddress(addr string, port string) (string, string
     return addr, port
 }
 
-func (a *DirectAgent) OnConnected() (interface{}, interface{}, error){
+func (a *DirectAgent) OnConnectResult(request internal.ConnectResult) (interface{}, interface{}, error){
     return nil, nil, nil
 }
 

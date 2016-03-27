@@ -24,6 +24,7 @@ import (
     "skywalker/utils"
     "skywalker/agent"
     "skywalker/cipher"
+    "skywalker/internal"
 )
 
 
@@ -147,7 +148,9 @@ func (p *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (str
     return serverConfig.serverAddr, serverConfig.serverPort
 }
 
-func (a *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error) {
+
+func (a *ShadowSocksServerAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
+    if result.Result == internal.CONNECT_RESULT_OK {
     port, err := strconv.Atoi(a.targetPort)
     if err != nil {
         return nil, nil, agent.NewAgentError(shadowsocks_error_invalid_target, "invalid target port")
@@ -157,6 +160,8 @@ func (a *ShadowSocksServerAgent) OnConnected() (interface{}, interface{}, error)
     buf.Write(a.iv)
     buf.Write(a.encrypter.Encrypt(plain))
     return nil, buf.Bytes() , nil
+    }
+    return nil, nil, nil
 }
 
 func (a *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {

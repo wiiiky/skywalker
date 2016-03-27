@@ -89,8 +89,8 @@ type ServerAgent interface {
      */
     GetRemoteAddress(string, string) (string, string)
 
-    /* 只有成功连接远程服务器才会被调用 */
-    OnConnected() (interface{}, interface{}, error)
+    /* 连接结果 */
+    OnConnectResult(internal.ConnectResult) (interface{}, interface{}, error)
 
     /* 从服务器接收到数据 */
     FromServer([]byte) (interface{}, interface{}, error)

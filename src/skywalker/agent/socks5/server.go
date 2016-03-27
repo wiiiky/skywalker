@@ -21,6 +21,7 @@ import (
     "net"
     "strconv"
     "skywalker/agent"
+    "skywalker/internal"
 )
 
 func NewSocks5ServerAgent() agent.ServerAgent {
@@ -113,6 +114,14 @@ func (a *Socks5ServerAgent) GetRemoteAddress(addr string, port string) (string, 
     return s5Config.serverAddr, s5Config.serverPort
 }
 
+func (a *Socks5ServerAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
+    if result.Result == internal.CONNECT_RESULT_OK {
+        req := buildVersionRequest(a.version, a.nmethods, a.methods)
+        return nil, req, nil
+    }else{
+        return nil, nil, nil
+    }
+}
 func (a *Socks5ServerAgent) OnConnected() (interface{}, interface{}, error) {
     req := buildVersionRequest(a.version, a.nmethods, a.methods)
     return nil, req, nil

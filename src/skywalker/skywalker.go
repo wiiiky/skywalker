@@ -202,19 +202,24 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
     }
     addr, port := sAgent.GetRemoteAddress(addrinfo[0], addrinfo[1])
     conn, result := utils.TcpConnect(addr, port)
+
+    var connResult internal.ConnectResult
     if result != internal.CONNECT_RESULT_OK {
-        s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT,
-                                           internal.NewConnectResult(result, hostname, nil))
+        connResult = internal.NewConnectResult(result, hostname, nil)
+    } else{
+        connResult = internal.NewConnectResult(result, hostname, conn.RemoteAddr())
+    }
+    s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT, connResult)
+    tdata, rdata, err := sAgent.OnConnectResult(connResult)
+    if connResult.Result != internal.CONNECT_RESULT_OK {
         return
     }
-    s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT,
-                                       internal.NewConnectResult(result, hostname, conn.RemoteAddr()))
-    sConn = conn
 
+    sConn = conn
     defer sConn.Close()
-    tdata, rdata, err := sAgent.OnConnected()
+
     if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
-        log.DEBUG("server agent onConnected error, %s", _err.Error())
+        log.DEBUG("server agent OnConnectResult error, %s", _err.Error())
         return
     }
 
