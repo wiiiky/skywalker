@@ -21,6 +21,7 @@ import (
     "bytes"
     "strconv"
     "strings"
+    "skywalker/log"
     "skywalker/utils"
     "skywalker/agent"
     "skywalker/cipher"
@@ -48,12 +49,23 @@ type ShadowSocksServerAgent struct {
     targetPort string
 }
 
+type ssServerAddress struct {
+    serverAddr string
+    serverPort string
+}
+
 /* 配置参数 */
 type ssServerConfig struct {
     serverAddr string
     serverPort string
     password string
     method string
+
+    /* 多服务器设置 */
+    serverAddrs []ssServerAddress
+    retry int   /* 每个服务器的重试次数，没人为3 */
+    sindex int  /* 当前选中的服务器 */
+    try int     /* 当前尝试次数 */
 
     cipherInfo *cipher.CipherInfo
 }
@@ -70,30 +82,59 @@ func (p *ShadowSocksServerAgent) Name() string {
 
 func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
     var serverAddr, serverPort, password, method string
+    var serverAddrs []ssServerAddress
     var val interface{}
+    var retry int = 3
     var ok bool
-    val, ok = cfg["serverAddr"]
-    if ok == false {
-        return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverAddr not found")
+
+    val, ok = cfg["serverAddress[]"]
+    if ok == true {
+        array := val.([]interface{})
+        for _, ele := range array {
+            m, ok1 := ele.(map[string]interface{})
+            if ok1 == false {
+                return agent.NewAgentError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
+            }
+            val1, ok2 := m["serverAddr"]
+            val2, ok3 := m["serverPort"]
+            if ok2 == false || ok3 == false {
+                return agent.NewAgentError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
+            }
+            addr, ok4 := val1.(string)
+            port, ok5 := val2.(float64)
+            if ok4 == false || ok5 == false {
+                return agent.NewAgentError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
+            }
+            serverAddrs = append(serverAddrs, ssServerAddress{addr, strconv.Itoa(int(port))})
+        } 
     }
-    serverAddr, ok = val.(string)
-    if ok == false {
-        return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverAddr must be type of string")
+    
+    if len(serverAddrs) == 0 {
+        /* 指定了serverAddress 时则忽略serverAddr/serverPort */
+        if val, ok = cfg["serverAddr"]; ok == true {
+            if serverAddr = val.(string); len(serverAddr) == 0{
+                return agent.NewAgentError(ERROR_INVALID_CONFIG, "no server address")
+            }
+        }
+        if val, ok = cfg["serverPort"]; ok == true {
+            if port, ok1 := val.(float64); ok1 == true && port > 0{
+                serverPort = strconv.Itoa(int(port))
+            } else {
+                return agent.NewAgentError(ERROR_INVALID_CONFIG, "no server port")
+            }
+        }
+        go utils.GetHostAddress(serverAddr)
+    } else {
+        for _, addr := range serverAddrs {
+            go utils.GetHostAddress(addr.serverAddr)
+        }
+        if val, ok = cfg["retry"]; ok == true {
+            if retry = int(val.(float64)); retry <=0 {
+                retry = 3
+            }
+        }
     }
-    val, ok = cfg["serverPort"]
-    if ok == false {
-        return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverPort not found")
-    }
-    switch port := val.(type) {
-        case int:
-            serverPort = strconv.Itoa(port)
-        case string:
-            serverPort = port
-        case float64:
-            serverPort = strconv.Itoa(int(port))
-        default:
-            return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverPort is illegal")
-    }
+    
     val, ok = cfg["password"]
     if ok == false {
         return agent.NewAgentError(ERROR_INVALID_CONFIG, "password not found")
@@ -118,14 +159,18 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
         return agent.NewAgentError(ERROR_INVALID_CONFIG, "unknown cipher method")
     }
 
-    /* 预先解析DNS */
-    go utils.GetHostAddress(serverAddr)
 
     serverConfig.serverAddr=serverAddr
     serverConfig.serverPort=serverPort
     serverConfig.password=password
     serverConfig.method=strings.ToLower(method)
     serverConfig.cipherInfo=info
+    serverConfig.serverAddrs = serverAddrs
+    serverConfig.retry = retry
+    serverConfig.sindex = 0
+    serverConfig.try = 0
+
+    log.DEBUG("shadowsocks Config: %v", serverConfig)
     return nil
 }
 
@@ -145,21 +190,39 @@ func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
 func (p *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (string, string) {
     p.targetAddr = addr
     p.targetPort = port
-    return serverConfig.serverAddr, serverConfig.serverPort
+
+    if len(serverConfig.serverAddrs) == 0 {
+        return serverConfig.serverAddr, serverConfig.serverPort
+    } else {
+        addr := serverConfig.serverAddrs[serverConfig.sindex]
+        return addr.serverAddr, addr.serverPort
+    }
 }
 
 
 func (a *ShadowSocksServerAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
     if result.Result == internal.CONNECT_RESULT_OK {
-    port, err := strconv.Atoi(a.targetPort)
-    if err != nil {
-        return nil, nil, agent.NewAgentError(ERROR_INVALID_TARGET, "invalid target port")
+        port, err := strconv.Atoi(a.targetPort)
+        if err != nil {
+            return nil, nil, agent.NewAgentError(ERROR_INVALID_TARGET, "invalid target port")
+        }
+        plain := buildAddressRequest(a.targetAddr, uint16(port))
+        buf := bytes.Buffer{}
+        buf.Write(a.iv)
+        buf.Write(a.encrypter.Encrypt(plain))
+        return nil, buf.Bytes() , nil
     }
-    plain := buildAddressRequest(a.targetAddr, uint16(port))
-    buf := bytes.Buffer{}
-    buf.Write(a.iv)
-    buf.Write(a.encrypter.Encrypt(plain))
-    return nil, buf.Bytes() , nil
+    /* 出错 */
+    if len(serverConfig.serverAddrs) > 0{
+        /* 考虑更换服务器 */
+        if serverConfig.try += 1; serverConfig.try >= serverConfig.retry {
+            serverConfig.try = 0
+            if serverConfig.sindex += 1; serverConfig.sindex >= len(serverConfig.serverAddrs) {
+                serverConfig.sindex = 0
+            }
+            addr := serverConfig.serverAddrs[serverConfig.sindex]
+            log.DEBUG("change server to %s:%s", addr.serverAddr, addr.serverPort)
+        }
     }
     return nil, nil, nil
 }

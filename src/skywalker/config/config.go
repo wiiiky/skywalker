@@ -69,6 +69,8 @@ func init() {
     if err != nil {
         fatalError("Fail To Load Config File '%s': %s", *configFile, err.Error())
     }
+    log.Initialize(Config.Logger)
+    utils.Initialize(Config.CacheTimeout)
 
     /* 初始化代理 */
     clientAgent := getClientAgent()
@@ -84,7 +86,4 @@ func init() {
     } else if err := serverAgent.OnInit(Config.ServerConfig); err != nil {
         fatalError("Fail To Initialize [%s]:%s", serverAgent.Name(), err.Error())
     }
-
-    log.Initialize(Config.Logger)
-    utils.Initialize(Config.CacheTimeout)
 }
