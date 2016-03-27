@@ -66,11 +66,11 @@ func (a *ShadowSocksClientAgent) OnInit(cfg map[string]interface{}) error {
     var ok bool
     val, ok = cfg["password"]
     if ok == false {
-        return agent.NewAgentError(shadowsocks_error_invalid_config, "password not found")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "password not found")
     }
     password, ok = val.(string)
     if ok == false {
-        return agent.NewAgentError(shadowsocks_error_invalid_config, "password must be type of string")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "password must be type of string")
     }
     val, ok = cfg["method"]
     if ok == false {
@@ -78,14 +78,14 @@ func (a *ShadowSocksClientAgent) OnInit(cfg map[string]interface{}) error {
     }else{
         method, ok = val.(string)
         if ok == false {
-            agent.NewAgentError(shadowsocks_error_invalid_config, "method must be type of string")
+            agent.NewAgentError(ERROR_INVALID_CONFIG, "method must be type of string")
         }
     }
 
     /* 验证加密方式 */
     info := cipher.GetCipherInfo(strings.ToLower(method))
     if info == nil {
-        return agent.NewAgentError(shadowsocks_error_invalid_config, "unknown cipher method")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "unknown cipher method")
     }
 
     clientConfig.password = password
@@ -119,7 +119,7 @@ func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface
         /* 第一个数据包，应该包含IV和请求数据 */
         ivSize := clientConfig.cipherInfo.IvSize
         if len(data) < ivSize {
-            return nil, nil, agent.NewAgentError(shadowsocks_error_invalid_package, "invalid package")
+            return nil, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE, "invalid package")
         }
         iv := data[:ivSize]
         p.decrypter = clientConfig.cipherInfo.DecrypterFunc(p.key, iv)

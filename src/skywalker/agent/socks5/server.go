@@ -64,16 +64,16 @@ func (a *Socks5ServerAgent) OnInit(cfg map[string]interface{}) error {
 
     val, ok = cfg["serverAddr"]
     if ok == false {
-        return agent.NewAgentError(socks5_error_invalid_config, "serverAddr not found")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverAddr not found")
     }
     serverAddr, ok = val.(string);
     if ok == false {
-        return agent.NewAgentError(socks5_error_invalid_config, "serverAddr must be type of string")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverAddr must be type of string")
     }
 
     val, ok = cfg["serverPort"]
     if ok == false {
-        return agent.NewAgentError(socks5_error_invalid_config, "serverPort not found")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverPort not found")
     }
     switch port := val.(type) {
         case int:
@@ -83,7 +83,7 @@ func (a *Socks5ServerAgent) OnInit(cfg map[string]interface{}) error {
         case float64:
             serverPort = strconv.Itoa(int(port))
         default:
-            return agent.NewAgentError(socks5_error_invalid_config, "serverPort is illegal")
+            return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverPort is illegal")
     }
     s5Config.serverAddr = serverAddr
     s5Config.serverPort = serverPort
@@ -133,7 +133,7 @@ func (a *Socks5ServerAgent) FromServer(data []byte) (interface{}, interface{}, e
         if err != nil {
             return nil, nil, err
         }else if ver != a.version {
-            return nil, nil, agent.NewAgentError(socks5_error_unsupported_version, "unsupported protocol version %d", ver)
+            return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
         }
         a.state = state_addr
         req := buildAddressRequest(a.version, CMD_CONNECT, a.atype, a.address, a.port)
@@ -143,9 +143,9 @@ func (a *Socks5ServerAgent) FromServer(data []byte) (interface{}, interface{}, e
         if err != nil {
             return nil, nil, err
         } else if rep != REPLY_SUCCEED {
-            return nil, nil, agent.NewAgentError(socks5_error_invalid_reply, "unsuccessful address reply message")
+            return nil, nil, agent.NewAgentError(ERROR_INVALID_REPLY, "unsuccessful address reply message")
         } else if ver != a.version {
-            return nil, nil, agent.NewAgentError(socks5_error_unsupported_version, "unsupported protocol version %d", ver)
+            return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
         }
         a.state = state_transfer
         if a.buf == nil {

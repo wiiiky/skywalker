@@ -24,14 +24,13 @@ import (
 )
 
 const (
-    socks5_error_ok = 0
-    socks5_error_invalid_nmethods = 1
-    socks5_error_invalid_message_size = 2
-    socks5_error_unsupported_cmd = 3
-    socks5_error_unsupported_version = 4
-    socks5_error_unsupported_method = 5
-    socks5_error_invalid_reply = 6
-    socks5_error_invalid_config = 7
+    ERROR_INVALID_NMETHODS = 1
+    ERROR_INVALID_INVALID_MESSAGE_SIZE = 2
+    ERROR_UNSUPPORTED_CMD = 3
+    ERROR_UNSUPPORTED_VERSION = 4
+    ERROR_UNSUPPORTED_METHOD = 5
+    ERROR_INVALID_REPLY = 6
+    ERROR_INVALID_CONFIG = 7
 )
 
 /* 方法常量 */
@@ -80,14 +79,14 @@ func buildVersionRequest(version uint8, nmethods uint8, methods []byte) []byte {
 /* 解析握手请求 */
 func parseVersionRequest(data []byte) (uint8, uint8, []uint8, error) {
     if len(data) < 3 {
-        return 0, 0, nil, agent.NewAgentError(socks5_error_invalid_message_size, "version request message is too short")
+        return 0, 0, nil, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "version request message is too short")
     }
     version := uint8(data[0])
     nmethods := uint8(data[1])
     if nmethods < 1 {
-        return 0, 0, nil, agent.NewAgentError(socks5_error_invalid_nmethods, "nmethods cannot be zero")
+        return 0, 0, nil, agent.NewAgentError(ERROR_INVALID_NMETHODS, "nmethods cannot be zero")
     } else if len(data) != 2 + int(nmethods) {
-        return 0, 0, nil, agent.NewAgentError(socks5_error_invalid_message_size, "unexpected version request message size")
+        return 0, 0, nil, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected version request message size")
     }
     return version, nmethods, []uint8(data[2:]), nil
 }
@@ -102,7 +101,7 @@ func buildVersionReply(ver uint8, method uint8) []byte {
 
 func parseVersionReply(data []byte) (uint8, uint8, error) {
     if len(data) != 2 {
-        return 0, 0, agent.NewAgentError(socks5_error_invalid_message_size, "unexpected version reply message size")
+        return 0, 0, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected version reply message size")
     }
     return data[0], data[1], nil
 }
@@ -132,7 +131,7 @@ func buildAddressRequest(ver uint8, cmd uint8, atype uint8, address string, port
 /* 解析连接请求 */
 func parseAddressRequest(data []byte) (uint8, uint8, uint8, string, uint16, []byte, error) {
     if len(data) < 6 {
-        return 0, 0, 0, "", 0, nil, agent.NewAgentError(socks5_error_invalid_message_size, "address request message size is too short")
+        return 0, 0, 0, "", 0, nil, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address request message size is too short")
     }
     version := uint8(data[0])
     cmd := uint8(data[1])
@@ -142,7 +141,7 @@ func parseAddressRequest(data []byte) (uint8, uint8, uint8, string, uint16, []by
     var left []byte = nil
     if atype == ATYPE_IPV4 {
         if len(data) < 10 {
-            return 0, 0, 0, "", 0, nil, agent.NewAgentError(socks5_error_invalid_message_size, "address request message size is too short")
+            return 0, 0, 0, "", 0, nil, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address request message size is too short")
         } else if len(data) > 10 {
             left = data[10:]
         }
@@ -150,7 +149,7 @@ func parseAddressRequest(data []byte) (uint8, uint8, uint8, string, uint16, []by
         data = data[8:]
     }else if atype == ATYPE_IPV6 {
         if len(data) < 22 {
-            return 0, 0, 0, "", 0, nil, agent.NewAgentError(socks5_error_invalid_message_size, "address request message size is too short")
+            return 0, 0, 0, "", 0, nil, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address request message size is too short")
         } else if len(data) > 22 {
             left = data[22:]
         }
@@ -159,7 +158,7 @@ func parseAddressRequest(data []byte) (uint8, uint8, uint8, string, uint16, []by
     }else {
         length := uint8(data[4])
         if len(data) < 7 + int(length) {
-            return 0, 0, 0, "", 0, nil, agent.NewAgentError(socks5_error_invalid_message_size, "address request message size is too short")
+            return 0, 0, 0, "", 0, nil, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address request message size is too short")
         } else if len(data) > 7 + int(length) {
             left = data[7 + int(length):]
         }
@@ -191,7 +190,7 @@ func buildAddressReply(ver uint8, rep uint8, atype uint8, addr string, port uint
 
 func parseAddressReply(data []byte) (uint8, uint8, uint8, string, uint16, error) {
     if len(data) < 10 {
-        return 0,0,0,"",0, agent.NewAgentError(socks5_error_invalid_message_size, "address reply message size is too short")
+        return 0,0,0,"",0, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address reply message size is too short")
     }
     ver := data[0]
     rep := data[1]
@@ -201,20 +200,20 @@ func parseAddressReply(data []byte) (uint8, uint8, uint8, string, uint16, error)
     var left []byte
     if atype == ATYPE_IPV4 {
         if len(data) != 10 {
-            return 0,0,0,"",0, agent.NewAgentError(socks5_error_invalid_message_size, "unexpected address request message size")
+            return 0,0,0,"",0, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected address request message size")
         }
         address = net.IP(data[4:8]).String()
         left = data[8:]
     } else if atype == ATYPE_IPV6 {
         if len(data) != 22 {
-            return 0,0,0,"",0, agent.NewAgentError(socks5_error_invalid_message_size, "unexpected address request message size")
+            return 0,0,0,"",0, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected address request message size")
         }
         address = net.IP(data[4:20]).String()
         left = data[20:]
     } else {
         length := data[4]
         if len(data) != int(length + 7) {
-            return 0,0,0,"",0, agent.NewAgentError(socks5_error_invalid_message_size, "unexpected address request message size")
+            return 0,0,0,"",0, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected address request message size")
         }
         address = string(data[5:(5+length)])
         left = data[(5+length):]

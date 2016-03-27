@@ -85,7 +85,7 @@ func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, e
             if err != nil {
                 return nil, nil, err
             } else if ver != 5 {
-                return nil, nil, agent.NewAgentError(socks5_error_unsupported_version, "unsupported protocol version %d", ver)
+                return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
             }
             p.version = ver
             p.nmethods = nmethods
@@ -97,9 +97,9 @@ func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, e
             if err != nil {
                 return nil, nil, err
             } else if ver != p.version {
-                return nil, nil, agent.NewAgentError(socks5_error_unsupported_version, "unsupported protocol version %d", ver)
+                return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
             } else if cmd != CMD_CONNECT {
-                return nil, nil,agent.NewAgentError(socks5_error_unsupported_cmd, "unsupported protocol command %d", cmd)
+                return nil, nil,agent.NewAgentError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", cmd)
             }
             p.atype = atype
             p.address = address

@@ -74,15 +74,15 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
     var ok bool
     val, ok = cfg["serverAddr"]
     if ok == false {
-        return agent.NewAgentError(shadowsocks_error_invalid_config, "serverAddr not found")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverAddr not found")
     }
     serverAddr, ok = val.(string)
     if ok == false {
-        return agent.NewAgentError(shadowsocks_error_invalid_config, "serverAddr must be type of string")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverAddr must be type of string")
     }
     val, ok = cfg["serverPort"]
     if ok == false {
-        return agent.NewAgentError(shadowsocks_error_invalid_config, "serverPort not found")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverPort not found")
     }
     switch port := val.(type) {
         case int:
@@ -92,15 +92,15 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
         case float64:
             serverPort = strconv.Itoa(int(port))
         default:
-            return agent.NewAgentError(shadowsocks_error_invalid_config, "serverPort is illegal")
+            return agent.NewAgentError(ERROR_INVALID_CONFIG, "serverPort is illegal")
     }
     val, ok = cfg["password"]
     if ok == false {
-        return agent.NewAgentError(shadowsocks_error_invalid_config, "password not found")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "password not found")
     }
     password, ok = val.(string)
     if ok == false {
-        return agent.NewAgentError(shadowsocks_error_invalid_config, "password must be type of string")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "password must be type of string")
     }
     val, ok = cfg["method"]
     if ok == false {
@@ -108,14 +108,14 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
     }else{
         method, ok = val.(string)
         if ok == false {
-            return agent.NewAgentError(shadowsocks_error_invalid_config, "method must be type of string")
+            return agent.NewAgentError(ERROR_INVALID_CONFIG, "method must be type of string")
         }
     }
 
     /* 验证加密方式 */
     info := cipher.GetCipherInfo(strings.ToLower(method))
     if info == nil {
-        return agent.NewAgentError(shadowsocks_error_invalid_config, "unknown cipher method")
+        return agent.NewAgentError(ERROR_INVALID_CONFIG, "unknown cipher method")
     }
 
     /* 预先解析DNS */
@@ -153,7 +153,7 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result internal.ConnectResult) 
     if result.Result == internal.CONNECT_RESULT_OK {
     port, err := strconv.Atoi(a.targetPort)
     if err != nil {
-        return nil, nil, agent.NewAgentError(shadowsocks_error_invalid_target, "invalid target port")
+        return nil, nil, agent.NewAgentError(ERROR_INVALID_TARGET, "invalid target port")
     }
     plain := buildAddressRequest(a.targetAddr, uint16(port))
     buf := bytes.Buffer{}
@@ -167,7 +167,7 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result internal.ConnectResult) 
 func (a *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {
     if a.decrypter == nil {
         if len(data) < serverConfig.cipherInfo.IvSize {
-            return nil, nil, agent.NewAgentError(shadowsocks_error_invalid_package, "invalid package")
+            return nil, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE, "invalid package")
         }
         iv := data[:serverConfig.cipherInfo.IvSize]
         data = data[serverConfig.cipherInfo.IvSize:]
