@@ -17,6 +17,7 @@
 
 package http
 
+
 /*
  * HTTP代理协议
  */
@@ -29,22 +30,24 @@ const (
     http_METHOD_CONNECT = "CONNECT"
 )
 
-var (
-    uncomplete_request = error.New("")
-)
 
 type httpRequest struct {
     method string
     host string
     path string
     content_length int
+    headers map[string]string
+    body []byte
+
+    data []byte
 }
 
 /*
- * 解析数据，如果解析到一个完整请求，返回nil
- * 如果正常但还没有一个完整请求，uncomplete_request
- * 出错返回错误
+ * 解析数据，如果解析到一个完整请求，返回true, nil
+ * 如果正常但还没有一个完整请求，返回false, nil
+ * 出错返回false,error
  */
-func (req *httpRequest) feed(data []byte) error {
-    return nil
+func (req *httpRequest) feed(data []byte) (bool, error) {
+    req.data = append(req.data, data...)
+    return false, nil
 }

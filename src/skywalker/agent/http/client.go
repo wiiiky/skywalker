@@ -18,9 +18,13 @@
 package http
 
 import (
+    "skywalker/agent"
     "skywalker/internal"
 )
 
+func NewHTTPClientAgent() agent.ClientAgent {
+    return &HTTPClientAgent{}
+}
 
 type HTTPClientAgent struct {
 }

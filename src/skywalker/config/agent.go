@@ -22,6 +22,7 @@ import (
     "strings"
     "skywalker/log"
     "skywalker/agent"
+    "skywalker/agent/http"
     "skywalker/agent/direct"
     "skywalker/agent/socks5"
     "skywalker/agent/shadowsocks"
@@ -32,6 +33,7 @@ type newServerAgentFunc func() agent.ServerAgent
 
 var (
     clientMap = map[string] newClientAgentFunc{
+        "http": http.NewHTTPClientAgent,
         "socks5": socks5.NewSocks5ClientAgent,
         "shadowsocks": shadowsocks.NewShadowSocksClientAgent,
     }
