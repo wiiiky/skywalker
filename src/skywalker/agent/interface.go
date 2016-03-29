@@ -40,7 +40,7 @@ type ClientAgent interface {
     /* 返回协议名 */
     Name() string
    /*
-     * 程序初始化时调用
+     * 程序初始化时调用，该方法全局只调用一次
      */
     OnInit(map[string]interface{}) error
     /* 
@@ -73,7 +73,7 @@ type ServerAgent interface {
     Name() string
 
     /*
-     * 程序初始化时调用
+     * 程序初始化时调用，全局只调用一次
      */
     OnInit(map[string]interface{}) error
     /* 

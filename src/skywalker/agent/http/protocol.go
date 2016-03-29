@@ -20,3 +20,31 @@ package http
 /*
  * HTTP代理协议
  */
+
+const (
+    http_METHOD_GET = "GET"
+    http_METHOD_POST = "POST"
+    http_METHOD_PUT = "PUT"
+    http_METHOD_DELETE = "DELETE"
+    http_METHOD_CONNECT = "CONNECT"
+)
+
+var (
+    uncomplete_request = error.New("")
+)
+
+type httpRequest struct {
+    method string
+    host string
+    path string
+    content_length int
+}
+
+/*
+ * 解析数据，如果解析到一个完整请求，返回nil
+ * 如果正常但还没有一个完整请求，uncomplete_request
+ * 出错返回错误
+ */
+func (req *httpRequest) feed(data []byte) error {
+    return nil
+}
