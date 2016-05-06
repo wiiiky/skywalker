@@ -18,9 +18,7 @@
 package http
 
 import (
-    "bytes"
-    "bufio"
-    "net/http"
+    "net/url"
 )
 
 
@@ -43,27 +41,21 @@ const (
 )
 
 func newHTTPRequest() *httpRequest{
-    return &httpRequest{nil, nil}
+    return &httpRequest{}
 }
 
 
 type httpRequest struct {
-    request *http.Request
+    Method string
+    URL *url.URL
+    Version float32
+    Headers map[string]string
 
+    OK bool
     data []byte
 }
 
 func (req *httpRequest) parse(data []byte) error {
-    if req.request != nil {
-        return nil
-    }
-    reader := bufio.NewReader(bytes.NewReader([]byte(data)))
-    request, err := http.ReadRequest(reader)
-    if err != nil {
-        return err
-    }
-    req.request = request
-
     return nil
 }
 

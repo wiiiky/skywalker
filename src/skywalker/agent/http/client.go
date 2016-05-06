@@ -18,7 +18,6 @@
 package http
 
 import (
-    "strings"
     "skywalker/agent"
     "skywalker/internal"
 )
@@ -51,20 +50,7 @@ func (a *HTTPClientAgent) OnConnectResult(internal.ConnectResult) (interface{}, 
 
 /* 从客户端接收到数据 */
 func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
-    if a.req.request == nil {
-        if a.req.parse(data) == nil {
-            host := a.req.request.Host
-            if len(host) == 0 {
-                return nil, nil, agent.NewAgentError(ERROR_INVALID_HOST, "")
-            }
-            if strings.Index(host, ":") < 0 {
-                host = host + ":80"
-            }
-            var tdata [][]byte
-            tdata = append(tdata, []byte(host))
-            tdata = append(tdata, a.req.data)
-            return tdata, nil, nil
-        }
+    if a.req.OK == false {
         return nil, nil, nil
     }
     return data, nil, nil
