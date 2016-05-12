@@ -18,6 +18,7 @@
 package http
 
 import (
+    "fmt"
     "bytes"
     "net/url"
     "skywalker/agent"
@@ -57,9 +58,25 @@ type httpRequest struct {
     Version string
     Headers map[string]string
     Host string
+    Payload []byte
 
     OK bool
     data []byte
+}
+
+func (req *httpRequest) buildRequest() []byte{
+    var request string
+    path := req.URI.RawPath
+    if len(path) == 0{
+        path = "/"
+    }
+    request = fmt.Sprintf("%s %s?%s HTTP/%s\r\n", req.Method, path,
+                          req.URI.RawQuery, req.Version)
+    for k := range req.Headers {
+        request += fmt.Sprintf("%s: %s\r\n", k, req.Headers[k])
+    }
+    request += "\r\n" + string(req.Payload)
+    return []byte(request)
 }
 
 var (
@@ -88,13 +105,17 @@ func parseRequestVersion(version string) string {
 }
 
 /* 检查是否已经有完成的HTTP首部 */
-func checkHTTPHeaders(headers [][]byte) bool{
-    for _,h := range headers {
+func fetchHTTPHeaders(lines [][]byte) ([][]byte,bool){
+    var headers [][]byte
+    var complete bool
+    for _,h := range lines {
         if len(h) == 0 {
-            return true
+            complete = true
+            break
         }
+        headers = append(headers, h)
     }
-    return false
+    return headers, complete
 }
 
 /*
@@ -112,8 +133,9 @@ func (req *httpRequest) parse(data []byte) error {
     var uri *url.URL = nil
     var version string
     var err error = nil
-    var headers map[string]string
+    var headers map[string]string =  make(map[string]string)
     var host string
+    var complete bool
     for _,t := range bytes.Split(lines[0], []byte(" ")) {
         e := bytes.Trim(t, " ");
         if(len(e)>0){
@@ -127,7 +149,7 @@ func (req *httpRequest) parse(data []byte) error {
     if method = parseRequestMethod(string(firstline[0])); len(method) == 0{
         return agent.NewAgentError(ERROR_INVALID_METHOD, "invalid method %s", firstline[0])
     }
-    if uri, err = url.ParseRequestURI(string(firstline[1])); uri == nil || err != nil {
+    if uri, err = url.Parse(string(firstline[1])); uri == nil || err != nil {
         return agent.NewAgentError(ERROR_INVALID_URI, "invalid uri %s", firstline[1])
     }
     if version = parseRequestVersion(string(firstline[2])); len(version) == 0{
@@ -135,7 +157,7 @@ func (req *httpRequest) parse(data []byte) error {
                                    firstline[2])
     }
     
-    complete := checkHTTPHeaders(lines)
+    lines, complete = fetchHTTPHeaders(lines[1:])
     if complete {  /* 如果已经读取了完成的HTTP首部 */
         lines = lines[1:]
     } else {    /* 没有读取完成的HTTP首部，则暂时忽略最后一行 */
@@ -159,11 +181,13 @@ func (req *httpRequest) parse(data []byte) error {
         if len(host) <= 0 {
             return agent.NewAgentError(ERROR_INVALID_HOST, "host not found")
         }
+        headers["Host"] = host
         req.Method = method
         req.URI = uri
         req.Version = version
         req.Headers = headers
         req.Host = host
+        req.Payload = bytes.SplitN(data, []byte("\r\n\r\n"), 2)[1]
         req.OK = true
     }
     return nil

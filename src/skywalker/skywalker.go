@@ -149,7 +149,8 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                 }
                 tdata, rdata, err := cAgent.FromClient(data)
                 if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
-                    log.DEBUG("transfer data from client agent to server agent error, %s",  _err.Error())
+                    log.DEBUG("transfer data from client agent to server agent error, %s",
+                              _err.Error())
                     break RUNNING
                 }
             case pkg, ok := <- s2c:
@@ -160,7 +161,8 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
                     tdata, rdata, err := cAgent.FromServerAgent(pkg.Data.([]byte))
                     if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
-                        log.DEBUG("receive data from server agent to client agent error, %s", _err.Error())
+                        log.DEBUG("receive data from server agent to client agent error, %s",
+                                  _err.Error())
                         break RUNNING
                     }
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_CONNECT_RESULT {
@@ -249,7 +251,8 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
                 if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
                     tdata, rdata, err := sAgent.FromClientAgent(pkg.Data.([]byte))
                     if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
-                        log.DEBUG("receive data from client agent to server agent error, %s", _err.Error())
+                        log.DEBUG("receive data from client agent to server agent error, %s",
+                                  _err.Error())
                         break RUNNING
                     }
                 } else {

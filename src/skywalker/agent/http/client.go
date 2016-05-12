@@ -18,6 +18,7 @@
 package http
 
 import (
+    "strings"
     "skywalker/agent"
     "skywalker/internal"
 )
@@ -44,20 +45,43 @@ func (a *HTTPClientAgent) OnStart(cfg map[string]interface{}) error {
     return nil
 }
 
-func (a *HTTPClientAgent) OnConnectResult(internal.ConnectResult) (interface{}, interface{}, error) {
+const (
+    CONNECT_RESPONSE = "HTTP/1.1 200 Connection established\r\nProxy-agent: SkyWalker Proxy/0.1\r\n\r\n"
+)
+
+func (a *HTTPClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
+    if a.req.Method == "CONNECT" && result.Result == internal.CONNECT_RESULT_OK {
+        return nil, []byte(CONNECT_RESPONSE), nil
+    }
     return nil, nil, nil
 }
 
 /* 从客户端接收到数据 */
 func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
-    if a.req.OK == false {
+    req := a.req
+    if req.OK == false {  /* 还没有解析到HTTP请求 */
+        err := req.feed(data)
+        if err != nil {
+            return nil, nil, err
+        }
+        if req.OK {   /* 解析到有效的HTTP请求 */
+            host := req.Host
+            if !strings.Contains(host, ":") {
+                host += ":80"
+            }
+            if req.Method == "CONNECT" {
+                return []byte(host), nil, nil
+            }else{
+                return [][]byte{[]byte(host), req.buildRequest()}, nil, nil
+            }
+        }
         return nil, nil, nil
     }
     return data, nil, nil
 }
 
 func (a *HTTPClientAgent) FromServerAgent(data []byte) (interface{}, interface{}, error) {
-    return data, nil, nil
+    return nil, data, nil
 }
 
 func (a *HTTPClientAgent) OnClose(){
