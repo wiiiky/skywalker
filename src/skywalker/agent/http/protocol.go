@@ -18,7 +18,9 @@
 package http
 
 import (
+    "bytes"
     "net/url"
+    "skywalker/agent"
 )
 
 
@@ -37,7 +39,11 @@ const (
 const (
     ERROR_INVALID_FORMAT = 1
     ERROR_INVALID_METHOD = 2
-    ERROR_INVALID_HOST = 3
+    ERROR_INVALID_URI = 3
+    ERROR_INVALID_VERSION = 4
+    ERROR_INVALID_HOST = 5
+    ERROR_INVALID_HEADER = 6
+    
 )
 
 func newHTTPRequest() *httpRequest{
@@ -47,15 +53,119 @@ func newHTTPRequest() *httpRequest{
 
 type httpRequest struct {
     Method string
-    URL *url.URL
-    Version float32
+    URI *url.URL
+    Version string
     Headers map[string]string
+    Host string
 
     OK bool
     data []byte
 }
 
+var (
+    allowedMethods = []string{"GET", "PUT", "POST", "HEAD", "OPTIONS", "DELETE", "CONNECT", "TRACE"}
+    allowedVersions = []string{"HTTP/1.0", "HTTP/1.1"}
+)
+
+/* 检查HTTP请求方法是否合法，合法返回该方法，否则返回空字符串 */
+func parseRequestMethod(method string) string{
+    for _,allowedMethod := range allowedMethods {
+        if method == allowedMethod {
+            return allowedMethod
+        }
+    }
+    return ""
+}
+
+/* 解析HTTP请求的版本号，合法返回版本号，否则返回空字符串 */
+func parseRequestVersion(version string) string {
+    for _, allowedVersion := range allowedVersions {
+        if version == allowedVersion {
+            return allowedVersion[5:]
+        }
+    }
+    return ""
+}
+
+/* 检查是否已经有完成的HTTP首部 */
+func checkHTTPHeaders(headers [][]byte) bool{
+    for _,h := range headers {
+        if len(h) == 0 {
+            return true
+        }
+    }
+    return false
+}
+
+/*
+ * 解析HTTP请求，如果解析到完整的请求，则返回nil并且req的相应字段都会设置
+ * 如果没有解析到完整的请求，但暂时没有发现错误，则返回nil，但req的字段不会被设置
+ * 如果检测到错误，则返回对应的错误信息
+ */
 func (req *httpRequest) parse(data []byte) error {
+    lines := bytes.Split(data, []byte("\r\n"))
+    if(len(lines)<=1){
+        return nil;
+    }
+    var firstline [][]byte=nil
+    var method string
+    var uri *url.URL = nil
+    var version string
+    var err error = nil
+    var headers map[string]string
+    var host string
+    for _,t := range bytes.Split(lines[0], []byte(" ")) {
+        e := bytes.Trim(t, " ");
+        if(len(e)>0){
+            firstline = append(firstline, e);
+        }
+    }
+    if(len(firstline)!=3){
+        return agent.NewAgentError(ERROR_INVALID_FORMAT, "invalid request line")
+    }
+    /* 检查方法是否有效 */
+    if method = parseRequestMethod(string(firstline[0])); len(method) == 0{
+        return agent.NewAgentError(ERROR_INVALID_METHOD, "invalid method %s", firstline[0])
+    }
+    if uri, err = url.ParseRequestURI(string(firstline[1])); uri == nil || err != nil {
+        return agent.NewAgentError(ERROR_INVALID_URI, "invalid uri %s", firstline[1])
+    }
+    if version = parseRequestVersion(string(firstline[2])); len(version) == 0{
+        return agent.NewAgentError(ERROR_INVALID_VERSION, "invalid http version %s",
+                                   firstline[2])
+    }
+    
+    complete := checkHTTPHeaders(lines)
+    if complete {  /* 如果已经读取了完成的HTTP首部 */
+        lines = lines[1:]
+    } else {    /* 没有读取完成的HTTP首部，则暂时忽略最后一行 */
+        lines = lines[1:len(lines)-1]
+    }
+    for _, line := range lines {
+        kv := bytes.SplitN(line, []byte(":"), 2)
+        if len(kv) != 2{
+            return agent.NewAgentError(ERROR_INVALID_HEADER, "invalid header format")
+        }
+        key := string(bytes.Trim(kv[0], " "))
+        value := string(bytes.Trim(kv[1], " "))
+        headers[key] = value 
+    }
+    if complete {   /* 如果已经读取到了完整的HTTP首部，则检查Host */
+        if len(uri.Host) > 0 {
+            host = uri.Host
+        } else {
+            host = headers["Host"]
+        }
+        if len(host) <= 0 {
+            return agent.NewAgentError(ERROR_INVALID_HOST, "host not found")
+        }
+        req.Method = method
+        req.URI = uri
+        req.Version = version
+        req.Headers = headers
+        req.Host = host
+        req.OK = true
+    }
     return nil
 }
 
