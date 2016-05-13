@@ -18,6 +18,7 @@
 package http
 
 import (
+    "fmt"
     "strings"
     "skywalker/agent"
     "skywalker/internal"
@@ -63,8 +64,7 @@ func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, err
         err := req.feed(data)
         if err != nil {
             return nil, nil, err
-        }
-        if req.OK {   /* 解析到有效的HTTP请求 */
+        } else if req.OK {   /* 解析到有效的HTTP请求 */
             host := req.Host
             if !strings.Contains(host, ":") {
                 host += ":80"
@@ -72,7 +72,10 @@ func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, err
             if req.Method == "CONNECT" {
                 return []byte(host), nil, nil
             }else{
-                return [][]byte{[]byte(host), req.buildRequest()}, nil, nil
+                request := req.buildRequest()
+                req.reset()
+                fmt.Printf("%s\n",request)
+                return [][]byte{[]byte(host), request}, nil, nil
             }
         }
         return nil, nil, nil

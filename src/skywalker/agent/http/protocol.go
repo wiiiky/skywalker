@@ -20,6 +20,7 @@ package http
 import (
     "fmt"
     "bytes"
+    "strconv"
     "net/url"
     "skywalker/agent"
 )
@@ -58,20 +59,29 @@ type httpRequest struct {
     Version string
     Headers map[string]string
     Host string
+    ContentLength uint64
     Payload []byte
 
     OK bool
     data []byte
 }
 
+func (req *httpRequest) reset() {
+    req.OK = false
+    req.data = []byte("")
+}
+
 func (req *httpRequest) buildRequest() []byte{
     var request string
-    path := req.URI.RawPath
+    path := req.URI.Path
     if len(path) == 0{
         path = "/"
     }
-    request = fmt.Sprintf("%s %s?%s HTTP/%s\r\n", req.Method, path,
-                          req.URI.RawQuery, req.Version)
+    query := req.URI.RawQuery
+    if len(query) > 0 {
+        query = "?" + query
+    }
+    request = fmt.Sprintf("%s %s%s HTTP/%s\r\n", req.Method, path, query, req.Version)
     for k := range req.Headers {
         request += fmt.Sprintf("%s: %s\r\n", k, req.Headers[k])
     }
@@ -116,6 +126,15 @@ func fetchHTTPHeaders(lines [][]byte) ([][]byte,bool){
         headers = append(headers, h)
     }
     return headers, complete
+}
+
+func fetchContentLength(headers map[string]string) uint64 {
+    content_length, ok := headers["Content-Length"]
+    if !ok {
+        return 0
+    }
+    length, _ := strconv.Atoi(content_length)
+    return uint64(length)
 }
 
 /*
@@ -187,7 +206,11 @@ func (req *httpRequest) parse(data []byte) error {
         req.Version = version
         req.Headers = headers
         req.Host = host
+        req.ContentLength = fetchContentLength(headers)
         req.Payload = bytes.SplitN(data, []byte("\r\n\r\n"), 2)[1]
+        if uint64(len(req.Payload)) < req.ContentLength {
+            return nil
+        }
         req.OK = true
     }
     return nil
