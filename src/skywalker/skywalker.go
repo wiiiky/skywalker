@@ -186,14 +186,52 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
     log.INFO("%s Closed By %s", chain, closed_by)
 }
 
+/*
+ * 连接到远程地址
+ * 成功返回net.Conn和对应的channel
+ * 失败返回nil,nil
+ */
+func connectRemote(hostname string, sAgent agent.ServerAgent,
+                   s2c chan *internal.InternalPackage) (net.Conn, chan []byte) {
+    addrinfo := strings.Split(hostname, ":")
+    if len(addrinfo) != 2 {
+        return nil, nil
+    }
+    /* 获取服务器地址，并链接 */
+    addr, port := sAgent.GetRemoteAddress(addrinfo[0], addrinfo[1])
+    conn, result := utils.TcpConnect(addr, port)
+
+    /* 连接结果 */
+    var connResult internal.ConnectResult
+    if result != internal.CONNECT_RESULT_OK {
+        connResult = internal.NewConnectResult(result, hostname, nil)
+    } else{
+        connResult = internal.NewConnectResult(result, hostname, conn.RemoteAddr())
+    }
+    /* 给客户端代理发送连接结果反馈 */
+    s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT, connResult)
+    /* 服务端代理链接结果反馈 */
+    tdata, rdata, err := sAgent.OnConnectResult(connResult)
+    if connResult.Result != internal.CONNECT_RESULT_OK {
+        return nil, nil
+    }
+
+    /* 发送服务端代理的处理后数据 */
+    if _err := transferData(s2c, conn, tdata, rdata, err); _err != nil {
+        log.DEBUG("server agent OnConnectResult error, %s", _err.Error())
+        conn.Close()
+        return nil, nil
+    }
+
+    return conn, getConnectionChannel(conn)
+}
+
 /* 处理服务器连接的goroutine */
 func serverGoroutine(id uint, sAgent agent.ServerAgent,
-                          c2s chan *internal.InternalPackage,
-                          s2c chan *internal.InternalPackage) {
+                     c2s chan *internal.InternalPackage,
+                     s2c chan *internal.InternalPackage) {
     defer sAgent.OnClose()
     defer close(s2c)
-
-    var sConn net.Conn;
 
     /* 获取服务器地址 */
     pkg, ok := <- c2s
@@ -201,34 +239,12 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
         return
     }
     hostname := string(pkg.Data.([]byte))
-    addrinfo := strings.Split(hostname, ":")
-    if len(addrinfo) != 2 {
+    sConn, sChan := connectRemote(hostname, sAgent, s2c)
+    if sConn == nil{
         return
     }
-    addr, port := sAgent.GetRemoteAddress(addrinfo[0], addrinfo[1])
-    conn, result := utils.TcpConnect(addr, port)
-
-    var connResult internal.ConnectResult
-    if result != internal.CONNECT_RESULT_OK {
-        connResult = internal.NewConnectResult(result, hostname, nil)
-    } else{
-        connResult = internal.NewConnectResult(result, hostname, conn.RemoteAddr())
-    }
-    s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT, connResult)
-    tdata, rdata, err := sAgent.OnConnectResult(connResult)
-    if connResult.Result != internal.CONNECT_RESULT_OK {
-        return
-    }
-
-    sConn = conn
     defer sConn.Close()
 
-    if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
-        log.DEBUG("server agent OnConnectResult error, %s", _err.Error())
-        return
-    }
-
-    sChan := getConnectionChannel(sConn)
 
     RUNNING:
     for {
@@ -240,21 +256,22 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
                 }
                 tdata, rdata, err := sAgent.FromServer(data)
                 if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
-                    log.DEBUG("transfer data from server agent to client agent error, %s", _err.Error())
+                    log.DEBUG("transfer data from server agent to client agent error, %s",
+                              _err.Error())
                     break RUNNING
                 }
             case pkg, ok := <-c2s:
                 /* 来自客户端代理的数据 */
                 if ok == false {
                     break RUNNING
-                }
-                if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
+                }else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
                     tdata, rdata, err := sAgent.FromClientAgent(pkg.Data.([]byte))
                     if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
                         log.DEBUG("receive data from client agent to server agent error, %s",
                                   _err.Error())
                         break RUNNING
                     }
+                } else if pkg.CMD == internal.INTERNAL_PROTOCOL_CONNECT {
                 } else {
                     log.WARNING("Unknown Package From Client Agent, IGNORED!")
                 }
