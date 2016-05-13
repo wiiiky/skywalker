@@ -93,6 +93,7 @@ func getConnectionChannel(conn net.Conn) chan []byte {
 func transferData(ic chan *internal.InternalPackage,
                   conn net.Conn, tdata interface{},
                   rdata interface{}, err error) error {
+    /* 转发数据 */
     switch data := tdata.(type) {
         case string:
             ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, []byte(data))
@@ -106,7 +107,28 @@ func transferData(ic chan *internal.InternalPackage,
             ic <- data
         case internal.InternalPackage:
             ic <- &data
+        case []interface{}:
+            for _, d := range data {
+                switch e := d.(type){
+                    case string:
+                        ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA,
+                                                          []byte(e))
+                    case []byte:
+                        ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA,
+                                                          e)
+                    case [][]byte:
+                        for _, f := range e {
+                            ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA,
+                                                              f)
+                        }
+                    case *internal.InternalPackage:
+                        ic <- e
+                    case internal.InternalPackage:
+                        ic <- &e
+                }
+            }
     }
+    /* 发送到远端连接 */
     switch data := rdata.(type){
         case string:
             if _, _err := conn.Write([]byte(data)); _err != nil {
@@ -137,7 +159,7 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
 
     cChan := getConnectionChannel(cConn)
 
-    chain := cConn.RemoteAddr().String() + " <==> "
+    var chain string
     closed_by := "Client"
     RUNNING:
     for {
@@ -168,7 +190,7 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_CONNECT_RESULT {
                     result := pkg.Data.(internal.ConnectResult)
                     if result.Result == internal.CONNECT_RESULT_OK {
-                        chain += result.Hostname
+                        chain = cConn.RemoteAddr().String() + " <==> " + result.Hostname
                         log.INFO("%s Connected", chain)
                     } else {
                         closed_by = "Server"
@@ -226,7 +248,10 @@ func connectRemote(hostname string, sAgent agent.ServerAgent,
     return conn, getConnectionChannel(conn)
 }
 
-/* 处理服务器连接的goroutine */
+/*
+ * 处理服务器连接的goroutine
+ * 从客户端代理收到的第一个数据包一定是服务器地址，无论该数据包被标志成什么类型
+ */
 func serverGoroutine(id uint, sAgent agent.ServerAgent,
                      c2s chan *internal.InternalPackage,
                      s2c chan *internal.InternalPackage) {
@@ -238,12 +263,10 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
     if ok == false {
         return
     }
-    hostname := string(pkg.Data.([]byte))
-    sConn, sChan := connectRemote(hostname, sAgent, s2c)
+    sConn, sChan := connectRemote(string(pkg.Data.([]byte)), sAgent, s2c)
     if sConn == nil{
         return
     }
-    defer sConn.Close()
 
 
     RUNNING:
@@ -272,9 +295,16 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
                         break RUNNING
                     }
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_CONNECT {
+                    /* 需要重新链接服务器 */
+                    sConn.Close()
+                    sConn, sChan = connectRemote(string(pkg.Data.([]byte)), sAgent, s2c)
+                    if sConn == nil{
+                        return
+                    }
                 } else {
                     log.WARNING("Unknown Package From Client Agent, IGNORED!")
                 }
         }
     }
+    sConn.Close()
 }

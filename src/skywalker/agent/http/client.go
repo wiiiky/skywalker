@@ -18,7 +18,6 @@
 package http
 
 import (
-    "fmt"
     "strings"
     "skywalker/agent"
     "skywalker/internal"
@@ -30,6 +29,7 @@ func NewHTTPClientAgent() agent.ClientAgent {
 
 type HTTPClientAgent struct {
     req *httpRequest
+    host string
 }
 
 func (a *HTTPClientAgent) Name() string {
@@ -51,8 +51,10 @@ const (
 )
 
 func (a *HTTPClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
-    if a.req.Method == "CONNECT" && result.Result == internal.CONNECT_RESULT_OK {
-        return nil, []byte(CONNECT_RESPONSE), nil
+    if result.Result == internal.CONNECT_RESULT_OK {
+        if a.req.Method == "CONNECT"  {
+            return nil, []byte(CONNECT_RESPONSE), nil
+        }
     }
     return nil, nil, nil
 }
@@ -71,11 +73,17 @@ func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, err
             }
             if req.Method == "CONNECT" {
                 return []byte(host), nil, nil
-            }else{
+            } else {
                 request := req.buildRequest()
                 req.reset()
-                fmt.Printf("%s\n",request)
-                return [][]byte{[]byte(host), request}, nil, nil
+                if a.host != host {
+                    a.host = host
+                    c := internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT,
+                                                     []byte(host))
+                    return []interface{}{c, request}, nil, nil 
+                } else {
+                    return request, nil, nil
+                }
             }
         }
         return nil, nil, nil
