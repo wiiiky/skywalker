@@ -21,6 +21,7 @@ import (
     "fmt"
     "bytes"
     "strconv"
+    "strings"
     "net/url"
     "skywalker/agent"
 )
@@ -104,6 +105,16 @@ func parseRequestMethod(method string) string{
     return ""
 }
 
+/* 解析HTTP请求的URL，CONNECT方法的请求带有域名，因此要特殊处理 */
+func parseRequestURI(method string, rawurl string) *url.URL {
+    if method == "CONNECT" && !strings.HasPrefix(rawurl, "http://") &&
+            !strings.HasPrefix(rawurl, "https://") {
+        rawurl = "http://"+rawurl
+    }
+    uri, _ := url.Parse(rawurl)
+    return uri
+}
+
 /* 解析HTTP请求的版本号，合法返回版本号，否则返回空字符串 */
 func parseRequestVersion(version string) string {
     for _, allowedVersion := range allowedVersions {
@@ -151,7 +162,6 @@ func (req *httpRequest) parse(data []byte) error {
     var method string
     var uri *url.URL = nil
     var version string
-    var err error = nil
     var headers map[string]string =  make(map[string]string)
     var host string
     var complete bool
@@ -168,7 +178,7 @@ func (req *httpRequest) parse(data []byte) error {
     if method = parseRequestMethod(string(firstline[0])); len(method) == 0{
         return agent.NewAgentError(ERROR_INVALID_METHOD, "invalid method %s", firstline[0])
     }
-    if uri, err = url.Parse(string(firstline[1])); uri == nil || err != nil {
+    if uri = parseRequestURI(method, string(firstline[1])); uri == nil {
         return agent.NewAgentError(ERROR_INVALID_URI, "invalid uri %s", firstline[1])
     }
     if version = parseRequestVersion(string(firstline[2])); len(version) == 0{

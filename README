@@ -19,6 +19,7 @@ SkyWalker(以下简称SW)是一个代理转发程序，可以配置传入和传�
 
 *   sock5
 *   shadowsocks
+*   http
 
 ### Usage
 
