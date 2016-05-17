@@ -39,7 +39,7 @@ var (
 )
 
 /* 初始化日志模块 */
-func Initialize(loggers []LoggerConfig) {
+func Init(loggers []LoggerConfig) {
     for _, cfg := range(loggers) {
         level := strings.ToUpper(cfg.Level)
         file := cfg.File

@@ -35,7 +35,7 @@ func NewStatPlugin() plugin.SWPlugin{
     return &StatPlugin{}
 }
 
-func (p *StatPlugin) init() {
+func (p *StatPlugin) Init() {
     p.c2ca = 0
     p.ca2sa = 0
     p.sa2s = 0
@@ -44,32 +44,32 @@ func (p *StatPlugin) init() {
     p.ca2c = 0
 }
 
-func (p *StatPlugin) fromClientToClientAgent(data []byte) []byte {
+func (p *StatPlugin) FromClientToClientAgent(data []byte) []byte {
     p.c2ca += uint64(len(data))
     return data
 }
 
-func (p *StatPlugin) fromClientAgentToServerAgent(data []byte) []byte {
+func (p *StatPlugin) FromClientAgentToServerAgent(data []byte) []byte {
     p.ca2sa += uint64(len(data))
     return data
 }
 
-func (p *StatPlugin) fromServerAgentToServer(data []byte) []byte {
+func (p *StatPlugin) FromServerAgentToServer(data []byte) []byte {
     p.sa2s += uint64(len(data))
     return data
 }
 
-func (p *StatPlugin) fromServerToServerAgent(data []byte) []byte {
+func (p *StatPlugin) FromServerToServerAgent(data []byte) []byte {
     p.s2sa += uint64(len(data))
     return data
 }
 
-func (p *StatPlugin) fromServerAgentToClientAgent(data []byte) []byte {
+func (p *StatPlugin) FromServerAgentToClientAgent(data []byte) []byte {
     p.sa2ca += uint64(len(data))
     return data
 }
 
-func (p *StatPlugin) fromClientAgentToClient(data []byte) []byte {
+func (p *StatPlugin) FromClientAgentToClient(data []byte) []byte {
     p.ca2c += uint64(len(data))
     return data
 }

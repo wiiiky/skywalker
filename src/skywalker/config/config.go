@@ -41,6 +41,8 @@ type ProxyConfig struct {
     Logger []log.LoggerConfig       `json:"logger"`
 
     CacheTimeout int64          `json:"cacheTimeout"`
+    
+    Plugins []string            `json:"plugins"`
 }
 
 var (
@@ -60,7 +62,7 @@ func fatalError(format string, params ...interface{}) {
 }
 
 func init() {
-    configFile := flag.String("c", "./config.json", "the config file path")
+    configFile := flag.String("c", "./config.json", "the config file")
     flag.Parse()
     data, err := ioutil.ReadFile(*configFile)
     if err != nil {
@@ -70,8 +72,8 @@ func init() {
     if err != nil {
         fatalError("Fail To Load Config File '%s': %s", *configFile, err.Error())
     }
-    log.Initialize(Config.Logger)
-    utils.Initialize(Config.CacheTimeout)
+    log.Init(Config.Logger)
+    utils.Init(Config.CacheTimeout)
 
     /* 初始化代理 */
     clientAgent := getClientAgent()
@@ -87,4 +89,8 @@ func init() {
     } else if err := serverAgent.OnInit(Config.ServerConfig); err != nil {
         fatalError("Fail To Initialize [%s]:%s", serverAgent.Name(), err.Error())
     }
+    
+    
+    /* 初始化插件 */
+    initPlugin(Config.Plugins)
 }

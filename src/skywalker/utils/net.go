@@ -46,7 +46,7 @@ var (
     hostCache Cache
 )
 
-func Initialize(timeout int64) {
+func Init(timeout int64) {
     hostCache = NewLRUCache(timeout)
 }
 
