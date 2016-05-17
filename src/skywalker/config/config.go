@@ -44,6 +44,7 @@ type ProxyConfig struct {
 }
 
 var (
+    /* 默认配置 */
     Config = ProxyConfig{
         BindAddr: "127.0.0.1",
         BindPort: 12345,
