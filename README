@@ -57,6 +57,22 @@ SW可以通过配置达到不同的代理效果，不过目前支持的协议还
     }
 ```
 
+*    http转shadowsocks代理：
+```javascript
+    {
+        "bindAddr": "127.0.0.1",
+        "bindPort": 12345,
+        "clientProtocol": "http",
+        "serverProtocol": "shadowsocks",
+        "serverConfig": {
+            "serverAddr": "example.com",
+            "serverPort": 23456,
+            "password": "sspassword",
+            "method": "aes-256-cfb"
+        }
+    }
+```
+
 *   shadowsocks服务端代理的配置
 ```javascript
     {
