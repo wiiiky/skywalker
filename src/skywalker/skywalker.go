@@ -169,6 +169,7 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                 if ok == false{
                     break RUNNING
                 }
+                config.CallPluginsMethod("FromClientToClientAgent", data)
                 tdata, rdata, err := cAgent.FromClient(data)
                 if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
                     log.DEBUG("transfer data from client agent to server agent error, %s",
@@ -181,6 +182,7 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                     closed_by = "Server"
                     break RUNNING
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
+                    config.CallPluginsMethod("FromServerAgentToClientAgent", pkg.Data.([]byte))
                     tdata, rdata, err := cAgent.FromServerAgent(pkg.Data.([]byte))
                     if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
                         log.DEBUG("receive data from server agent to client agent error, %s",
@@ -277,6 +279,7 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
                 if ok == false {
                     break RUNNING
                 }
+                config.CallPluginsMethod("FromServerToServerAgent", data)
                 tdata, rdata, err := sAgent.FromServer(data)
                 if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
                     log.DEBUG("transfer data from server agent to client agent error, %s",
@@ -287,7 +290,8 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
                 /* 来自客户端代理的数据 */
                 if ok == false {
                     break RUNNING
-                }else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
+                } else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
+                    config.CallPluginsMethod("FromServerToServerAgent", pkg.Data.([]byte))
                     tdata, rdata, err := sAgent.FromClientAgent(pkg.Data.([]byte))
                     if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
                         log.DEBUG("receive data from client agent to server agent error, %s",
