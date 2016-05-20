@@ -28,4 +28,6 @@ type SWPlugin interface {
     FromServerToServerAgent([]byte) []byte
     FromServerAgentToClientAgent([]byte) []byte
     FromClientAgentToClient([]byte) []byte
+    
+    AtExit()
 }

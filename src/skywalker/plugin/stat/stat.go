@@ -18,6 +18,7 @@
 package stat
 
 import (
+    "fmt"
     "skywalker/plugin"
 )
 
@@ -72,4 +73,9 @@ func (p *StatPlugin) FromServerAgentToClientAgent(data []byte) []byte {
 func (p *StatPlugin) FromClientAgentToClient(data []byte) []byte {
     p.ca2c += uint64(len(data))
     return data
+}
+
+func (p *StatPlugin) AtExit(){
+    fmt.Println("---------------------------------------")
+    fmt.Printf("Sent: %v KB\tReceived: %v KB\n", p.sa2s/1000.0, p.s2sa/1000.0)
 }

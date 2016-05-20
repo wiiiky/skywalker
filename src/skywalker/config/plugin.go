@@ -19,7 +19,10 @@ package config
 
 
 import (
+    "os"
     "reflect"
+    "syscall"
+    "os/signal"
     "skywalker/log"
     "skywalker/plugin"
     "skywalker/plugin/stat"
@@ -56,4 +59,18 @@ func CallPluginsMethod(name string, data []byte) []byte {
     }
 
     return data
+}
+
+func init() {
+    ch := make(chan os.Signal, 1)
+    signal.Notify(ch, os.Interrupt, os.Kill, syscall.SIGTERM)
+
+     go func() {
+        <-ch
+        signal.Stop(ch)
+        for i := range plugins {
+            plugins[i].AtExit()
+        }
+        os.Exit(0)
+     }()
 }
