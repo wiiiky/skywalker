@@ -50,15 +50,25 @@ func initPlugin(ps []string){
     }
 }
 
-func CallPluginsMethod(name string, data []byte) []byte {
-    for i := range plugins {
-        plugin := plugins[i]
-        method := reflect.ValueOf(plugin).MethodByName(name)
-        args := []reflect.Value{reflect.ValueOf(data)}
-        data = method.Call(args)[0].Bytes()
+func CallPluginsMethod(name string, data interface{}) {
+    callPluginsMethod := func(d []byte){
+        for i := range plugins {
+            plugin := plugins[i]
+            method := reflect.ValueOf(plugin).MethodByName(name)
+            args := []reflect.Value{reflect.ValueOf(d)}
+            data = method.Call(args)[0].Bytes()
+        }
     }
-
-    return data
+    switch d := data.(type){
+        case string:
+            callPluginsMethod([]byte(d))
+        case []byte:
+            callPluginsMethod(d)
+        case [][]byte:
+            for _, _d := range d{
+                callPluginsMethod(_d)
+            }
+    }
 }
 
 func init() {

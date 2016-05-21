@@ -94,14 +94,17 @@ func transferData(ic chan *internal.InternalPackage,
                   conn net.Conn, tdata interface{},
                   rdata interface{}, err error) error {
     /* 转发数据 */
+    transferIc := func(d []byte){
+        ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, d)
+    }
     switch data := tdata.(type) {
         case string:
-            ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, []byte(data))
+            transferIc([]byte(data))
         case []byte:
-            ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, data)
+            transferIc(data)
         case [][]byte:
             for _, d := range data {
-                ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, d)
+                transferIc(d)
             }
         case *internal.InternalPackage:
             ic <- data
@@ -111,15 +114,12 @@ func transferData(ic chan *internal.InternalPackage,
             for _, d := range data {
                 switch e := d.(type){
                     case string:
-                        ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA,
-                                                          []byte(e))
+                        transferIc([]byte(e))
                     case []byte:
-                        ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA,
-                                                          e)
+                        transferIc(e)
                     case [][]byte:
                         for _, f := range e {
-                            ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA,
-                                                              f)
+                            transferIc(f)
                         }
                     case *internal.InternalPackage:
                         ic <- e
@@ -171,6 +171,7 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                 }
                 config.CallPluginsMethod("FromClientToClientAgent", data)
                 tdata, rdata, err := cAgent.FromClient(data)
+                config.CallPluginsMethod("FromClientAgentToClient", rdata)
                 if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
                     log.DEBUG("transfer data from client agent to server agent error, %s",
                               _err.Error())
@@ -184,6 +185,7 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
                     config.CallPluginsMethod("FromServerAgentToClientAgent", pkg.Data.([]byte))
                     tdata, rdata, err := cAgent.FromServerAgent(pkg.Data.([]byte))
+                    config.CallPluginsMethod("FromClientAgentToClient", rdata)
                     if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
                         log.DEBUG("receive data from server agent to client agent error, %s",
                                   _err.Error())
@@ -281,6 +283,7 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
                 }
                 config.CallPluginsMethod("FromServerToServerAgent", data)
                 tdata, rdata, err := sAgent.FromServer(data)
+                config.CallPluginsMethod("FromServerAgentToServer", rdata);
                 if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
                     log.DEBUG("transfer data from server agent to client agent error, %s",
                               _err.Error())
@@ -291,8 +294,9 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
                 if ok == false {
                     break RUNNING
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
-                    config.CallPluginsMethod("FromServerToServerAgent", pkg.Data.([]byte))
+                    config.CallPluginsMethod("FromClientAgentToServerAgent", pkg.Data.([]byte))
                     tdata, rdata, err := sAgent.FromClientAgent(pkg.Data.([]byte))
+                    config.CallPluginsMethod("FromServerAgentToServer", rdata)
                     if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
                         log.DEBUG("receive data from client agent to server agent error, %s",
                                   _err.Error())

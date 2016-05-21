@@ -77,5 +77,18 @@ func (p *StatPlugin) FromClientAgentToClient(data []byte) []byte {
 
 func (p *StatPlugin) AtExit(){
     fmt.Println("---------------------------------------")
-    fmt.Printf("Sent: %v KB\tReceived: %v KB\n", p.sa2s/1000.0, p.s2sa/1000.0)
+    formatData := func(size uint64) string{
+        var f string
+        if(size < 1024) {
+            f = fmt.Sprintf("%v B", size)
+        }else if(size < 1024 * 1024) {
+            f = fmt.Sprintf("%v KB", size/1024.0)
+        }else if(size < 1024 * 1024 * 1024) {
+            f = fmt.Sprintf("%v MB", size/1024.0/1024.0)
+        }else {
+            f = fmt.Sprintf("%v GB", size/1024.0/1024.0/1024.0)
+        }
+        return f
+    }
+    fmt.Printf("Sent: %s\tReceived: %s\n", formatData(p.sa2s), formatData(p.s2sa))
 }
