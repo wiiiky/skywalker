@@ -21,13 +21,13 @@ package plugin
 type SWPlugin interface {
     Init()
 
-    FromClientToClientAgent([]byte) []byte
-    FromClientAgentToServerAgent([]byte) []byte
-    FromServerAgentToServer([]byte) []byte
+    FromClientToClientAgent([]byte)
+    FromClientAgentToServerAgent([]byte)
+    FromServerAgentToServer([]byte)
 
-    FromServerToServerAgent([]byte) []byte
-    FromServerAgentToClientAgent([]byte) []byte
-    FromClientAgentToClient([]byte) []byte
+    FromServerToServerAgent([]byte)
+    FromServerAgentToClientAgent([]byte)
+    FromClientAgentToClient([]byte)
     
     AtExit()
 }

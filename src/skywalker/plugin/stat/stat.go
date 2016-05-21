@@ -45,34 +45,28 @@ func (p *StatPlugin) Init() {
     p.ca2c = 0
 }
 
-func (p *StatPlugin) FromClientToClientAgent(data []byte) []byte {
+func (p *StatPlugin) FromClientToClientAgent(data []byte) {
     p.c2ca += uint64(len(data))
-    return data
 }
 
-func (p *StatPlugin) FromClientAgentToServerAgent(data []byte) []byte {
+func (p *StatPlugin) FromClientAgentToServerAgent(data []byte) {
     p.ca2sa += uint64(len(data))
-    return data
 }
 
-func (p *StatPlugin) FromServerAgentToServer(data []byte) []byte {
+func (p *StatPlugin) FromServerAgentToServer(data []byte) {
     p.sa2s += uint64(len(data))
-    return data
 }
 
-func (p *StatPlugin) FromServerToServerAgent(data []byte) []byte {
+func (p *StatPlugin) FromServerToServerAgent(data []byte) {
     p.s2sa += uint64(len(data))
-    return data
 }
 
-func (p *StatPlugin) FromServerAgentToClientAgent(data []byte) []byte {
+func (p *StatPlugin) FromServerAgentToClientAgent(data []byte) {
     p.sa2ca += uint64(len(data))
-    return data
 }
 
-func (p *StatPlugin) FromClientAgentToClient(data []byte) []byte {
+func (p *StatPlugin) FromClientAgentToClient(data []byte) {
     p.ca2c += uint64(len(data))
-    return data
 }
 
 func (p *StatPlugin) AtExit(){
