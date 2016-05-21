@@ -56,7 +56,7 @@ func CallPluginsMethod(name string, data interface{}) {
             plugin := plugins[i]
             method := reflect.ValueOf(plugin).MethodByName(name)
             args := []reflect.Value{reflect.ValueOf(d)}
-            data = method.Call(args)[0].Bytes()
+            method.Call(args)
         }
     }
     switch d := data.(type){
