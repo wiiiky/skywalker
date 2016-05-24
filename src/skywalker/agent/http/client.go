@@ -95,5 +95,5 @@ func (a *HTTPClientAgent) FromServerAgent(data []byte) (interface{}, interface{}
     return nil, data, nil
 }
 
-func (a *HTTPClientAgent) OnClose(){
+func (a *HTTPClientAgent) OnClose(bool){
 }

@@ -60,5 +60,5 @@ func (a *DirectAgent) FromClientAgent(data []byte) (interface{}, interface{}, er
     return nil, data, nil
 }
 
-func (a *DirectAgent) OnClose() {
+func (a *DirectAgent) OnClose(bool) {
 }

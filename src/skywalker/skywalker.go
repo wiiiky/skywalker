@@ -153,14 +153,13 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                           c2s chan *internal.InternalPackage,
                           s2c chan *internal.InternalPackage,
                           cConn net.Conn) {
-    defer cAgent.OnClose()
     defer cConn.Close()
     defer close(c2s)
 
     cChan := getConnectionChannel(cConn)
 
     var chain string
-    closed_by := "Client"
+    closed_by_client := true
     RUNNING:
     for {
         select {
@@ -180,13 +179,14 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
             case pkg, ok := <- s2c:
                 /* 来自服务端代理的数据 */
                 if ok == false {
-                    closed_by = "Server"
+                    closed_by_client = false
                     break RUNNING
                 } else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
                     config.CallPluginsMethod("FromServerAgentToClientAgent", pkg.Data.([]byte))
                     tdata, rdata, err := cAgent.FromServerAgent(pkg.Data.([]byte))
                     config.CallPluginsMethod("FromClientAgentToClient", rdata)
                     if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
+                        closed_by_client = false
                         log.DEBUG("receive data from server agent to client agent error, %s",
                                   _err.Error())
                         break RUNNING
@@ -196,12 +196,11 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                     if result.Result == internal.CONNECT_RESULT_OK {
                         chain = cConn.RemoteAddr().String() + " <==> " + result.Hostname
                         log.INFO("%s Connected", chain)
-                    } else {
-                        closed_by = "Server"
                     }
                     tdata, rdata, err := cAgent.OnConnectResult(result)
                     err = transferData(c2s, cConn, tdata, rdata, err)
                     if result.Result != internal.CONNECT_RESULT_OK || err != nil {
+                        closed_by_client = false
                         break RUNNING
                     }
                 } else {
@@ -209,7 +208,12 @@ func clientGoroutine(id uint, cAgent agent.ClientAgent,
                 }
         }
     }
-    log.INFO("%s Closed By %s", chain, closed_by)
+    cAgent.OnClose(closed_by_client)
+    if closed_by_client {
+        log.INFO("%s Closed By Client", chain)
+    } else {
+        log.INFO("%s Closed By Server", chain)
+    }
 }
 
 /*
@@ -259,7 +263,6 @@ func connectRemote(hostname string, sAgent agent.ServerAgent,
 func serverGoroutine(id uint, sAgent agent.ServerAgent,
                      c2s chan *internal.InternalPackage,
                      s2c chan *internal.InternalPackage) {
-    defer sAgent.OnClose()
     defer close(s2c)
 
     /* 获取服务器地址 */
@@ -272,19 +275,21 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
         return
     }
 
-
+    closed_by_client := true
     RUNNING:
     for {
         select {
             case data, ok := <-sChan:
                 /* 来自服务端的数据 */
                 if ok == false {
+                    closed_by_client = false
                     break RUNNING
                 }
                 config.CallPluginsMethod("FromServerToServerAgent", data)
                 tdata, rdata, err := sAgent.FromServer(data)
                 config.CallPluginsMethod("FromServerAgentToServer", rdata);
                 if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
+                    closed_by_client = false
                     log.DEBUG("transfer data from server agent to client agent error, %s",
                               _err.Error())
                     break RUNNING
@@ -315,4 +320,5 @@ func serverGoroutine(id uint, sAgent agent.ServerAgent,
         }
     }
     sConn.Close()
+    sAgent.OnClose(closed_by_client)
 }

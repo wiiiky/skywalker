@@ -40,18 +40,26 @@ func NewShadowSocksServerAgent() agent.ServerAgent {
  * 其命名逻辑是面向服务器的代理
  */
 type ShadowSocksServerAgent struct {
+    cipherInfo *cipher.CipherInfo
     encrypter cipher.Encrypter
     decrypter cipher.Decrypter
     key []byte
     iv []byte
 
+    serverAddr string
+    serverPort string
     targetAddr string
     targetPort string
+    
+    /* SS连接是否成功 */
+    connected bool
 }
 
 type ssServerAddress struct {
     serverAddr string
     serverPort string
+    password string
+    method string
 }
 
 /* 配置参数 */
@@ -66,14 +74,27 @@ type ssServerConfig struct {
     retry int   /* 每个服务器的重试次数，没人为3 */
     sindex int  /* 当前选中的服务器 */
     try int     /* 当前尝试次数 */
-
-    cipherInfo *cipher.CipherInfo
 }
 
 /* 保存全局的配置，配置只读取一次 */
 var (
     serverConfig ssServerConfig
 )
+
+/* 更改当前服务器 */
+func (scfg *ssServerConfig) changeServer() {
+    if len(scfg.serverAddrs) > 0{
+        /* 考虑更换服务器 */
+        if scfg.try += 1; scfg.try >= scfg.retry {
+            serverConfig.try = 0
+            if scfg.sindex += 1; scfg.sindex >= len(scfg.serverAddrs) {
+                scfg.sindex = 0
+            }
+            addr := scfg.serverAddrs[scfg.sindex]
+            log.DEBUG("change server to %s:%s", addr.serverAddr, addr.serverPort)
+        }
+    }
+}
 
 
 func (p *ShadowSocksServerAgent) Name() string {
@@ -90,38 +111,37 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
     val, ok = cfg["serverAddress[]"]
     if ok == true {
         array := val.([]interface{})
+        
         for _, ele := range array {
-            m, ok1 := ele.(map[string]interface{})
-            if ok1 == false {
+            m, ok := ele.(map[string]interface{})
+            if !ok {
                 return agent.NewAgentError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
             }
-            val1, ok2 := m["serverAddr"]
-            val2, ok3 := m["serverPort"]
-            if ok2 == false || ok3 == false {
+            addr := utils.GetMapString(m, "serverAddr")
+            port := utils.GetMapInt(m, "serverPort")
+            password := utils.GetMapString(m, "password")
+            method := utils.GetMapString(m, "method")
+            if len(addr) == 0 || port == 0 {
                 return agent.NewAgentError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
             }
-            addr, ok4 := val1.(string)
-            port, ok5 := val2.(float64)
-            if ok4 == false || ok5 == false {
-                return agent.NewAgentError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
+            saddr := ssServerAddress{
+                serverAddr: addr,
+                serverPort: strconv.Itoa(int(port)),
+                password: password,
+                method: method,
             }
-            serverAddrs = append(serverAddrs, ssServerAddress{addr, strconv.Itoa(int(port))})
+            serverAddrs = append(serverAddrs, saddr)
         } 
     }
-    
+
     if len(serverAddrs) == 0 {
-        /* 指定了serverAddress 时则忽略serverAddr/serverPort */
-        if val, ok = cfg["serverAddr"]; ok == true {
-            if serverAddr = val.(string); len(serverAddr) == 0{
-                return agent.NewAgentError(ERROR_INVALID_CONFIG, "no server address")
-            }
+        if serverAddr = utils.GetMapString(cfg, "serverAddr"); len(serverAddr) == 0{
+            return agent.NewAgentError(ERROR_INVALID_CONFIG, "no server address")
         }
-        if val, ok = cfg["serverPort"]; ok == true {
-            if port, ok1 := val.(float64); ok1 == true && port > 0{
-                serverPort = strconv.Itoa(int(port))
-            } else {
-                return agent.NewAgentError(ERROR_INVALID_CONFIG, "no server port")
-            }
+        if port := utils.GetMapInt(cfg, "serverPort"); port > 0 {
+            serverPort = strconv.Itoa(int(port))
+        } else {
+            return agent.NewAgentError(ERROR_INVALID_CONFIG, "no server port")
         }
         go utils.GetHostAddress(serverAddr)
     } else {
@@ -134,37 +154,17 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
             }
         }
     }
-    
-    val, ok = cfg["password"]
-    if ok == false {
-        return agent.NewAgentError(ERROR_INVALID_CONFIG, "password not found")
-    }
-    password, ok = val.(string)
-    if ok == false {
-        return agent.NewAgentError(ERROR_INVALID_CONFIG, "password must be type of string")
-    }
-    val, ok = cfg["method"]
-    if ok == false {
-        method = "aes-256-cfb"      /* 默认加密方式 */
-    }else{
-        method, ok = val.(string)
-        if ok == false {
-            return agent.NewAgentError(ERROR_INVALID_CONFIG, "method must be type of string")
-        }
-    }
-
-    /* 验证加密方式 */
-    info := cipher.GetCipherInfo(strings.ToLower(method))
-    if info == nil {
-        return agent.NewAgentError(ERROR_INVALID_CONFIG, "unknown cipher method")
+    password = utils.GetMapString(cfg, "password")
+    method = utils.GetMapString(cfg, "method")
+    if len(method) == 0 {
+        method = "aes-256-cfb"
     }
 
 
     serverConfig.serverAddr=serverAddr
     serverConfig.serverPort=serverPort
     serverConfig.password=password
-    serverConfig.method=strings.ToLower(method)
-    serverConfig.cipherInfo=info
+    serverConfig.method=method
     serverConfig.serverAddrs = serverAddrs
     serverConfig.retry = retry
     serverConfig.sindex = 0
@@ -176,27 +176,47 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 
 
 /* 初始化读取配置 */
-func (p *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
-    key := generateKey([]byte(serverConfig.password), serverConfig.cipherInfo.KeySize)
-    iv := generateIV(serverConfig.cipherInfo.IvSize)
+func (a *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
+    var password, method, serverAddr, serverPort string
+    if len(serverConfig.serverAddrs) > 0 {
+        addrinfo := serverConfig.serverAddrs[serverConfig.sindex]
+        password = addrinfo.password
+        method = addrinfo.method
+        serverAddr = addrinfo.serverAddr
+        serverPort = addrinfo.serverPort
+    }
+    if len(password) == 0 {
+        password = serverConfig.password
+    }
+    if len(method) == 0 {
+        method = serverConfig.method
+    }
+    if len(serverAddr) == 0 {
+        serverAddr = serverConfig.serverAddr
+    }
+    if len(serverPort) == 0 {
+        serverPort = serverConfig.serverPort
+    }
+    info := cipher.GetCipherInfo(strings.ToLower(method))
+    key := generateKey([]byte(password), info.KeySize)
+    iv := generateIV(info.IvSize)
 
-    p.encrypter = serverConfig.cipherInfo.EncrypterFunc(key, iv)
-    p.decrypter = nil
-    p.key = key
-    p.iv = iv
+    a.cipherInfo = info
+    a.serverAddr = serverAddr
+    a.serverPort = serverPort
+    a.encrypter = info.EncrypterFunc(key, iv)
+    a.decrypter = nil
+    a.key = key
+    a.iv = iv
+    a.connected = false
     return nil
 }
 
-func (p *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (string, string) {
-    p.targetAddr = addr
-    p.targetPort = port
+func (a *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (string, string) {
+    a.targetAddr = addr
+    a.targetPort = port
 
-    if len(serverConfig.serverAddrs) == 0 {
-        return serverConfig.serverAddr, serverConfig.serverPort
-    } else {
-        addr := serverConfig.serverAddrs[serverConfig.sindex]
-        return addr.serverAddr, addr.serverPort
-    }
+    return a.serverAddr, a.serverPort
 }
 
 
@@ -213,28 +233,19 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result internal.ConnectResult) 
         return nil, buf.Bytes() , nil
     }
     /* 出错 */
-    if len(serverConfig.serverAddrs) > 0{
-        /* 考虑更换服务器 */
-        if serverConfig.try += 1; serverConfig.try >= serverConfig.retry {
-            serverConfig.try = 0
-            if serverConfig.sindex += 1; serverConfig.sindex >= len(serverConfig.serverAddrs) {
-                serverConfig.sindex = 0
-            }
-            addr := serverConfig.serverAddrs[serverConfig.sindex]
-            log.DEBUG("change server to %s:%s", addr.serverAddr, addr.serverPort)
-        }
-    }
+    serverConfig.changeServer()
     return nil, nil, nil
 }
 
 func (a *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {
     if a.decrypter == nil {
-        if len(data) < serverConfig.cipherInfo.IvSize {
+        if len(data) < a.cipherInfo.IvSize {
             return nil, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE, "invalid package")
         }
-        iv := data[:serverConfig.cipherInfo.IvSize]
-        data = data[serverConfig.cipherInfo.IvSize:]
-        a.decrypter = serverConfig.cipherInfo.DecrypterFunc(a.key, iv)
+        iv := data[:a.cipherInfo.IvSize]
+        data = data[a.cipherInfo.IvSize:]
+        a.decrypter = a.cipherInfo.DecrypterFunc(a.key, iv)
+        a.connected = true
     }
     return a.decrypter.Decrypt(data), nil, nil
 }
@@ -243,5 +254,9 @@ func (a *ShadowSocksServerAgent) FromClientAgent(data []byte) (interface{}, inte
     return nil, a.encrypter.Encrypt(data), nil
 }
 
-func (a *ShadowSocksServerAgent) OnClose() {
+func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
+    if !closed_by_client && !a.connected {
+        log.DEBUG("Connection Closed Unexpectedly")
+        serverConfig.changeServer()
+    }
 }

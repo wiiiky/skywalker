@@ -59,7 +59,7 @@ type ClientAgent interface {
     FromServerAgent([]byte) (interface{}, interface{}, error)
 
     /* 关闭链接，释放资源，收尾工作 */
-    OnClose()
+    OnClose(bool)
 }
 
 /*
@@ -98,5 +98,5 @@ type ServerAgent interface {
     FromClientAgent([]byte) (interface{}, interface{}, error)
 
     /* 关闭链接，释放资源，收尾工作 */
-    OnClose()
+    OnClose(bool)
 }

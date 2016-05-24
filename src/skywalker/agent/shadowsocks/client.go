@@ -154,5 +154,5 @@ func (p *ShadowSocksClientAgent) FromServerAgent(data []byte) (interface{}, inte
     return nil, rdata, nil
 }
 
-func (p *ShadowSocksClientAgent) OnClose() {
+func (p *ShadowSocksClientAgent) OnClose(bool) {
 }

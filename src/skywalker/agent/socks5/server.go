@@ -167,5 +167,5 @@ func (a *Socks5ServerAgent) FromClientAgent(data []byte) (interface{}, interface
     return nil, data, nil
 }
 
-func (a *Socks5ServerAgent) OnClose(){
+func (a *Socks5ServerAgent) OnClose(bool){
 }
