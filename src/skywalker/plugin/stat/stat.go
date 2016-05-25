@@ -73,14 +73,15 @@ func (p *StatPlugin) AtExit(){
     fmt.Println("---------------------------------------")
     formatData := func(size uint64) string{
         var f string
+        s := float64(size)
         if(size < 1024) {
-            f = fmt.Sprintf("%v B", size)
+            f = fmt.Sprintf("%v B", s)
         }else if(size < 1024 * 1024) {
-            f = fmt.Sprintf("%v KB", size/1024.0)
+            f = fmt.Sprintf("%v KB", s/1024.0)
         }else if(size < 1024 * 1024 * 1024) {
-            f = fmt.Sprintf("%v MB", size/1024.0/1024.0)
+            f = fmt.Sprintf("%v MB", s/1024.0/1024.0)
         }else {
-            f = fmt.Sprintf("%v GB", size/1024.0/1024.0/1024.0)
+            f = fmt.Sprintf("%v GB", s/1024.0/1024.0/1024.0)
         }
         return f
     }
