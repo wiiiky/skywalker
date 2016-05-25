@@ -32,10 +32,11 @@ type LoggerConfig struct {
 }
 
 var (
-    debugLogger *log.Logger = nil
-    infoLogger *log.Logger = log.New(os.Stdout, "[INFO]", log.Ldate|log.Ltime)
-    warningLogger *log.Logger = log.New(os.Stdout, "[WARNING]", log.Ldate|log.Ltime)
-    errorLogger *log.Logger = log.New(os.Stdout, "[ERROR]", log.Ldate|log.Ltime)
+    logFlag int = log.Ldate | log.Ltime
+    debugLogger *log.Logger = log.New(os.Stdout, "\x1b[36m[DEBUG]\x1b[0m", logFlag)
+    infoLogger *log.Logger = log.New(os.Stdout, "\x1b[34m[INFO]\x1b[0m", logFlag)
+    warningLogger *log.Logger = log.New(os.Stderr, "\x1b[33m[WARNING]\x1b[0m", logFlag)
+    errorLogger *log.Logger = log.New(os.Stderr, "\x1b[31m[ERROR]\x1b[0m", logFlag)
 )
 
 /* 初始化日志模块 */
@@ -61,23 +62,19 @@ func Init(loggers []LoggerConfig) {
         } 
         switch level {
             case "DEBUG":
-                debugLogger = log.New(fd, "[DEBUG]", log.Ldate|log.Ltime)
+                debugLogger = log.New(fd, "[DEBUG]", logFlag)
             case "INFO":
-                infoLogger = log.New(fd, "[INFO]", log.Ldate|log.Ltime)
+                infoLogger = log.New(fd, "[INFO]", logFlag)
             case "WARNING":
-                warningLogger = log.New(fd, "[WARNING]", log.Ldate|log.Ltime)
+                warningLogger = log.New(fd, "[WARNING]", logFlag)
             case "ERROR":
-                errorLogger = log.New(fd, "[ERROR]", log.Ldate|log.Ltime)
+                errorLogger = log.New(fd, "[ERROR]", logFlag)
             default:
                 if fd != os.Stderr && fd != os.Stdout {
                     fd.Close()
                 }
         }
     }
-//    debugLogger = log.New(os.Stdout, "[DEBUG]", log.Ldate|log.Ltime)
-//    infoLogger = log.New(os.Stdout, "[INFO]", log.Ldate|log.Ltime)
-//    warningLogger = log.New(os.Stderr, "[WARNING]", log.Ldate|log.Ltime)
-//    errorLogger = log.New(os.Stderr, "[ERROR]", log.Ldate|log.Ltime)
 }
 
 func DEBUG(fmt string, v ...interface{}) {
