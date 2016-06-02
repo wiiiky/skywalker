@@ -37,14 +37,15 @@ var (
     plugins = []plugin.SWPlugin{}
 )
 
-func initPlugin(ps []string){
+func initPlugin(ps []PluginConfig){
     for i := range ps {
-        f := pluginMap[ps[i]]
+        pc := ps[i]
+        f := pluginMap[pc.Name]
         if f == nil {
             log.WARNING("Plugin %s Not Found", ps[i])
         } else {
             p := f()
-            p.Init()
+            p.Init(pc.Config)
             plugins = append(plugins, p)
         }
     }

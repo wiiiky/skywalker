@@ -18,14 +18,15 @@
 package config
 
 import (
-    "os"
-    "fmt"
     "flag"
-    "io/ioutil"
-    "encoding/json"
     "skywalker/log"
     "skywalker/utils"
 )
+
+type PluginConfig struct {
+    Name string                     `json:"name"`
+    Config map[string]interface{}   `json:"config"`
+}
 
 /* 服务配置 */
 type ProxyConfig struct {
@@ -42,7 +43,7 @@ type ProxyConfig struct {
 
     CacheTimeout int64          `json:"cacheTimeout"`
     
-    Plugins []string            `json:"plugins"`
+    Plugins []PluginConfig            `json:"plugins"`
 }
 
 var (
@@ -56,21 +57,12 @@ var (
     }
 )
 
-func fatalError(format string, params ...interface{}) {
-    fmt.Printf("*ERROR* " + format + "\n", params...)
-    os.Exit(1)
-}
 
 func init() {
     configFile := flag.String("c", "./config.json", "the config file")
     flag.Parse()
-    data, err := ioutil.ReadFile(*configFile)
-    if err != nil {
-        fatalError("Cannot Cannot Open Config File '%s': %s", *configFile, err.Error())
-    }
-    err = json.Unmarshal(data, &Config)
-    if err != nil {
-        fatalError("Fail To Load Config File '%s': %s", *configFile, err.Error())
+    if !utils.ReadJSONFile(*configFile, &Config) {
+        utils.FatalError("Fail To Load Config From %s", configFile)
     }
     log.Init(Config.Logger)
     utils.Init(Config.CacheTimeout)
@@ -78,19 +70,19 @@ func init() {
     /* 初始化代理 */
     clientAgent := getClientAgent()
     if clientAgent == nil {
-        fatalError("Client Protocol [%s] Not Found!", Config.ClientProtocol)
+        utils.FatalError("Client Protocol [%s] Not Found!", Config.ClientProtocol)
     } else if err := clientAgent.OnInit(Config.ClientConfig); err != nil {
-        fatalError("Fail To Initialize [%s]:%s", clientAgent.Name(), err.Error())
+        utils.FatalError("Fail To Initialize [%s]:%s", clientAgent.Name(), err.Error())
     }
 
     serverAgent := getServerAgent()
     if serverAgent == nil {
-        fatalError("Server Protocol [%s] Not Found!", Config.ServerProtocol)
+        utils.FatalError("Server Protocol [%s] Not Found!", Config.ServerProtocol)
     } else if err := serverAgent.OnInit(Config.ServerConfig); err != nil {
-        fatalError("Fail To Initialize [%s]:%s", serverAgent.Name(), err.Error())
+        utils.FatalError("Fail To Initialize [%s]:%s", serverAgent.Name(), err.Error())
     }
-    
-    
+
+
     /* 初始化插件 */
     initPlugin(Config.Plugins)
 }

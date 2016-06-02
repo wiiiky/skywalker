@@ -19,7 +19,7 @@ package plugin
 
 
 type SWPlugin interface {
-    Init()
+    Init(map[string]interface{})
 
     FromClientToClientAgent([]byte)
     FromClientAgentToServerAgent([]byte)

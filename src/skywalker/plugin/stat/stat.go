@@ -19,54 +19,58 @@ package stat
 
 import (
     "fmt"
+    "skywalker/log"
+    "skywalker/utils"
     "skywalker/plugin"
 )
 
 type StatPlugin struct {
-    c2ca uint64
-    ca2sa uint64
-    sa2s uint64
+    C2CA uint64     `json:"c2ca"`
+    CA2SA uint64    `json:"ca2sa"`
+    SA2S uint64     `json:"sa2s"`
 
-    s2sa uint64
-    sa2ca uint64
-    ca2c uint64
+    S2SA uint64     `json:"s2sa"`
+    SA2CA uint64    `json:"sa2ca"`
+    CA2C uint64     `json:"ca2c"`
+
+    sfile string        /* 用户保存流量数据的文件 */
 }
 
 func NewStatPlugin() plugin.SWPlugin{
     return &StatPlugin{}
 }
 
-func (p *StatPlugin) Init() {
-    p.c2ca = 0
-    p.ca2sa = 0
-    p.sa2s = 0
-    p.s2sa = 0
-    p.sa2ca = 0
-    p.ca2c = 0
+func (p *StatPlugin) Init(cfg map[string]interface{}) {
+    p.sfile = utils.GetMapString(cfg, "save")
+    if len(p.sfile) > 0 {
+        p.sfile = utils.ExpandPath(p.sfile)
+        utils.ReadJSONFile(p.sfile, &p)
+        log.DEBUG("read stat from %s", p.sfile)
+    }
 }
 
 func (p *StatPlugin) FromClientToClientAgent(data []byte) {
-    p.c2ca += uint64(len(data))
+    p.C2CA += uint64(len(data))
 }
 
 func (p *StatPlugin) FromClientAgentToServerAgent(data []byte) {
-    p.ca2sa += uint64(len(data))
+    p.CA2SA += uint64(len(data))
 }
 
 func (p *StatPlugin) FromServerAgentToServer(data []byte) {
-    p.sa2s += uint64(len(data))
+    p.SA2S += uint64(len(data))
 }
 
 func (p *StatPlugin) FromServerToServerAgent(data []byte) {
-    p.s2sa += uint64(len(data))
+    p.S2SA += uint64(len(data))
 }
 
 func (p *StatPlugin) FromServerAgentToClientAgent(data []byte) {
-    p.sa2ca += uint64(len(data))
+    p.SA2CA += uint64(len(data))
 }
 
 func (p *StatPlugin) FromClientAgentToClient(data []byte) {
-    p.ca2c += uint64(len(data))
+    p.CA2C += uint64(len(data))
 }
 
 func (p *StatPlugin) AtExit(){
@@ -85,5 +89,8 @@ func (p *StatPlugin) AtExit(){
         }
         return f
     }
-    fmt.Printf("Sent: %s\tReceived: %s\n", formatData(p.sa2s), formatData(p.s2sa))
+    fmt.Printf("Sent: %s\tReceived: %s\n", formatData(p.SA2S), formatData(p.S2SA))
+    if len(p.sfile) > 0 {
+        utils.SaveJSONFile(p.sfile, p)
+    }
 }
