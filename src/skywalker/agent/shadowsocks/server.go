@@ -82,11 +82,11 @@ var (
 )
 
 /* 更改当前服务器 */
-func (scfg *ssServerConfig) changeServer() {
-    if len(scfg.serverAddrs) > 0{
-        /* 考虑更换服务器 */
+func (scfg *ssServerConfig) changeServer(server string) {
+    if len(scfg.serverAddrs) > 0 && scfg.serverAddrs[scfg.sindex].serverAddr == server {
+        /* 出错次数过多就考虑更换服务器 */
         if scfg.try += 1; scfg.try >= scfg.retry {
-            serverConfig.try = 0
+            scfg.try = 0
             if scfg.sindex += 1; scfg.sindex >= len(scfg.serverAddrs) {
                 scfg.sindex = 0
             }
@@ -94,6 +94,31 @@ func (scfg *ssServerConfig) changeServer() {
             log.DEBUG("change server to %s:%s", addr.serverAddr, addr.serverPort)
         }
     }
+}
+
+/* 返回当前服务的信息 */
+func (scfg *ssServerConfig) serverInfo() (string, string, string, string) {
+    var password, method, serverAddr, serverPort string
+    if len(scfg.serverAddrs) > 0 {
+        addrinfo := scfg.serverAddrs[serverConfig.sindex]
+        password = addrinfo.password
+        method = addrinfo.method
+        serverAddr = addrinfo.serverAddr
+        serverPort = addrinfo.serverPort
+    }
+    if len(password) == 0 {
+        password = scfg.password
+    }
+    if len(method) == 0 {
+        method = scfg.method
+    }
+    if len(serverAddr) == 0 {
+        serverAddr = scfg.serverAddr
+    }
+    if len(serverPort) == 0 {
+        serverPort = scfg.serverPort
+    }
+    return serverAddr, serverPort, password, method
 }
 
 
@@ -177,26 +202,7 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 
 /* 初始化读取配置 */
 func (a *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
-    var password, method, serverAddr, serverPort string
-    if len(serverConfig.serverAddrs) > 0 {
-        addrinfo := serverConfig.serverAddrs[serverConfig.sindex]
-        password = addrinfo.password
-        method = addrinfo.method
-        serverAddr = addrinfo.serverAddr
-        serverPort = addrinfo.serverPort
-    }
-    if len(password) == 0 {
-        password = serverConfig.password
-    }
-    if len(method) == 0 {
-        method = serverConfig.method
-    }
-    if len(serverAddr) == 0 {
-        serverAddr = serverConfig.serverAddr
-    }
-    if len(serverPort) == 0 {
-        serverPort = serverConfig.serverPort
-    }
+    serverAddr, serverPort, password, method := serverConfig.serverInfo()
     info := cipher.GetCipherInfo(strings.ToLower(method))
     key := generateKey([]byte(password), info.KeySize)
     iv := generateIV(info.IvSize)
@@ -233,7 +239,7 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result internal.ConnectResult) 
         return nil, buf.Bytes() , nil
     }
     /* 出错 */
-    serverConfig.changeServer()
+    serverConfig.changeServer(a.serverAddr)
     return nil, nil, nil
 }
 
@@ -255,8 +261,8 @@ func (a *ShadowSocksServerAgent) FromClientAgent(data []byte) (interface{}, inte
 }
 
 func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
-    if !closed_by_client && !a.connected {
+    if !closed_by_client && !a.connected {  /* 没有建立链接就断开，且不是客户端断开的 */
         log.DEBUG("Connection Closed Unexpectedly")
-        serverConfig.changeServer()
+        serverConfig.changeServer(a.serverAddr)
     }
 }
