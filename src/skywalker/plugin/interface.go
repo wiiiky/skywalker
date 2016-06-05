@@ -17,17 +17,16 @@
 
 package plugin
 
-
 type SWPlugin interface {
-    Init(map[string]interface{})
+	Init(map[string]interface{})
 
-    FromClientToClientAgent([]byte)
-    FromClientAgentToServerAgent([]byte)
-    FromServerAgentToServer([]byte)
+	FromClientToClientAgent([]byte)
+	FromClientAgentToServerAgent([]byte)
+	FromServerAgentToServer([]byte)
 
-    FromServerToServerAgent([]byte)
-    FromServerAgentToClientAgent([]byte)
-    FromClientAgentToClient([]byte)
-    
-    AtExit()
+	FromServerToServerAgent([]byte)
+	FromServerAgentToClientAgent([]byte)
+	FromClientAgentToClient([]byte)
+
+	AtExit()
 }

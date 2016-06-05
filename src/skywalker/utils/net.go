@@ -18,65 +18,64 @@
 package utils
 
 import (
-    "net"
-    "strconv"
-    "skywalker/internal"
+	"net"
+	"skywalker/internal"
+	"strconv"
 )
 
 /*
  * 将int、uint16类型的转化为字符串形式
  */
 func ConvertToString(port interface{}) string {
-    var portStr string
-    switch p := port.(type) {
-        case int:
-            portStr = strconv.Itoa(p)
-        case uint16:
-            portStr = strconv.Itoa(int(p))
-        case string:
-            portStr = p
-        default:
-            portStr = ""
-    }
-    return portStr
+	var portStr string
+	switch p := port.(type) {
+	case int:
+		portStr = strconv.Itoa(p)
+	case uint16:
+		portStr = strconv.Itoa(int(p))
+	case string:
+		portStr = p
+	default:
+		portStr = ""
+	}
+	return portStr
 }
 
 /*  DNS缓存 */
 var (
-    hostCache Cache
+	hostCache Cache
 )
 
 func Init(timeout int64) {
-    hostCache = NewLRUCache(timeout)
+	hostCache = NewLRUCache(timeout)
 }
-
 
 /* 从缓存中获取DNS结果，如果没找到则发起解析 */
 func GetHostAddress(host string) string {
-    ip := hostCache.GetString(host)
-    if len(ip) == 0 {
-        ips, err := net.LookupIP(host)
-        if err != nil || len(ips) == 0 {
-            return ""
-        }
-        ip = ips[0].String()
-        hostCache.Set(host, ip)
-    }
-    return ip
+	ip := hostCache.GetString(host)
+	if len(ip) == 0 {
+		ips, err := net.LookupIP(host)
+		if err != nil || len(ips) == 0 {
+			return ""
+		}
+		ip = ips[0].String()
+		hostCache.Set(host, ip)
+	}
+	return ip
 }
 
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
 func TcpConnect(host string, port interface{}) (net.Conn, int) {
-    ip := GetHostAddress(host)
-    if len(ip) == 0 {
-        return nil, internal.CONNECT_RESULT_UNKNOWN_HOST
-    }
-    addr := ip + ":" + ConvertToString(port)
-    conn, err := net.DialTimeout("tcp", addr, 10000000000)
-    if err != nil {
-        return nil, internal.CONNECT_RESULT_UNREACHABLE
-    }
-    return conn, internal.CONNECT_RESULT_OK
+	ip := GetHostAddress(host)
+	if len(ip) == 0 {
+		return nil, internal.CONNECT_RESULT_UNKNOWN_HOST
+	}
+	addr := ip + ":" + ConvertToString(port)
+	conn, err := net.DialTimeout("tcp", addr, 10000000000)
+	if err != nil {
+		return nil, internal.CONNECT_RESULT_UNREACHABLE
+	}
+	return conn, internal.CONNECT_RESULT_OK
 }

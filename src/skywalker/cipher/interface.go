@@ -17,15 +17,13 @@
 
 package cipher
 
-
 type newEncrypterFunc func([]byte, []byte) Encrypter
 type newDecrypterFunc func([]byte, []byte) Decrypter
 
-
 type Encrypter interface {
-    Encrypt([]byte) []byte
+	Encrypt([]byte) []byte
 }
 
 type Decrypter interface {
-    Decrypt([]byte) []byte
+	Decrypt([]byte) []byte
 }

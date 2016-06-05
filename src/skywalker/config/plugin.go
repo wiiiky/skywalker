@@ -17,71 +17,70 @@
 
 package config
 
-
 import (
-    "os"
-    "reflect"
-    "syscall"
-    "os/signal"
-    "skywalker/log"
-    "skywalker/plugin"
-    "skywalker/plugin/stat"
+	"os"
+	"os/signal"
+	"reflect"
+	"skywalker/log"
+	"skywalker/plugin"
+	"skywalker/plugin/stat"
+	"syscall"
 )
 
 type newPluginFunc func() plugin.SWPlugin
 
 var (
-    pluginMap = map[string] newPluginFunc{
-        "stat": stat.NewStatPlugin,
-    }
-    plugins = []plugin.SWPlugin{}
+	pluginMap = map[string]newPluginFunc{
+		"stat": stat.NewStatPlugin,
+	}
+	plugins = []plugin.SWPlugin{}
 )
 
-func initPlugin(ps []PluginConfig){
-    for i := range ps {
-        pc := ps[i]
-        f := pluginMap[pc.Name]
-        if f == nil {
-            log.WARNING("Plugin %s Not Found", ps[i])
-        } else {
-            p := f()
-            p.Init(pc.Config)
-            plugins = append(plugins, p)
-        }
-    }
+func initPlugin(ps []PluginConfig) {
+	for i := range ps {
+		pc := ps[i]
+		f := pluginMap[pc.Name]
+		if f == nil {
+			log.WARNING("Plugin %s Not Found", ps[i])
+		} else {
+			p := f()
+			p.Init(pc.Config)
+			plugins = append(plugins, p)
+		}
+	}
 }
 
 func CallPluginsMethod(name string, data interface{}) {
-    callPluginsMethod := func(d []byte){
-        for i := range plugins {
-            plugin := plugins[i]
-            method := reflect.ValueOf(plugin).MethodByName(name)
-            args := []reflect.Value{reflect.ValueOf(d)}
-            method.Call(args)
-        }
-    }
-    switch d := data.(type){
-        case string:
-            callPluginsMethod([]byte(d))
-        case []byte:
-            callPluginsMethod(d)
-        case [][]byte:
-            for _, _d := range d{
-                callPluginsMethod(_d)
-            }
-    }
+	callPluginsMethod := func(d []byte) {
+		for i := range plugins {
+			plugin := plugins[i]
+			method := reflect.ValueOf(plugin).MethodByName(name)
+			args := []reflect.Value{reflect.ValueOf(d)}
+			method.Call(args)
+		}
+	}
+	switch d := data.(type) {
+	case string:
+		callPluginsMethod([]byte(d))
+	case []byte:
+		callPluginsMethod(d)
+	case [][]byte:
+		for _, _d := range d {
+			callPluginsMethod(_d)
+		}
+	}
 }
 
 func init() {
-    ch := make(chan os.Signal, 1)
-    signal.Notify(ch, os.Interrupt, os.Kill, syscall.SIGTERM)
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, os.Kill, syscall.SIGTERM)
 
-     go func() {
-        <-ch
-        signal.Stop(ch)
-        for i := range plugins {
-            plugins[i].AtExit()
-        }
-        os.Exit(0)
-     }()
+	go func() {
+		<-ch
+		signal.Stop(ch)
+		for i := range plugins {
+			plugins[i].AtExit()
+		}
+		os.Exit(0)
+	}()
 }

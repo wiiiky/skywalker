@@ -17,82 +17,80 @@
 
 package config
 
-
 import (
-    "strings"
-    "skywalker/log"
-    "skywalker/agent"
-    "skywalker/agent/http"
-    "skywalker/agent/direct"
-    "skywalker/agent/socks5"
-    "skywalker/agent/shadowsocks"
+	"skywalker/agent"
+	"skywalker/agent/direct"
+	"skywalker/agent/http"
+	"skywalker/agent/shadowsocks"
+	"skywalker/agent/socks5"
+	"skywalker/log"
+	"strings"
 )
 
 type newClientAgentFunc func() agent.ClientAgent
 type newServerAgentFunc func() agent.ServerAgent
 
 var (
-    clientMap = map[string] newClientAgentFunc{
-        "http": http.NewHTTPClientAgent,
-        "socks5": socks5.NewSocks5ClientAgent,
-        "shadowsocks": shadowsocks.NewShadowSocksClientAgent,
-    }
-    serverMap = map[string] newServerAgentFunc{
-        "socks5": socks5.NewSocks5ServerAgent,
-        "direct": direct.NewDirectAgent,
-        "shadowsocks": shadowsocks.NewShadowSocksServerAgent,
-    }
+	clientMap = map[string]newClientAgentFunc{
+		"http":        http.NewHTTPClientAgent,
+		"socks5":      socks5.NewSocks5ClientAgent,
+		"shadowsocks": shadowsocks.NewShadowSocksClientAgent,
+	}
+	serverMap = map[string]newServerAgentFunc{
+		"socks5":      socks5.NewSocks5ServerAgent,
+		"direct":      direct.NewDirectAgent,
+		"shadowsocks": shadowsocks.NewShadowSocksServerAgent,
+	}
 )
 
-
 func getClientAgent() agent.ClientAgent {
-    protocol := strings.ToLower(Config.ClientProtocol)
-    newAgentFunc := clientMap[protocol]
-    if newAgentFunc == nil {
-        return nil
-    }
-    return newAgentFunc()
+	protocol := strings.ToLower(Config.ClientProtocol)
+	newAgentFunc := clientMap[protocol]
+	if newAgentFunc == nil {
+		return nil
+	}
+	return newAgentFunc()
 }
 
 func getServerAgent() agent.ServerAgent {
-    protocol := strings.ToLower(Config.ServerProtocol)
-    newAgentFunc := serverMap[protocol]
-    if newAgentFunc == nil {
-        return nil
-    }
-    return newAgentFunc()
+	protocol := strings.ToLower(Config.ServerProtocol)
+	newAgentFunc := serverMap[protocol]
+	if newAgentFunc == nil {
+		return nil
+	}
+	return newAgentFunc()
 }
 
 /*
  * 初始化客户端代理
  */
 func GetClientAgent() agent.ClientAgent {
-    agent := getClientAgent()
-    if agent == nil {
-        log.ERROR("Client Protocol [%s] Not Found!", Config.ClientProtocol)
-        return nil
-    }
-    err := agent.OnStart(Config.ClientConfig)
-    if err != nil {
-        log.WARNING("Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
-        return nil
-    }
-    return agent
+	agent := getClientAgent()
+	if agent == nil {
+		log.ERROR("Client Protocol [%s] Not Found!", Config.ClientProtocol)
+		return nil
+	}
+	err := agent.OnStart(Config.ClientConfig)
+	if err != nil {
+		log.WARNING("Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
+		return nil
+	}
+	return agent
 }
 
 /*
  * 初始化服务器代理
  */
 func GetServerAgent() agent.ServerAgent {
-    agent := getServerAgent()
-    if agent == nil {
-        log.ERROR("Server Protocol [%s] Not Found!", Config.ServerProtocol)
-        return nil
-    }
-    err := agent.OnStart(Config.ServerConfig)
-    if err != nil {
-        log.WARNING("Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())
-        return nil
-    }
-    return agent
+	agent := getServerAgent()
+	if agent == nil {
+		log.ERROR("Server Protocol [%s] Not Found!", Config.ServerProtocol)
+		return nil
+	}
+	err := agent.OnStart(Config.ServerConfig)
+	if err != nil {
+		log.WARNING("Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())
+		return nil
+	}
+	return agent
 }

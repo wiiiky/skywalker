@@ -18,66 +18,65 @@
 package utils
 
 import (
-    "time"
+	"time"
 )
 
-
 type Cache interface {
-    Get(string) interface{}
-    Set(string, interface{})
-    GetString(string) string
+	Get(string) interface{}
+	Set(string, interface{})
+	GetString(string) string
 
-    Timeout()
+	Timeout()
 }
 
 type cacheValue struct {
-    value interface{}
-    timestamp int64
+	value     interface{}
+	timestamp int64
 }
 
 type lruCache struct {
-    data map[string]cacheValue
-    timeout int64
+	data    map[string]cacheValue
+	timeout int64
 }
 
 func NewLRUCache(timeout int64) Cache {
-    return &lruCache{make(map[string]cacheValue), timeout}
+	return &lruCache{make(map[string]cacheValue), timeout}
 }
 
 func (c *lruCache) Timeout() {
 }
 
 func (c *lruCache) Get(key string) interface{} {
-    val, ok := c.data[key]
-    if ok == false {
-        return nil
-    }
-    now := time.Now().Unix()
-    if c.timeout == 0 || now - val.timestamp < c.timeout {
-        return val.value
-    }
-    delete(c.data, key)
-    return nil 
+	val, ok := c.data[key]
+	if ok == false {
+		return nil
+	}
+	now := time.Now().Unix()
+	if c.timeout == 0 || now-val.timestamp < c.timeout {
+		return val.value
+	}
+	delete(c.data, key)
+	return nil
 }
 
 func (c *lruCache) Set(key string, value interface{}) {
-    val, ok := c.data[key]
-    now := time.Now().Unix()
-    if ok == false {
-        c.data[key] = cacheValue{value, now}
-    }else {
-        val.value = value
-        val.timestamp = now
-    }
+	val, ok := c.data[key]
+	now := time.Now().Unix()
+	if ok == false {
+		c.data[key] = cacheValue{value, now}
+	} else {
+		val.value = value
+		val.timestamp = now
+	}
 }
 
 func (c *lruCache) GetString(key string) string {
-    val := c.Get(key)
-    switch data := val.(type) {
-        case string:
-            return data
-        case []byte:
-            return string(data)
-    }
-    return ""
+	val := c.Get(key)
+	switch data := val.(type) {
+	case string:
+		return data
+	case []byte:
+		return string(data)
+	}
+	return ""
 }

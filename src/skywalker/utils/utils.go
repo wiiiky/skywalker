@@ -18,61 +18,61 @@
 package utils
 
 import (
-    "os"
-    "fmt"
-    "os/user"
-    "io/ioutil"
-    "encoding/json"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/user"
 )
 
 func GetMapString(m map[string]interface{}, name string) string {
-    val, ok := m[name]
-    if !ok {
-        return ""
-    }
-    s, _ := val.(string)
-    return s
+	val, ok := m[name]
+	if !ok {
+		return ""
+	}
+	s, _ := val.(string)
+	return s
 }
 
 func GetMapInt(m map[string]interface{}, name string) int64 {
-    val, ok := m[name]
-    if !ok {
-        return 0
-    }
-    i, _ := val.(float64)
-    return int64(i)
+	val, ok := m[name]
+	if !ok {
+		return 0
+	}
+	i, _ := val.(float64)
+	return int64(i)
 }
 
 func ExpandPath(path string) string {
-    if len(path) >= 2 && path[:2] == "~/" {
-        user, _ := user.Current()
-        return user.HomeDir + path[1:]
-    }
-    return path
+	if len(path) >= 2 && path[:2] == "~/" {
+		user, _ := user.Current()
+		return user.HomeDir + path[1:]
+	}
+	return path
 }
 
 func FatalError(format string, params ...interface{}) {
-    fmt.Printf("*ERROR* " + format + "\n", params...)
-    os.Exit(1)
+	fmt.Printf("*ERROR* "+format+"\n", params...)
+	os.Exit(1)
 }
 
 func ReadJSONFile(path string, v interface{}) bool {
-    data, err := ioutil.ReadFile(path)
-    if err != nil {
-        return false
-    }
-    err = json.Unmarshal(data, v)
-    if err != nil {
-        return false
-    }
-    return true
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	err = json.Unmarshal(data, v)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func SaveJSONFile(path string, v interface{}) bool {
-    data, err := json.Marshal(v)
-    if err != nil {
-        return false
-    }
+	data, err := json.Marshal(v)
+	if err != nil {
+		return false
+	}
 
-    return ioutil.WriteFile(path, data, 0644) == nil
+	return ioutil.WriteFile(path, data, 0644) == nil
 }

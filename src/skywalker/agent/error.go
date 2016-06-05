@@ -18,23 +18,22 @@
 package agent
 
 import (
-    "fmt"
+	"fmt"
 )
-
 
 /*
  * 通用错误结构
  */
 type AgentError struct {
-    errcode int
-    message string
+	errcode int
+	message string
 }
 
 func (e *AgentError) Error() string {
-    return fmt.Sprintf("[%d]%s", e.errcode, e.message)
+	return fmt.Sprintf("[%d]%s", e.errcode, e.message)
 }
 
 func NewAgentError(errcode int, format string, params ...interface{}) *AgentError {
-    message := fmt.Sprintf(format, params...)
-    return &AgentError{errcode, message}
+	message := fmt.Sprintf(format, params...)
+	return &AgentError{errcode, message}
 }

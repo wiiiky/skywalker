@@ -16,10 +16,10 @@
 package chacha20
 
 import (
-	"unsafe"
-	"errors"
 	"crypto/cipher"
 	"encoding/binary"
+	"errors"
+	"unsafe"
 )
 
 const (

@@ -17,41 +17,38 @@
 
 package cipher
 
-
 import (
-    "crypto/rc4"
-    "crypto/md5"
-    _cipher "crypto/cipher"
+	_cipher "crypto/cipher"
+	"crypto/md5"
+	"crypto/rc4"
 )
 
 type rc4MD5Stream struct {
-    stream _cipher.Stream
+	stream _cipher.Stream
 }
 
 func (e *rc4MD5Stream) Encrypt(plain []byte) []byte {
-    return cipherStreamXOR(e.stream, plain)
+	return cipherStreamXOR(e.stream, plain)
 }
 
 func (e *rc4MD5Stream) Decrypt(plain []byte) []byte {
-    return cipherStreamXOR(e.stream, plain)
+	return cipherStreamXOR(e.stream, plain)
 }
 
-
-func newRC4MD5Stream(key, iv []byte) *rc4MD5Stream{
+func newRC4MD5Stream(key, iv []byte) *rc4MD5Stream {
 	h := md5.New()
 	h.Write(key)
 	h.Write(iv)
 	rc4key := h.Sum(nil)
 
-    stream, _ := rc4.NewCipher(rc4key)
+	stream, _ := rc4.NewCipher(rc4key)
 	return &rc4MD5Stream{stream}
 }
 
-
 func newRC4MD5Encrypter(key, iv []byte) Encrypter {
-    return newRC4MD5Stream(key, iv)
+	return newRC4MD5Stream(key, iv)
 }
 
 func newRC4MD5Decrypter(key, iv []byte) Decrypter {
-    return newRC4MD5Stream(key, iv)
+	return newRC4MD5Stream(key, iv)
 }

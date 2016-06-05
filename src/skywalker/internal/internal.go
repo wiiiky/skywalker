@@ -18,7 +18,7 @@
 package internal
 
 import (
-    "net"
+	"net"
 )
 
 /*
@@ -26,26 +26,26 @@ import (
  */
 
 const (
-    INTERNAL_PROTOCOL_DATA = 0
-    INTERNAL_PROTOCOL_CONNECT = 1
-    INTERNAL_PROTOCOL_CONNECT_RESULT = 2
+	INTERNAL_PROTOCOL_DATA           = 0
+	INTERNAL_PROTOCOL_CONNECT        = 1
+	INTERNAL_PROTOCOL_CONNECT_RESULT = 2
 )
 
 type InternalPackage struct {
-    CMD int           /* 命令 */
-    Data interface{}
+	CMD  int /* 命令 */
+	Data interface{}
 }
 
 func NewInternalPackage(cmd int, data interface{}) *InternalPackage {
-    return &InternalPackage{cmd, data}
+	return &InternalPackage{cmd, data}
 }
 
 /* 连接远程服务器的结果 */
 const (
-    CONNECT_RESULT_OK = 0
-    CONNECT_RESULT_UNKNOWN_HOST = 1
-    CONNECT_RESULT_UNREACHABLE = 2
-    CONNECT_RESULT_UNKNOWN_ERROR = 3
+	CONNECT_RESULT_OK            = 0
+	CONNECT_RESULT_UNKNOWN_HOST  = 1
+	CONNECT_RESULT_UNREACHABLE   = 2
+	CONNECT_RESULT_UNKNOWN_ERROR = 3
 )
 
 /*
@@ -55,11 +55,11 @@ const (
  * @Address  连接成功后是IP地址，否则为空
  */
 type ConnectResult struct {
-    Result int
-    Hostname string
-    Address net.Addr
+	Result   int
+	Hostname string
+	Address  net.Addr
 }
 
 func NewConnectResult(result int, hostname string, address net.Addr) ConnectResult {
-    return ConnectResult{result, hostname, address}
+	return ConnectResult{result, hostname, address}
 }

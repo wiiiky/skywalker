@@ -18,103 +18,103 @@
 package shadowsocks
 
 import (
-    "net"
-    "bytes"
-    "crypto/md5"
-    "crypto/rand"
-    "encoding/binary"
-    "skywalker/agent"
+	"bytes"
+	"crypto/md5"
+	"crypto/rand"
+	"encoding/binary"
+	"net"
+	"skywalker/agent"
 )
 
 const (
-    ERROR_INVALID_CONFIG = 1
-    ERROR_INVALID_TARGET = 2
-    ERROR_INVALID_PACKAGE = 3
-    ERROR_INVALID_PACKAGE_SIZE = 4
-    ERROR_INVALID_ADDRESS_TYPE = 5
+	ERROR_INVALID_CONFIG       = 1
+	ERROR_INVALID_TARGET       = 2
+	ERROR_INVALID_PACKAGE      = 3
+	ERROR_INVALID_PACKAGE_SIZE = 4
+	ERROR_INVALID_ADDRESS_TYPE = 5
 )
 
 /* 根据密码生成KEY */
 func generateKey(password []byte, klen int) []byte {
-    var last []byte = nil
-    total := 0
-    buf := bytes.Buffer{}
-    for total < klen {
-        data := append(last, password...)
-        checksum := md5.Sum(data)
-        last = checksum[:]
-        total += len(last)
-        buf.Write(last)
-    }
-    return buf.Bytes()[:klen]
+	var last []byte = nil
+	total := 0
+	buf := bytes.Buffer{}
+	for total < klen {
+		data := append(last, password...)
+		checksum := md5.Sum(data)
+		last = checksum[:]
+		total += len(last)
+		buf.Write(last)
+	}
+	return buf.Bytes()[:klen]
 }
 
 /* 随机生成IV */
 func generateIV(ilen int) []byte {
-    iv := make([]byte, ilen)
-    rand.Read(iv)
-    return iv
+	iv := make([]byte, ilen)
+	rand.Read(iv)
+	return iv
 }
 
 /* 生成连接请求 */
 func buildAddressRequest(addr string, port uint16) []byte {
-    buf := bytes.Buffer{}
+	buf := bytes.Buffer{}
 
-    ip := net.ParseIP(addr)
-    if ip == nil {  /* 域名 */
-        binary.Write(&buf, binary.BigEndian, uint8(3))
-        binary.Write(&buf, binary.BigEndian, uint8(len(addr)))
-        binary.Write(&buf, binary.BigEndian, []byte(addr))
-    }else {
-        if len(ip) == 4 {
-            binary.Write(&buf, binary.BigEndian, uint8(1))
-        } else {
-            binary.Write(&buf, binary.BigEndian, uint8(4))
-        }
-        binary.Write(&buf, binary.BigEndian, []byte(ip))
-    }
-    binary.Write(&buf, binary.BigEndian, port)
-    return buf.Bytes()
+	ip := net.ParseIP(addr)
+	if ip == nil { /* 域名 */
+		binary.Write(&buf, binary.BigEndian, uint8(3))
+		binary.Write(&buf, binary.BigEndian, uint8(len(addr)))
+		binary.Write(&buf, binary.BigEndian, []byte(addr))
+	} else {
+		if len(ip) == 4 {
+			binary.Write(&buf, binary.BigEndian, uint8(1))
+		} else {
+			binary.Write(&buf, binary.BigEndian, uint8(4))
+		}
+		binary.Write(&buf, binary.BigEndian, []byte(ip))
+	}
+	binary.Write(&buf, binary.BigEndian, port)
+	return buf.Bytes()
 }
 
 /* 解析连接请求 */
 func parseAddressRequest(data []byte) (string, uint16, []byte, error) {
-    if data == nil || len(data) < 7 {
-        return "", 0, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
-    }
-    atype := data[0]
-    var addr string
-    var port uint16
+	if data == nil || len(data) < 7 {
+		return "", 0, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
+	}
+	atype := data[0]
+	var addr string
+	var port uint16
 
-    if atype == byte(3) {   /* 域名 */
-        length := int(data[1])
-        if len(data) < length + 4 {
-            return "", 0, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
-        }
-        addr = string(data[2:2+length])
-        data = data[2+length:]
-    } else if atype == byte(1) {    /* IPv4 */
-        ip := net.ParseIP(string(data[1:5]))
-        if ip == nil {
-            return "", 0, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
-        }
-        addr = ip.String()
-        data = data[5:]
-    } else if atype == byte(4) {    /* IPv6 */
-        if len(data) < 19 {
-            return "", 0, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
-        }
-        ip := net.ParseIP(string(data[1:17]))
-        if ip == nil {
-            return "", 0, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
-        }
-        addr = ip.String()
-        data = data[17:]
-    } else {
-        return "", 0, nil,  agent.NewAgentError(ERROR_INVALID_ADDRESS_TYPE, "invalid address type %d", atype)
-    }
-    buf := bytes.NewReader(data)
-    binary.Read(buf, binary.BigEndian, &port)
+	if atype == byte(3) { /* 域名 */
+		length := int(data[1])
+		if len(data) < length+4 {
+			return "", 0, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
+		}
+		addr = string(data[2 : 2+length])
+		data = data[2+length:]
+	} else if atype == byte(1) { /* IPv4 */
+		ip := net.ParseIP(string(data[1:5]))
+		if ip == nil {
+			return "", 0, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
+		}
+		addr = ip.String()
+		data = data[5:]
+	} else if atype == byte(4) { /* IPv6 */
+		if len(data) < 19 {
+			return "", 0, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
+		}
+		ip := net.ParseIP(string(data[1:17]))
+		if ip == nil {
+			return "", 0, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
+		}
+		addr = ip.String()
+		data = data[17:]
+	} else {
+		return "", 0, nil, agent.NewAgentError(ERROR_INVALID_ADDRESS_TYPE, "invalid address type %d", atype)
+	}
+	buf := bytes.NewReader(data)
+	binary.Read(buf, binary.BigEndian, &port)
 
-    return addr, port, data[2:], nil
+	return addr, port, data[2:], nil
 }

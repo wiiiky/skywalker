@@ -17,42 +17,41 @@
 
 package cipher
 
-
 import (
-    "skywalker/cipher/salsa20"
+	"skywalker/cipher/salsa20"
 )
 
 type salsaStream struct {
-    nonce   []byte
-    key     [32]byte
-    counter int
+	nonce   []byte
+	key     [32]byte
+	counter int
 }
 
 func (stream *salsaStream) XORKeyStream(out, in []byte) {
-    key := stream.key
-    nonce := stream.nonce
+	key := stream.key
+	nonce := stream.nonce
 
-    salsa20.XORKeyStream(out, in, nonce, &key)
+	salsa20.XORKeyStream(out, in, nonce, &key)
 }
 
-func (stream *salsaStream) Encrypt(data []byte) []byte{
-    return cipherStreamXOR(stream, data)
+func (stream *salsaStream) Encrypt(data []byte) []byte {
+	return cipherStreamXOR(stream, data)
 }
 
-func (stream *salsaStream) Decrypt(data []byte) []byte{
-    return cipherStreamXOR(stream, data)
+func (stream *salsaStream) Decrypt(data []byte) []byte {
+	return cipherStreamXOR(stream, data)
 }
 
 func newSalsa20Stream(key, iv []byte) *salsaStream {
-    var key32 [32]byte
-    copy(key32[:], key)
-    return &salsaStream{iv, key32, 0}
+	var key32 [32]byte
+	copy(key32[:], key)
+	return &salsaStream{iv, key32, 0}
 }
 
 func newSalsa20Encrypter(key, iv []byte) Encrypter {
-    return newSalsa20Stream(key, iv)
+	return newSalsa20Stream(key, iv)
 }
 
 func newSalsa20Decrypter(key, iv []byte) Decrypter {
-    return newSalsa20Stream(key, iv)
+	return newSalsa20Stream(key, iv)
 }

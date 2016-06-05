@@ -17,40 +17,39 @@
 
 package cipher
 
-
 import (
-    "crypto/aes"
-    _cipher "crypto/cipher"
+	"crypto/aes"
+	_cipher "crypto/cipher"
 )
 
 /* AES CFB模式 加密 */
 type aesCFBEncrypter struct {
-    stream _cipher.Stream
+	stream _cipher.Stream
 }
 
 func (e *aesCFBEncrypter) Encrypt(plain []byte) []byte {
-    return cipherStreamXOR(e.stream, plain)
+	return cipherStreamXOR(e.stream, plain)
 }
 
 func newAESCFBEncrypter(key, iv []byte) Encrypter {
-    block, _ := aes.NewCipher(key)
+	block, _ := aes.NewCipher(key)
 
-    stream := _cipher.NewCFBEncrypter(block, iv)
-    return &aesCFBEncrypter{stream}
+	stream := _cipher.NewCFBEncrypter(block, iv)
+	return &aesCFBEncrypter{stream}
 }
 
 /* AES CFB模式 解密 */
 type aesCFBDecrypter struct {
-    stream _cipher.Stream
+	stream _cipher.Stream
 }
 
 func (e *aesCFBDecrypter) Decrypt(encrypted []byte) []byte {
-    return cipherStreamXOR(e.stream, encrypted)
+	return cipherStreamXOR(e.stream, encrypted)
 }
 
 func newAESCFBDecrypter(key, iv []byte) Decrypter {
-    block, _ := aes.NewCipher(key)
+	block, _ := aes.NewCipher(key)
 
-    stream := _cipher.NewCFBDecrypter(block, iv)
-    return &aesCFBDecrypter{stream}
+	stream := _cipher.NewCFBDecrypter(block, iv)
+	return &aesCFBDecrypter{stream}
 }

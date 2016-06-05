@@ -18,8 +18,8 @@
 package direct
 
 import (
-    "skywalker/agent"
-    "skywalker/internal"
+	"skywalker/agent"
+	"skywalker/internal"
 )
 
 /*
@@ -29,35 +29,35 @@ type DirectAgent struct {
 }
 
 func NewDirectAgent() agent.ServerAgent {
-    return &DirectAgent{}
+	return &DirectAgent{}
 }
 
 func (a *DirectAgent) Name() string {
-    return "Direct"
+	return "Direct"
 }
 
 func (a *DirectAgent) OnInit(cfg map[string]interface{}) error {
-    return nil
+	return nil
 }
 
 func (a *DirectAgent) OnStart(cfg map[string]interface{}) error {
-    return nil
+	return nil
 }
 
-func (a *DirectAgent) GetRemoteAddress(addr string, port string) (string, string){
-    return addr, port
+func (a *DirectAgent) GetRemoteAddress(addr string, port string) (string, string) {
+	return addr, port
 }
 
-func (a *DirectAgent) OnConnectResult(request internal.ConnectResult) (interface{}, interface{}, error){
-    return nil, nil, nil
+func (a *DirectAgent) OnConnectResult(request internal.ConnectResult) (interface{}, interface{}, error) {
+	return nil, nil, nil
 }
 
-func (a *DirectAgent) FromServer(data []byte) (interface{}, interface{}, error){
-    return data, nil, nil
+func (a *DirectAgent) FromServer(data []byte) (interface{}, interface{}, error) {
+	return data, nil, nil
 }
 
 func (a *DirectAgent) FromClientAgent(data []byte) (interface{}, interface{}, error) {
-    return nil, data, nil
+	return nil, data, nil
 }
 
 func (a *DirectAgent) OnClose(bool) {

@@ -18,85 +18,90 @@
 package log
 
 import (
-    "os"
-    "log"
-    "fmt"
-    "strings"
+	"fmt"
+	"log"
+	"os"
+	"strings"
 )
 
 type LoggerConfig struct {
-    /* 日志等级，可以用|连接多个，如DEBUG|INFO */
-    Level string    `json:"level"`
-    /* 日志记录文件，如果是标准输出，则是STDOUT，标准错误输出STDERR */
-    File string     `json:"file"`
+	/* 日志等级，可以用|连接多个，如DEBUG|INFO */
+	Level string `json:"level"`
+	/* 日志记录文件，如果是标准输出，则是STDOUT，标准错误输出STDERR */
+	File string `json:"file"`
 }
 
 var (
-    logFlag int = log.Ldate | log.Ltime
-    debugLogger *log.Logger = log.New(os.Stdout, "\x1b[36m[DEBUG]\x1b[0m", logFlag)
-    infoLogger *log.Logger = log.New(os.Stdout, "\x1b[34m[INFO]\x1b[0m", logFlag)
-    warningLogger *log.Logger = log.New(os.Stderr, "\x1b[33m[WARNING]\x1b[0m", logFlag)
-    errorLogger *log.Logger = log.New(os.Stderr, "\x1b[31m[ERROR]\x1b[0m", logFlag)
+	logFlag       int         = log.Ldate | log.Ltime
+	logColor      map[string]string = map[string]string{	/* 日志在终端的颜色 */
+		"DEBUG": "36m",
+		"INFO": "34m",
+		"WARNING": "33m",
+		"ERROR": "31m",
+	}
+	loggers       map[string]*log.Logger = map[string]*log.Logger{
+		"DEBUG": nil,
+		"INFO": nil,
+		"WARNING": nil,
+		"ERROR": nil,
+	}
 )
 
 /* 初始化日志模块 */
-func Init(loggers []LoggerConfig) {
-    for _, cfg := range(loggers) {
-        level := strings.ToUpper(cfg.Level)
-        file := cfg.File
-        var fd *os.File
-        var err error
-        if file == "STDOUT" {
-            fd = os.Stdout
-        } else if file == "STDERR" {
-            fd = os.Stderr
-        } else {
-            if len(file) == 0 {
-                file = "/dev/null"
-            }
-            fd, err = os.Create(file)
-            if err !=nil {
-                fmt.Printf("Cannot open %s for logging", file)
-                continue
-            }
-        } 
-        switch level {
-            case "DEBUG":
-                debugLogger = log.New(fd, "[DEBUG]", logFlag)
-            case "INFO":
-                infoLogger = log.New(fd, "[INFO]", logFlag)
-            case "WARNING":
-                warningLogger = log.New(fd, "[WARNING]", logFlag)
-            case "ERROR":
-                errorLogger = log.New(fd, "[ERROR]", logFlag)
-            default:
-                if fd != os.Stderr && fd != os.Stdout {
-                    fd.Close()
-                }
-        }
-    }
+func Init(lgcfg []LoggerConfig) {
+	for _, cfg := range lgcfg {
+		level := strings.ToUpper(cfg.Level)
+		file := cfg.File
+		var fd *os.File
+		var err error
+		if file == "STDOUT" {
+			fd = os.Stdout
+		} else if file == "STDERR" {
+			fd = os.Stderr
+		} else {
+			if len(file) == 0 {
+				file = "/dev/null"
+			}
+			fd, err = os.Create(file)
+			if err != nil {
+				fmt.Printf("Cannot open %s for logging", file)
+				continue
+			}
+		}
+		var prefix string
+		if fd == os.Stderr || fd == os.Stdout {
+			prefix = fmt.Sprintf("\x1b[%s[%s]\x1b[0m", logColor[level], level)
+		} else {
+			prefix = fmt.Sprintf("[%s]", level)
+		}
+		loggers[level] = log.New(fd, prefix, logFlag)
+	}
 }
 
 func DEBUG(fmt string, v ...interface{}) {
-    if debugLogger != nil {
-        debugLogger.Printf(fmt, v...)
-    }
+	logger := loggers["DEBUG"]
+	if logger != nil {
+		logger.Printf(fmt, v...)
+	}
 }
 
 func INFO(fmt string, v ...interface{}) {
-    if infoLogger != nil {
-        infoLogger.Printf(fmt, v...)
-    }
+	logger := loggers["INFO"]
+	if logger != nil {
+		logger.Printf(fmt, v...)
+	}
 }
 
 func WARNING(fmt string, v ...interface{}) {
-    if warningLogger != nil {
-        warningLogger.Printf(fmt, v...)
-    }
+	logger := loggers["WARNING"]
+	if logger != nil {
+		logger.Printf(fmt, v...)
+	}
 }
 
 func ERROR(fmt string, v ...interface{}) {
-    if errorLogger !=nil {
-        errorLogger.Printf(fmt, v...)
-    }
+	logger := loggers["ERROR"]
+	if logger != nil {
+		logger.Printf(fmt, v...)
+	}
 }

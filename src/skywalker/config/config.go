@@ -18,71 +18,74 @@
 package config
 
 import (
-    "flag"
-    "skywalker/log"
-    "skywalker/utils"
+	"flag"
+	"skywalker/log"
+	"skywalker/utils"
 )
 
 type PluginConfig struct {
-    Name string                     `json:"name"`
-    Config map[string]interface{}   `json:"config"`
+	Name   string                 `json:"name"`
+	Config map[string]interface{} `json:"config"`
 }
 
 /* 服务配置 */
 type ProxyConfig struct {
-    BindAddr string      `json:"bindAddr"`
-    BindPort uint16      `json:"bindPort"`
+	BindAddr string `json:"bindAddr"`
+	BindPort uint16 `json:"bindPort"`
 
-    ClientProtocol string                 `json:"clientProtocol"`
-    ClientConfig map[string]interface{}   `json:"clientConfig"`
+	ClientProtocol string                 `json:"clientProtocol"`
+	ClientConfig   map[string]interface{} `json:"clientConfig"`
 
-    ServerProtocol string                 `json:"serverProtocol"`
-    ServerConfig map[string]interface{}   `json:"serverConfig"`
+	ServerProtocol string                 `json:"serverProtocol"`
+	ServerConfig   map[string]interface{} `json:"serverConfig"`
 
-    Logger []log.LoggerConfig       `json:"logger"`
+	Logger []log.LoggerConfig `json:"logger"`
 
-    CacheTimeout int64          `json:"cacheTimeout"`
-    
-    Plugins []PluginConfig            `json:"plugins"`
+	CacheTimeout int64 `json:"cacheTimeout"`
+
+	Plugins []PluginConfig `json:"plugins"`
 }
 
 var (
-    /* 默认配置 */
-    Config = ProxyConfig{
-        BindAddr: "127.0.0.1",
-        BindPort: 12345,
-        CacheTimeout: 300,
-        /* 默认的日志输出 */
-        Logger: []log.LoggerConfig{log.LoggerConfig{"INFO", "STDOUT"},log.LoggerConfig{"WARNING", "STDOUT"},log.LoggerConfig{"ERROR", "STDOUT"}},
-    }
+	/* 默认配置 */
+	Config = ProxyConfig{
+		BindAddr:     "127.0.0.1",
+		BindPort:     12345,
+		CacheTimeout: 300,
+		/* 默认的日志输出 */
+		Logger: []log.LoggerConfig{
+			log.LoggerConfig{"DEBUG", "STDOUT"},
+			log.LoggerConfig{"INFO", "STDOUT"},
+			log.LoggerConfig{"WARNING", "STDERR"},
+			log.LoggerConfig{"ERROR", "STDERR"},
+		},
+	}
 )
 
-
 func init() {
-    configFile := flag.String("c", "./config.json", "the config file")
-    flag.Parse()
-    if !utils.ReadJSONFile(*configFile, &Config) {
-        utils.FatalError("Fail To Load Config From %s", configFile)
-    }
-    log.Init(Config.Logger)
-    utils.Init(Config.CacheTimeout)
+	configFile := flag.String("c", "./config.json", "the config file")
+	flag.Parse()
+	if !utils.ReadJSONFile(*configFile, &Config) {
+		utils.FatalError("Fail To Load Config From %s", configFile)
+	}
+	log.Init(Config.Logger)
+	utils.Init(Config.CacheTimeout)
 
-    /* 初始化代理 */
-    clientAgent := getClientAgent()
-    if clientAgent == nil {
-        utils.FatalError("Client Protocol [%s] Not Found!", Config.ClientProtocol)
-    } else if err := clientAgent.OnInit(Config.ClientConfig); err != nil {
-        utils.FatalError("Fail To Initialize [%s]:%s", clientAgent.Name(), err.Error())
-    }
+	/* 初始化代理 */
+	clientAgent := getClientAgent()
+	if clientAgent == nil {
+		utils.FatalError("Client Protocol [%s] Not Found!", Config.ClientProtocol)
+	} else if err := clientAgent.OnInit(Config.ClientConfig); err != nil {
+		utils.FatalError("Fail To Initialize [%s]:%s", clientAgent.Name(), err.Error())
+	}
 
-    serverAgent := getServerAgent()
-    if serverAgent == nil {
-        utils.FatalError("Server Protocol [%s] Not Found!", Config.ServerProtocol)
-    } else if err := serverAgent.OnInit(Config.ServerConfig); err != nil {
-        utils.FatalError("Fail To Initialize [%s]:%s", serverAgent.Name(), err.Error())
-    }
+	serverAgent := getServerAgent()
+	if serverAgent == nil {
+		utils.FatalError("Server Protocol [%s] Not Found!", Config.ServerProtocol)
+	} else if err := serverAgent.OnInit(Config.ServerConfig); err != nil {
+		utils.FatalError("Fail To Initialize [%s]:%s", serverAgent.Name(), err.Error())
+	}
 
-
-    /* 初始化插件 */
-    initPlugin(Config.Plugins)
+	/* 初始化插件 */
+	initPlugin(Config.Plugins)
 }

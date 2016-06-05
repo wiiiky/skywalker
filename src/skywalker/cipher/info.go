@@ -21,26 +21,25 @@ package cipher
  * 此文件主要保存加密算法的信息
  */
 
-type CipherInfo struct{
-    KeySize int
-    IvSize int
-    EncrypterFunc newEncrypterFunc
-    DecrypterFunc newDecrypterFunc
+type CipherInfo struct {
+	KeySize       int
+	IvSize        int
+	EncrypterFunc newEncrypterFunc
+	DecrypterFunc newDecrypterFunc
 }
 
 var (
-    cipherInfos = map[string]*CipherInfo{
-        "aes-128-cfb": &CipherInfo{16, 16, newAESCFBEncrypter, newAESCFBDecrypter},
-        "aes-192-cfb": &CipherInfo{24, 16, newAESCFBEncrypter, newAESCFBDecrypter},
-        "aes-256-cfb": &CipherInfo{32, 16, newAESCFBEncrypter, newAESCFBDecrypter},
-        "rc4-md5": &CipherInfo{16, 16, newRC4MD5Encrypter, newRC4MD5Decrypter},
-        "salsa20": &CipherInfo{32, 8, newSalsa20Encrypter, newSalsa20Decrypter},
-        "chacha20": &CipherInfo{32, 8, newChacha20Encrypter, newChacha20Decrypter},
-    }
+	cipherInfos = map[string]*CipherInfo{
+		"aes-128-cfb": &CipherInfo{16, 16, newAESCFBEncrypter, newAESCFBDecrypter},
+		"aes-192-cfb": &CipherInfo{24, 16, newAESCFBEncrypter, newAESCFBDecrypter},
+		"aes-256-cfb": &CipherInfo{32, 16, newAESCFBEncrypter, newAESCFBDecrypter},
+		"rc4-md5":     &CipherInfo{16, 16, newRC4MD5Encrypter, newRC4MD5Decrypter},
+		"salsa20":     &CipherInfo{32, 8, newSalsa20Encrypter, newSalsa20Decrypter},
+		"chacha20":    &CipherInfo{32, 8, newChacha20Encrypter, newChacha20Decrypter},
+	}
 )
 
-func GetCipherInfo(name string) *CipherInfo{
-    info := cipherInfos[name]
-    return info
+func GetCipherInfo(name string) *CipherInfo {
+	info := cipherInfos[name]
+	return info
 }
-

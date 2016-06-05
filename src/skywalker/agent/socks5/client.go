@@ -18,9 +18,9 @@
 package socks5
 
 import (
-    "strconv"
-    "skywalker/agent"
-    "skywalker/internal"
+	"skywalker/agent"
+	"skywalker/internal"
+	"strconv"
 )
 
 /*
@@ -28,103 +28,100 @@ import (
  * https://tools.ietf.org/html/rfc1928
  */
 
-
 const (
-    state_init = 0          /* 初始化状态，等待客户端发送握手请求 */
-    state_addr = 1          /* 等待客户端发送链接请求 */
-    state_transfer = 2      /* 转发数据 */
-    state_error = 3         /* 已经出错 */
+	state_init     = 0 /* 初始化状态，等待客户端发送握手请求 */
+	state_addr     = 1 /* 等待客户端发送链接请求 */
+	state_transfer = 2 /* 转发数据 */
+	state_error    = 3 /* 已经出错 */
 )
 
 func NewSocks5ClientAgent() agent.ClientAgent {
-    return &Socks5ClientAgent{}
+	return &Socks5ClientAgent{}
 }
 
 type Socks5ClientAgent struct {
-    version uint8
-    nmethods uint8
-    methods []uint8  /* 每个字节表示一个方法 */
+	version  uint8
+	nmethods uint8
+	methods  []uint8 /* 每个字节表示一个方法 */
 
-    atype uint8
-    address string
-    port uint16
+	atype   uint8
+	address string
+	port    uint16
 
-    state uint8
+	state uint8
 }
 
 func (p *Socks5ClientAgent) Name() string {
-    return "Socks5"
+	return "Socks5"
 }
 
-
 func (a *Socks5ClientAgent) OnInit(map[string]interface{}) error {
-    return nil
+	return nil
 }
 
 func (a *Socks5ClientAgent) OnStart(cfg map[string]interface{}) error {
-    a.state = state_init
-    return nil
+	a.state = state_init
+	return nil
 }
 
 /* 给客户端返回连接结果 */
-func (p *Socks5ClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error){
-    var rep uint8 = REPLY_GENERAL_FAILURE
-    if result.Result == internal.CONNECT_RESULT_OK {
-        rep = REPLY_SUCCEED
-    } else if result.Result == internal.CONNECT_RESULT_UNKNOWN_HOST {
-        rep = REPLY_HOST_UNREACHABLE
-    } else if result.Result == internal.CONNECT_RESULT_UNREACHABLE {
-        rep = REPLY_NETWORK_UNREACHABLE
-    }
-    return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil
+func (p *Socks5ClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
+	var rep uint8 = REPLY_GENERAL_FAILURE
+	if result.Result == internal.CONNECT_RESULT_OK {
+		rep = REPLY_SUCCEED
+	} else if result.Result == internal.CONNECT_RESULT_UNKNOWN_HOST {
+		rep = REPLY_HOST_UNREACHABLE
+	} else if result.Result == internal.CONNECT_RESULT_UNREACHABLE {
+		rep = REPLY_NETWORK_UNREACHABLE
+	}
+	return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil
 }
 
-
 func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
-    switch p.state {
-        case state_init:    /* 接收客户端的握手请求并返回响应 */
-            ver, nmethods, methods, err := parseVersionRequest(data)
-            if err != nil {
-                p.state = state_error
-                return nil, nil, err
-            } else if ver != 5 {
-                p.state = state_error
-                return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
-            }
-            p.version = ver
-            p.nmethods = nmethods
-            p.methods = methods
-            p.state = state_addr
-            return nil, buildVersionReply(ver, 0), nil
-        case state_addr:    /* 接收客户端的地址请求，等待连接结果 */
-            ver, cmd, atype, address, port, left, err := parseAddressRequest(data)
-            if err != nil {
-                p.state = state_error
-                return nil, nil, err
-            } else if ver != p.version {
-                p.state = state_error
-                return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
-            } else if cmd != CMD_CONNECT {
-                p.state = state_error
-                return nil, nil,agent.NewAgentError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", cmd)
-            }
-            p.atype = atype
-            p.address = address
-            p.port = port
-            p.state = state_transfer
-            addrinfo := address + ":" + strconv.Itoa(int(port))
-            if left == nil {
-                return addrinfo, nil, nil
-            }
-            return [][]byte{[]byte(addrinfo), left}, nil, nil
-        case state_transfer:    /* 直接转发数据 */
-            return data, nil, nil
-    }
-    return nil, nil, nil
+	switch p.state {
+	case state_init: /* 接收客户端的握手请求并返回响应 */
+		ver, nmethods, methods, err := parseVersionRequest(data)
+		if err != nil {
+			p.state = state_error
+			return nil, nil, err
+		} else if ver != 5 {
+			p.state = state_error
+			return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
+		}
+		p.version = ver
+		p.nmethods = nmethods
+		p.methods = methods
+		p.state = state_addr
+		return nil, buildVersionReply(ver, 0), nil
+	case state_addr: /* 接收客户端的地址请求，等待连接结果 */
+		ver, cmd, atype, address, port, left, err := parseAddressRequest(data)
+		if err != nil {
+			p.state = state_error
+			return nil, nil, err
+		} else if ver != p.version {
+			p.state = state_error
+			return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
+		} else if cmd != CMD_CONNECT {
+			p.state = state_error
+			return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", cmd)
+		}
+		p.atype = atype
+		p.address = address
+		p.port = port
+		p.state = state_transfer
+		addrinfo := address + ":" + strconv.Itoa(int(port))
+		if left == nil {
+			return addrinfo, nil, nil
+		}
+		return [][]byte{[]byte(addrinfo), left}, nil, nil
+	case state_transfer: /* 直接转发数据 */
+		return data, nil, nil
+	}
+	return nil, nil, nil
 }
 
 func (p *Socks5ClientAgent) FromServerAgent(data []byte) (interface{}, interface{}, error) {
-    return nil, data, nil
+	return nil, data, nil
 }
 
 func (p *Socks5ClientAgent) OnClose(bool) {

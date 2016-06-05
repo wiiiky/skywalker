@@ -18,82 +18,82 @@
 package http
 
 import (
-    "strings"
-    "skywalker/agent"
-    "skywalker/internal"
+	"skywalker/agent"
+	"skywalker/internal"
+	"strings"
 )
 
 func NewHTTPClientAgent() agent.ClientAgent {
-    return &HTTPClientAgent{}
+	return &HTTPClientAgent{}
 }
 
 type HTTPClientAgent struct {
-    req *httpRequest
-    host string
+	req  *httpRequest
+	host string
 }
 
 func (a *HTTPClientAgent) Name() string {
-    return "http"
+	return "http"
 }
 
 /* 初始化，载入配置 */
 func (a *HTTPClientAgent) OnInit(cfg map[string]interface{}) error {
-    return nil
+	return nil
 }
 
 func (a *HTTPClientAgent) OnStart(cfg map[string]interface{}) error {
-    a.req = newHTTPRequest()
-    return nil
+	a.req = newHTTPRequest()
+	return nil
 }
 
 const (
-    CONNECT_RESPONSE = "HTTP/1.1 200 Connection established\r\nProxy-agent: SkyWalker Proxy/0.1\r\n\r\n"
+	CONNECT_RESPONSE = "HTTP/1.1 200 Connection established\r\nProxy-agent: SkyWalker Proxy/0.1\r\n\r\n"
 )
 
 func (a *HTTPClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
-    if result.Result == internal.CONNECT_RESULT_OK {
-        if a.req.Method == "CONNECT"  {
-            return nil, []byte(CONNECT_RESPONSE), nil
-        }
-    }
-    return nil, nil, nil
+	if result.Result == internal.CONNECT_RESULT_OK {
+		if a.req.Method == "CONNECT" {
+			return nil, []byte(CONNECT_RESPONSE), nil
+		}
+	}
+	return nil, nil, nil
 }
 
 /* 从客户端接收到数据 */
 func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
-    req := a.req
-    if req.OK == false {  /* 还没有解析到HTTP请求 */
-        err := req.feed(data)
-        if err != nil {
-            return nil, nil, err
-        } else if req.OK {   /* 解析到有效的HTTP请求 */
-            host := req.Host
-            if !strings.Contains(host, ":") {
-                host += ":80"
-            }
-            if req.Method == "CONNECT" {
-                return []byte(host), nil, nil
-            } else {
-                request := req.buildRequest()
-                req.reset()
-                if a.host != host {
-                    a.host = host
-                    c := internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT,
-                                                     []byte(host))
-                    return []interface{}{c, request}, nil, nil 
-                } else {
-                    return request, nil, nil
-                }
-            }
-        }
-        return nil, nil, nil
-    }
-    return data, nil, nil
+	req := a.req
+	if req.OK == false { /* 还没有解析到HTTP请求 */
+		err := req.feed(data)
+		if err != nil {
+			return nil, nil, err
+		} else if req.OK { /* 解析到有效的HTTP请求 */
+			host := req.Host
+			if !strings.Contains(host, ":") {
+				host += ":80"
+			}
+			if req.Method == "CONNECT" {
+				return []byte(host), nil, nil
+			} else {
+				request := req.buildRequest()
+				req.reset()
+				if a.host != host {
+					a.host = host
+					c := internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT,
+						[]byte(host))
+					return []interface{}{c, request}, nil, nil
+				} else {
+					return request, nil, nil
+				}
+			}
+		}
+		return nil, nil, nil
+	}
+	return data, nil, nil
 }
 
 func (a *HTTPClientAgent) FromServerAgent(data []byte) (interface{}, interface{}, error) {
-    return nil, data, nil
+	return nil, data, nil
 }
 
-func (a *HTTPClientAgent) OnClose(bool){
+func (a *HTTPClientAgent) OnClose(bool) {
 }

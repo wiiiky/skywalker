@@ -18,14 +18,14 @@
 package cipher
 
 import (
-    _cipher "crypto/cipher"
+	_cipher "crypto/cipher"
 )
 
 func cipherStreamXOR(stream _cipher.Stream, data []byte) []byte {
-    if data == nil || len(data) == 0 {
-        return nil
-    }
-    processed := make([]byte, len(data))
-    stream.XORKeyStream(processed, data)
-    return processed
+	if data == nil || len(data) == 0 {
+		return nil
+	}
+	processed := make([]byte, len(data))
+	stream.XORKeyStream(processed, data)
+	return processed
 }
