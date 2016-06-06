@@ -184,10 +184,10 @@ func (req *httpRequest) parse(data []byte) error {
 	}
 
 	lines, complete = fetchHTTPHeaders(lines[1:])
-	if complete { /* 如果已经读取了完成的HTTP首部 */
-		lines = lines[1:]
+	if complete { /* 如果已经读取了完整的HTTP首部 */
+		lines = lines
 	} else { /* 没有读取完成的HTTP首部，则暂时忽略最后一行 */
-		lines = lines[1 : len(lines)-1]
+		lines = lines[:len(lines)-1]
 	}
 	for _, line := range lines {
 		kv := bytes.SplitN(line, []byte(":"), 2)
