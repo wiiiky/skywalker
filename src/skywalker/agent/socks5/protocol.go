@@ -83,7 +83,9 @@ func parseVersionRequest(data []byte) (uint8, uint8, []uint8, error) {
 	}
 	version := uint8(data[0])
 	nmethods := uint8(data[1])
-	if nmethods < 1 {
+	if version != 5 {
+		return version, 0, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", version)
+	} else if nmethods < 1 {
 		return 0, 0, nil, agent.NewAgentError(ERROR_INVALID_NMETHODS, "nmethods cannot be zero")
 	} else if len(data) != 2+int(nmethods) {
 		return 0, 0, nil, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected version request message size")
@@ -91,6 +93,7 @@ func parseVersionRequest(data []byte) (uint8, uint8, []uint8, error) {
 	return version, nmethods, []uint8(data[2:]), nil
 }
 
+/* 返回SOCKS版本响应 */
 func buildVersionReply(ver uint8, method uint8) []byte {
 	buf := bytes.Buffer{}
 	binary.Write(&buf, binary.BigEndian, ver)
@@ -98,6 +101,7 @@ func buildVersionReply(ver uint8, method uint8) []byte {
 	return buf.Bytes()
 }
 
+/* 解析SOCKS版本请求 */
 func parseVersionReply(data []byte) (uint8, uint8, error) {
 	if len(data) != 2 {
 		return 0, 0, agent.NewAgentError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected version reply message size")

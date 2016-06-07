@@ -32,18 +32,18 @@ type LoggerConfig struct {
 }
 
 var (
-	logFlag       int         = log.Ldate | log.Ltime
-	logColor      map[string]string = map[string]string{	/* 日志在终端的颜色 */
-		"DEBUG": "36m",
-		"INFO": "34m",
+	logFlag  int               = log.Ldate | log.Ltime
+	logColor map[string]string = map[string]string{ /* 日志在终端的颜色 */
+		"DEBUG":   "36m",
+		"INFO":    "34m",
 		"WARNING": "33m",
-		"ERROR": "31m",
+		"ERROR":   "31m",
 	}
-	loggers       map[string]*log.Logger = map[string]*log.Logger{
-		"DEBUG": nil,
-		"INFO": nil,
+	loggers map[string]*log.Logger = map[string]*log.Logger{
+		"DEBUG":   nil,
+		"INFO":    nil,
 		"WARNING": nil,
-		"ERROR": nil,
+		"ERROR":   nil,
 	}
 )
 

@@ -83,10 +83,10 @@ func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, e
 		ver, nmethods, methods, err := parseVersionRequest(data)
 		if err != nil {
 			p.state = state_error
+			if ver != 0 {
+				return nil, buildVersionReply(5, 0), err
+			}
 			return nil, nil, err
-		} else if ver != 5 {
-			p.state = state_error
-			return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
 		}
 		p.version = ver
 		p.nmethods = nmethods

@@ -79,17 +79,21 @@ func (p *StatPlugin) AtExit() {
 		var f string
 		s := float64(size)
 		if size < 1024 {
-			f = fmt.Sprintf("%v B", s)
+			f = fmt.Sprintf("%.03f  B", s)
 		} else if size < 1024*1024 {
-			f = fmt.Sprintf("%v KB", s/1024.0)
+			f = fmt.Sprintf("%.03f KB", s/1024.0)
 		} else if size < 1024*1024*1024 {
-			f = fmt.Sprintf("%v MB", s/1024.0/1024.0)
+			f = fmt.Sprintf("%.03f MB", s/1024.0/1024.0)
 		} else {
-			f = fmt.Sprintf("%v GB", s/1024.0/1024.0/1024.0)
+			f = fmt.Sprintf("%.03f GB", s/1024.0/1024.0/1024.0)
 		}
 		return f
 	}
-	fmt.Printf("Sent: %s\tReceived: %s\n", formatData(p.SA2S), formatData(p.S2SA))
+	var tp StatPlugin
+	utils.ReadJSONFile(p.sfile, &tp)
+	fmt.Printf("Scope\t\tSent\t\tReceived\n")
+	fmt.Printf("Session\t\t%s\t%s\n", formatData(p.SA2S-tp.SA2S), formatData(p.S2SA-tp.S2SA))
+	fmt.Printf("Total\t\t%s\t%s\n", formatData(p.SA2S), formatData(p.S2SA))
 	if len(p.sfile) > 0 {
 		utils.SaveJSONFile(p.sfile, p)
 	}
