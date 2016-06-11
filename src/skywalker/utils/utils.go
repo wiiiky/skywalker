@@ -34,6 +34,17 @@ func GetMapString(m map[string]interface{}, name string) string {
 	return s
 }
 
+func GetMapStringDefault(m map[string]interface{}, name string, def string) string {
+	val, ok := m[name]
+	if !ok {
+		return def
+	}
+	if s, ok := val.(string); ok {
+		return s
+	}
+	return def
+}
+
 func GetMapInt(m map[string]interface{}, name string) int64 {
 	val, ok := m[name]
 	if !ok {
@@ -41,6 +52,17 @@ func GetMapInt(m map[string]interface{}, name string) int64 {
 	}
 	i, _ := val.(float64)
 	return int64(i)
+}
+
+func GetMapIntDefault(m map[string]interface{}, name string, def int64) int64 {
+	val, ok := m[name]
+	if !ok {
+		return def
+	}
+	if i, ok := val.(float64); ok {
+		return int64(i)
+	}
+	return def
 }
 
 func ExpandPath(path string) string {

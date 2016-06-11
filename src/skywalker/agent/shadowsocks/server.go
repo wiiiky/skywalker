@@ -170,17 +170,10 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 		for _, addr := range serverAddrs {
 			go utils.GetHostAddress(addr.serverAddr)
 		}
-		if val, ok = cfg["retry"]; ok == true {
-			if retry = int(val.(float64)); retry <= 0 {
-				retry = 3
-			}
-		}
+		retry = int(utils.GetMapIntDefault(cfg, "retry", 3))
 	}
 	password = utils.GetMapString(cfg, "password")
-	method = utils.GetMapString(cfg, "method")
-	if len(method) == 0 {
-		method = "aes-256-cfb"
-	}
+	method = utils.GetMapStringDefault(cfg, "method", "aes-256-cfb")
 
 	serverConfig.serverAddr = serverAddr
 	serverConfig.serverPort = serverPort

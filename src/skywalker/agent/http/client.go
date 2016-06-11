@@ -86,6 +86,7 @@ func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, err
 				}
 			}
 		}
+		/* 没有错误，但是也不是完整的HTTP请求 */
 		return nil, nil, nil
 	}
 	return data, nil, nil
