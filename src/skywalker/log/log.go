@@ -17,10 +17,12 @@
 
 package log
 
+/* #include<unistd.h> */
+import "C"
 import (
+	"os"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 )
 
@@ -32,14 +34,14 @@ type LoggerConfig struct {
 }
 
 var (
-	logFlag  int               = log.Ldate | log.Ltime
-	logColor map[string]string = map[string]string{ /* 日志在终端的颜色 */
+	gLogFlag  int               = log.Ldate | log.Ltime
+	gLogColor map[string]string = map[string]string{ /* 日志在终端的颜色 */
 		"DEBUG":   "36m",
 		"INFO":    "34m",
 		"WARNING": "33m",
 		"ERROR":   "31m",
 	}
-	loggers map[string]*log.Logger = map[string]*log.Logger{
+	gLoggers map[string]*log.Logger = map[string]*log.Logger{
 		"DEBUG":   nil,
 		"INFO":    nil,
 		"WARNING": nil,
@@ -47,61 +49,59 @@ var (
 	}
 )
 
+/* 打开日志文件 */
+func openLogFile(file string) *os.File {
+	if file == "STDOUT" {
+		return os.Stdout
+	} else if file == "STDERR" {
+		return os.Stderr
+	}
+	fd, err := os.OpenFile(file, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	if err != nil {		/* 打开日志文件出错 */
+		fmt.Println("fail to open log file %s : %s\n", file, err)
+		return nil
+	}
+	return fd
+}
+
 /* 初始化日志模块 */
 func Init(lgcfg []LoggerConfig) {
 	for _, cfg := range lgcfg {
 		level := strings.ToUpper(cfg.Level)
-		file := cfg.File
-		var fd *os.File
-		var err error
-		if file == "STDOUT" {
-			fd = os.Stdout
-		} else if file == "STDERR" {
-			fd = os.Stderr
-		} else {
-			if len(file) == 0 {
-				file = "/dev/null"
-			}
-			fd, err = os.Create(file)
-			if err != nil {
-				fmt.Printf("Cannot open %s for logging", file)
-				continue
-			}
+		fd := openLogFile(cfg.File)
+		if fd == nil {
+			continue
 		}
 		var prefix string
-		if fd == os.Stderr || fd == os.Stdout {
-			prefix = fmt.Sprintf("\x1b[%s[%s]\x1b[0m", logColor[level], level)
+		if C.isatty(C.int(fd.Fd())) > 0 {
+			prefix = fmt.Sprintf("\x1b[%s[%s]\x1b[0m", gLogColor[level], level)
 		} else {
 			prefix = fmt.Sprintf("[%s]", level)
 		}
-		loggers[level] = log.New(fd, prefix, logFlag)
+		gLoggers[level] = log.New(fd, prefix, gLogFlag)
 	}
 }
 
 func DEBUG(fmt string, v ...interface{}) {
-	logger := loggers["DEBUG"]
-	if logger != nil {
+	if logger := gLoggers["DEBUG"]; logger != nil {
 		logger.Printf(fmt, v...)
 	}
 }
 
 func INFO(fmt string, v ...interface{}) {
-	logger := loggers["INFO"]
-	if logger != nil {
+	if logger := gLoggers["INFO"]; logger != nil {
 		logger.Printf(fmt, v...)
 	}
 }
 
 func WARNING(fmt string, v ...interface{}) {
-	logger := loggers["WARNING"]
-	if logger != nil {
+	if logger := gLoggers["WARNING"]; logger != nil {
 		logger.Printf(fmt, v...)
 	}
 }
 
 func ERROR(fmt string, v ...interface{}) {
-	logger := loggers["ERROR"]
-	if logger != nil {
+	if logger := gLoggers["ERROR"]; logger != nil {
 		logger.Printf(fmt, v...)
 	}
 }
