@@ -20,7 +20,6 @@ package http
 import (
 	"skywalker/agent"
 	"skywalker/internal"
-	"strings"
 )
 
 func NewHTTPClientAgent() agent.ClientAgent {
@@ -59,35 +58,46 @@ func (a *HTTPClientAgent) OnConnectResult(result internal.ConnectResult) (interf
 	return nil, nil, nil
 }
 
+/* 发送请求到指定服务器 */
+func (a *HTTPClientAgent) sendRequest(host string, request []byte) (interface{}, interface{}, error) {
+	if a.host != host { /* 如果请求的服务器与上一次不一样则重新连接 */
+		a.host = host
+		c := internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT,
+			[]byte(host))
+		return []interface{}{c, request}, nil, nil
+	}
+	return request, nil, nil
+}
+
 /* 从客户端接收到数据 */
 func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
 	req := a.req
-	if req.OK == false { /* 还没有解析到HTTP请求 */
+	if req.Status == REQUEST_STATUS_UNKNOWN { /* 还没有解析到HTTP请求 */
 		err := req.feed(data)
 		if err != nil {
 			return nil, nil, err
-		} else if req.OK { /* 解析到有效的HTTP请求 */
-			host := req.Host
-			if !strings.Contains(host, ":") {
-				host += ":80"
-			}
+		} else if req.Status == REQUEST_STATUS_FULL_REQUEST { /* 解析到有效的HTTP请求 */
+			host := req.getHost()
 			if req.Method == "CONNECT" {
 				return []byte(host), nil, nil
 			} else {
 				request := req.buildRequest()
 				req.reset()
-				if a.host != host {
-					a.host = host
-					c := internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT,
-						[]byte(host))
-					return []interface{}{c, request}, nil, nil
-				} else {
-					return request, nil, nil
-				}
+				return a.sendRequest(host, request)
 			}
+		} else if req.Status == REQUEST_STATUS_FULL_HEADER {
+			/* 解析到完整HTTP首部，但还没有完整数据 */
+			host := req.getHost()
+			request := req.buildRequest()
+			return a.sendRequest(host, request)
 		}
-		/* 没有错误，但是也不是完整的HTTP请求 */
+		/* 没有错误，但也不是完整的HTTP请求 */
 		return nil, nil, nil
+	} else if req.Status == REQUEST_STATUS_FULL_HEADER {
+		if req.Payload = append(req.Payload, data...); uint64(len(req.Payload)) >= req.ContentLength {
+			/* 接受到完整请求后重置请求 */
+			req.reset()
+		}
 	}
 	return data, nil, nil
 }

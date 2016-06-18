@@ -20,9 +20,9 @@ package log
 /* #include<unistd.h> */
 import "C"
 import (
-	"os"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -57,7 +57,7 @@ func openLogFile(file string) *os.File {
 		return os.Stderr
 	}
 	fd, err := os.OpenFile(file, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-	if err != nil {		/* 打开日志文件出错 */
+	if err != nil { /* 打开日志文件出错 */
 		fmt.Println("fail to open log file %s : %s\n", file, err)
 		return nil
 	}
