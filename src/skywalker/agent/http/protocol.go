@@ -19,6 +19,7 @@ package http
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"skywalker/agent"
@@ -45,6 +46,7 @@ const (
 	ERROR_INVALID_VERSION = 4
 	ERROR_INVALID_HOST    = 5
 	ERROR_INVALID_HEADER  = 6
+	ERROR_AUTH_REQUIRED   = 7
 )
 
 const (
@@ -58,13 +60,14 @@ func newHTTPRequest() *httpRequest {
 }
 
 type httpRequest struct {
-	Method        string
-	URI           *url.URL
-	Version       string
-	Headers       map[string]string
-	Host          string
-	ContentLength uint64
-	Payload       []byte
+	Method             string
+	URI                *url.URL
+	Version            string
+	Headers            map[string]string
+	Host               string
+	ProxyAuthorization string
+	ContentLength      uint64
+	Payload            []byte
 
 	Status int
 	data   []byte
@@ -83,6 +86,7 @@ func (req *httpRequest) reset() {
 	req.data = []byte("")
 }
 
+/* 生成HTTP请求数据 */
 func (req *httpRequest) buildRequest() []byte {
 	var request string
 	path := req.URI.Path
@@ -95,7 +99,10 @@ func (req *httpRequest) buildRequest() []byte {
 	}
 	request = fmt.Sprintf("%s %s%s HTTP/%s\r\n", req.Method, path, query, req.Version)
 	for k := range req.Headers {
-		request += fmt.Sprintf("%s: %s\r\n", k, req.Headers[k])
+		v := req.Headers[k]
+		if !strings.HasPrefix(v, "Proxy-") { /* 不添加Proxy相关的首部 */
+			request += fmt.Sprintf("%s: %s\r\n", k, v)
+		}
 	}
 	request += "\r\n" + string(req.Payload)
 	return []byte(request)
@@ -158,6 +165,17 @@ func getContentLength(headers map[string]string) uint64 {
 	}
 	length, _ := strconv.Atoi(content_length)
 	return uint64(length)
+}
+
+func getProxyAuthorization(headers map[string]string) string {
+	auth, ok := headers["Proxy-Authorization"]
+	if !ok || !strings.HasPrefix(auth, "Basic ") { /* 不存在或者认证方法无效 */
+		return ""
+	}
+	if decoded, err := base64.StdEncoding.DecodeString(auth[6:]); err == nil {
+		return string(decoded)
+	}
+	return ""
 }
 
 /*
@@ -229,6 +247,7 @@ func (req *httpRequest) parse(data []byte) error {
 		req.Headers = headers
 		req.Host = host
 		req.ContentLength = getContentLength(headers)
+		req.ProxyAuthorization = getProxyAuthorization(headers)
 		req.Payload = bytes.SplitN(data, []byte("\r\n\r\n"), 2)[1]
 		if uint64(len(req.Payload)) < req.ContentLength {
 			req.Status = REQUEST_STATUS_FULL_HEADER
