@@ -19,6 +19,7 @@ package http
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"skywalker/agent"
@@ -45,6 +46,13 @@ const (
 	ERROR_INVALID_VERSION = 4
 	ERROR_INVALID_HOST    = 5
 	ERROR_INVALID_HEADER  = 6
+	ERROR_AUTH_REQUIRED   = 7
+)
+
+const (
+	REQUEST_STATUS_UNKNOWN      = 0 /* 没有接受到请求 */
+	REQUEST_STATUS_FULL_HEADER  = 1 /* 没有接受到了完整请求头，但还没有完整的请求数据 */
+	REQUEST_STATUS_FULL_REQUEST = 2 /* 接受到了完整请求 */
 )
 
 func newHTTPRequest() *httpRequest {
@@ -52,23 +60,33 @@ func newHTTPRequest() *httpRequest {
 }
 
 type httpRequest struct {
-	Method        string
-	URI           *url.URL
-	Version       string
-	Headers       map[string]string
-	Host          string
-	ContentLength uint64
-	Payload       []byte
+	Method             string
+	URI                *url.URL
+	Version            string
+	Headers            map[string]string
+	Host               string
+	ProxyAuthorization string
+	ContentLength      uint64
+	Payload            []byte
 
-	OK   bool
-	data []byte
+	Status int
+	data   []byte
+}
+
+func (req *httpRequest) getHost() string {
+	host := req.Host
+	if !strings.Contains(host, ":") {
+		host += ":80"
+	}
+	return host
 }
 
 func (req *httpRequest) reset() {
-	req.OK = false
+	req.Status = REQUEST_STATUS_UNKNOWN
 	req.data = []byte("")
 }
 
+/* 生成HTTP请求数据 */
 func (req *httpRequest) buildRequest() []byte {
 	var request string
 	path := req.URI.Path
@@ -81,7 +99,10 @@ func (req *httpRequest) buildRequest() []byte {
 	}
 	request = fmt.Sprintf("%s %s%s HTTP/%s\r\n", req.Method, path, query, req.Version)
 	for k := range req.Headers {
-		request += fmt.Sprintf("%s: %s\r\n", k, req.Headers[k])
+		v := req.Headers[k]
+		if !strings.HasPrefix(v, "Proxy-") { /* 不添加Proxy相关的首部 */
+			request += fmt.Sprintf("%s: %s\r\n", k, v)
+		}
 	}
 	request += "\r\n" + string(req.Payload)
 	return []byte(request)
@@ -123,26 +144,38 @@ func parseRequestVersion(version string) string {
 }
 
 /* 检查是否已经有完成的HTTP首部 */
-func fetchHTTPHeaders(lines [][]byte) ([][]byte, bool) {
+func getHTTPHeaders(lines [][]byte) ([][]byte, bool) {
 	var headers [][]byte
-	var complete bool
+	var full bool
 	for _, h := range lines {
 		if len(h) == 0 {
-			complete = true
+			full = true
 			break
 		}
 		headers = append(headers, h)
 	}
-	return headers, complete
+	return headers, full
 }
 
-func fetchContentLength(headers map[string]string) uint64 {
+/* 获取HTTP首部中Content-Length字段，或者默认为0 */
+func getContentLength(headers map[string]string) uint64 {
 	content_length, ok := headers["Content-Length"]
 	if !ok {
 		return 0
 	}
 	length, _ := strconv.Atoi(content_length)
 	return uint64(length)
+}
+
+func getProxyAuthorization(headers map[string]string) string {
+	auth, ok := headers["Proxy-Authorization"]
+	if !ok || !strings.HasPrefix(auth, "Basic ") { /* 不存在或者认证方法无效 */
+		return ""
+	}
+	if decoded, err := base64.StdEncoding.DecodeString(auth[6:]); err == nil {
+		return string(decoded)
+	}
+	return ""
 }
 
 /*
@@ -161,7 +194,7 @@ func (req *httpRequest) parse(data []byte) error {
 	var version string
 	var headers map[string]string = make(map[string]string)
 	var host string
-	var complete bool
+	var full bool
 	for _, t := range bytes.Split(lines[0], []byte(" ")) {
 		e := bytes.Trim(t, " ")
 		if len(e) > 0 {
@@ -183,8 +216,8 @@ func (req *httpRequest) parse(data []byte) error {
 			firstline[2])
 	}
 
-	lines, complete = fetchHTTPHeaders(lines[1:])
-	if complete { /* 如果已经读取了完整的HTTP首部 */
+	lines, full = getHTTPHeaders(lines[1:])
+	if full { /* 如果已经读取了完整的HTTP首部 */
 		lines = lines
 	} else { /* 没有读取完成的HTTP首部，则暂时忽略最后一行 */
 		lines = lines[:len(lines)-1]
@@ -198,7 +231,7 @@ func (req *httpRequest) parse(data []byte) error {
 		value := string(bytes.Trim(kv[1], " "))
 		headers[key] = value
 	}
-	if complete { /* 如果已经读取到了完整的HTTP首部，则检查Host */
+	if full { /* 如果已经读取到了完整的HTTP首部，则检查Host */
 		if len(uri.Host) > 0 {
 			host = uri.Host
 		} else {
@@ -213,12 +246,14 @@ func (req *httpRequest) parse(data []byte) error {
 		req.Version = version
 		req.Headers = headers
 		req.Host = host
-		req.ContentLength = fetchContentLength(headers)
+		req.ContentLength = getContentLength(headers)
+		req.ProxyAuthorization = getProxyAuthorization(headers)
 		req.Payload = bytes.SplitN(data, []byte("\r\n\r\n"), 2)[1]
 		if uint64(len(req.Payload)) < req.ContentLength {
-			return nil
+			req.Status = REQUEST_STATUS_FULL_HEADER
+		} else {
+			req.Status = REQUEST_STATUS_FULL_REQUEST
 		}
-		req.OK = true
 	}
 	return nil
 }
