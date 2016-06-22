@@ -19,6 +19,7 @@ package utils
 
 import (
 	"time"
+	"sync"
 )
 
 type Cache interface {
@@ -37,10 +38,19 @@ type cacheValue struct {
 type lruCache struct {
 	data    map[string]cacheValue
 	timeout int64
+	mutex   *sync.Mutex	/* 多goroutine同时访问，需要加锁 */
+}
+
+func (c *lruCache) lock() {
+	c.mutex.Lock()
+}
+
+func (c *lruCache) unlock() {
+	c.mutex.Unlock()
 }
 
 func NewLRUCache(timeout int64) Cache {
-	return &lruCache{make(map[string]cacheValue), timeout}
+	return &lruCache{make(map[string]cacheValue), timeout, &sync.Mutex{}}
 }
 
 func (c *lruCache) Timeout() {
@@ -62,12 +72,14 @@ func (c *lruCache) Get(key string) interface{} {
 func (c *lruCache) Set(key string, value interface{}) {
 	val, ok := c.data[key]
 	now := time.Now().Unix()
+	c.lock()
 	if ok == false {
 		c.data[key] = cacheValue{value, now}
 	} else {
 		val.value = value
 		val.timestamp = now
 	}
+	c.unlock()
 }
 
 func (c *lruCache) GetString(key string) string {
