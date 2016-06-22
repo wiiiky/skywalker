@@ -62,7 +62,7 @@ func init() {
 	configFile := flag.String("c", "./config.json", "the config file")
 	flag.Parse()
 	if !utils.ReadJSONFile(*configFile, &Config) {
-		utils.FatalError("Fail To Load Config From %s", configFile)
+		utils.FatalError("Fail To Load Config From %s", *configFile)
 	}
 	log.Init(Config.Logger)
 	utils.Init(Config.CacheTimeout)
