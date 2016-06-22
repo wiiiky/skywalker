@@ -19,7 +19,7 @@ package stat
 
 import (
 	"fmt"
-	"skywalker/log"
+	"github.com/hitoshii/golib/src/log"
 	"skywalker/plugin"
 	"skywalker/utils"
 )

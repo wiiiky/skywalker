@@ -1,4 +1,5 @@
 bin/
 pkg/
 config/*.json
+src/github.com/
 *~

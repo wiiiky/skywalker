@@ -18,9 +18,9 @@
 package http
 
 import (
+	"github.com/hitoshii/golib/src/log"
 	"skywalker/agent"
 	"skywalker/internal"
-	"skywalker/log"
 	"skywalker/utils"
 )
 
