@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Wiky L
+ * Copyright (C) 2015 - 2016 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -18,12 +18,12 @@
 package config
 
 import (
+	"github.com/hitoshii/golib/src/log"
 	"skywalker/agent"
 	"skywalker/agent/direct"
 	"skywalker/agent/http"
 	"skywalker/agent/shadowsocks"
 	"skywalker/agent/socks5"
-	"github.com/hitoshii/golib/src/log"
 	"strings"
 )
 

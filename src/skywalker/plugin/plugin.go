@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Wiky L
+ * Copyright (C) 2015 - 2016 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -15,45 +15,67 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package config
+package plugin
 
 import (
+	"github.com/hitoshii/golib/src/log"
 	"os"
 	"os/signal"
 	"reflect"
-	"github.com/hitoshii/golib/src/log"
-	"skywalker/plugin"
 	"skywalker/plugin/stat"
 	"syscall"
 )
 
-type newPluginFunc func() plugin.SWPlugin
+type newPluginFunc func() SkyWalkerPlugin
+
+type PluginConfig struct {
+	Name   string                 `json:"name"`
+	Config map[string]interface{} `json:"config"`
+}
+
+func NewStatPlugin() SkyWalkerPlugin {
+	return &stat.StatPlugin{}
+}
 
 var (
-	pluginMap = map[string]newPluginFunc{
-		"stat": stat.NewStatPlugin,
+	gPluginMap = map[string]newPluginFunc{
+		"stat": NewStatPlugin,
 	}
-	plugins = []plugin.SWPlugin{}
+	gPlugins []SkyWalkerPlugin = nil
 )
 
-func initPlugin(ps []PluginConfig) {
+/* 初始化插件 */
+func Init(ps []PluginConfig) {
 	for i := range ps {
 		pc := ps[i]
-		f := pluginMap[pc.Name]
+		f := gPluginMap[pc.Name]
 		if f == nil {
 			log.WARNING("Plugin %s Not Found", ps[i])
 		} else {
 			p := f()
 			p.Init(pc.Config)
-			plugins = append(plugins, p)
+			gPlugins = append(gPlugins, p)
 		}
 	}
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, os.Kill, syscall.SIGTERM)
+
+	/* 程序退出 FIXME 有待优化 */
+	go func() {
+		<-ch
+		signal.Stop(ch)
+		for _, plugin := range gPlugins {
+			plugin.AtExit()
+		}
+		os.Exit(0)
+	}()
 }
 
+/* 调用插件方法 */
 func CallPluginsMethod(name string, data interface{}) {
 	callPluginsMethod := func(d []byte) {
-		for i := range plugins {
-			plugin := plugins[i]
+		for _, plugin := range gPlugins {
 			method := reflect.ValueOf(plugin).MethodByName(name)
 			args := []reflect.Value{reflect.ValueOf(d)}
 			method.Call(args)
@@ -69,18 +91,4 @@ func CallPluginsMethod(name string, data interface{}) {
 			callPluginsMethod(_d)
 		}
 	}
-}
-
-func init() {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt, os.Kill, syscall.SIGTERM)
-
-	go func() {
-		<-ch
-		signal.Stop(ch)
-		for i := range plugins {
-			plugins[i].AtExit()
-		}
-		os.Exit(0)
-	}()
 }

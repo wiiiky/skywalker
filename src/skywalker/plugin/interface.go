@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Wiky L
+ * Copyright (C) 2015 - 2016 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -17,7 +17,7 @@
 
 package plugin
 
-type SWPlugin interface {
+type SkyWalkerPlugin interface {
 	Init(map[string]interface{})
 
 	FromClientToClientAgent([]byte)

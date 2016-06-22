@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Wiky L
+ * Copyright (C) 2015 - 2016 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -18,8 +18,8 @@
 package utils
 
 import (
-	"time"
 	"sync"
+	"time"
 )
 
 type Cache interface {
@@ -38,7 +38,7 @@ type cacheValue struct {
 type lruCache struct {
 	data    map[string]cacheValue
 	timeout int64
-	mutex   *sync.Mutex	/* 多goroutine同时访问，需要加锁 */
+	mutex   *sync.Mutex /* 多goroutine同时访问，需要加锁 */
 }
 
 func (c *lruCache) lock() {

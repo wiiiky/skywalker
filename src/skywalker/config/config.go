@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Wiky L
+ * Copyright (C) 2015 - 2016 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -20,13 +20,9 @@ package config
 import (
 	"flag"
 	"github.com/hitoshii/golib/src/log"
+	"skywalker/plugin"
 	"skywalker/utils"
 )
-
-type PluginConfig struct {
-	Name   string                 `json:"name"`
-	Config map[string]interface{} `json:"config"`
-}
 
 /* 服务配置 */
 type ProxyConfig struct {
@@ -43,7 +39,7 @@ type ProxyConfig struct {
 
 	CacheTimeout int64 `json:"cacheTimeout"`
 
-	Plugins []PluginConfig `json:"plugins"`
+	Plugins []plugin.PluginConfig `json:"plugins"`
 }
 
 var (
@@ -87,5 +83,5 @@ func init() {
 	}
 
 	/* 初始化插件 */
-	initPlugin(Config.Plugins)
+	plugin.Init(Config.Plugins)
 }

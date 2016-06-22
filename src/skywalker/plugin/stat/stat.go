@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Wiky L
+ * Copyright (C) 2015 - 2016 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -20,7 +20,6 @@ package stat
 import (
 	"fmt"
 	"github.com/hitoshii/golib/src/log"
-	"skywalker/plugin"
 	"skywalker/utils"
 )
 
@@ -34,10 +33,6 @@ type StatPlugin struct {
 	CA2C  uint64 `json:"ca2c"`
 
 	sfile string /* 用户保存流量数据的文件 */
-}
-
-func NewStatPlugin() plugin.SWPlugin {
-	return &StatPlugin{}
 }
 
 func (p *StatPlugin) Init(cfg map[string]interface{}) {

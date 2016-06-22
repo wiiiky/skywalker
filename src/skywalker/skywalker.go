@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Wiky L
+ * Copyright (C) 2016 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -23,6 +23,7 @@ import (
 	"skywalker/agent"
 	"skywalker/config"
 	"skywalker/internal"
+	"skywalker/plugin"
 	"skywalker/utils"
 	"strings"
 )
@@ -168,9 +169,9 @@ RUNNING:
 			if ok == false {
 				break RUNNING
 			}
-			config.CallPluginsMethod("FromClientToClientAgent", data)
+			plugin.CallPluginsMethod("FromClientToClientAgent", data)
 			tdata, rdata, err := cAgent.FromClient(data)
-			config.CallPluginsMethod("FromClientAgentToClient", rdata)
+			plugin.CallPluginsMethod("FromClientAgentToClient", rdata)
 			if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
 				log.DEBUG("transfer data from client agent to server agent error, %s",
 					_err.Error())
@@ -182,9 +183,9 @@ RUNNING:
 				closed_by_client = false
 				break RUNNING
 			} else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
-				config.CallPluginsMethod("FromServerAgentToClientAgent", pkg.Data.([]byte))
+				plugin.CallPluginsMethod("FromServerAgentToClientAgent", pkg.Data.([]byte))
 				tdata, rdata, err := cAgent.FromServerAgent(pkg.Data.([]byte))
-				config.CallPluginsMethod("FromClientAgentToClient", rdata)
+				plugin.CallPluginsMethod("FromClientAgentToClient", rdata)
 				if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
 					closed_by_client = false
 					log.DEBUG("receive data from server agent to client agent error, %s",
@@ -285,9 +286,9 @@ RUNNING:
 				closed_by_client = false
 				break RUNNING
 			}
-			config.CallPluginsMethod("FromServerToServerAgent", data)
+			plugin.CallPluginsMethod("FromServerToServerAgent", data)
 			tdata, rdata, err := sAgent.FromServer(data)
-			config.CallPluginsMethod("FromServerAgentToServer", rdata)
+			plugin.CallPluginsMethod("FromServerAgentToServer", rdata)
 			if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
 				closed_by_client = false
 				log.DEBUG("transfer data from server agent to client agent error, %s",
@@ -299,9 +300,9 @@ RUNNING:
 			if ok == false {
 				break RUNNING
 			} else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
-				config.CallPluginsMethod("FromClientAgentToServerAgent", pkg.Data.([]byte))
+				plugin.CallPluginsMethod("FromClientAgentToServerAgent", pkg.Data.([]byte))
 				tdata, rdata, err := sAgent.FromClientAgent(pkg.Data.([]byte))
-				config.CallPluginsMethod("FromServerAgentToServer", rdata)
+				plugin.CallPluginsMethod("FromServerAgentToServer", rdata)
 				if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
 					log.DEBUG("receive data from client agent to server agent error, %s",
 						_err.Error())
