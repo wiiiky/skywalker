@@ -21,7 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
-	"skywalker/log"
+	"github.com/hitoshii/golib/src/log"
 	"skywalker/plugin"
 	"skywalker/plugin/stat"
 	"syscall"

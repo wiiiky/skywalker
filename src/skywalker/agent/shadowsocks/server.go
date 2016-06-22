@@ -19,10 +19,10 @@ package shadowsocks
 
 import (
 	"bytes"
+	"github.com/hitoshii/golib/src/log"
 	"skywalker/agent"
 	"skywalker/cipher"
 	"skywalker/internal"
-	"skywalker/log"
 	"skywalker/utils"
 	"strconv"
 	"strings"

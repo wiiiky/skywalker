@@ -19,7 +19,7 @@ package config
 
 import (
 	"flag"
-	"skywalker/log"
+	"github.com/hitoshii/golib/src/log"
 	"skywalker/utils"
 )
 

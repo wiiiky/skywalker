@@ -23,7 +23,7 @@ import (
 	"skywalker/agent/http"
 	"skywalker/agent/shadowsocks"
 	"skywalker/agent/socks5"
-	"skywalker/log"
+	"github.com/hitoshii/golib/src/log"
 	"strings"
 )
 

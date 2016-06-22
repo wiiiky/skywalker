@@ -1,8 +1,11 @@
 
-all: skywalker
+all: get skywalker
 
 skywalker:
 	GOPATH=`pwd` go build -o bin/luker src/skywalker/skywalker.go
+
+get:
+	GOPATH=`pwd` go get -fix skywalker
 
 fmt:
 	find . -name '*.go'|xargs gofmt -w

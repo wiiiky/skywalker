@@ -22,7 +22,7 @@ import (
 )
 
 /*
- * Internal协议用于转化两个协议
+ * Internal协议用于CA和SA的通信
  */
 
 const (

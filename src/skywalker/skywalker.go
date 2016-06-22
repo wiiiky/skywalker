@@ -18,11 +18,11 @@
 package main
 
 import (
+	"github.com/hitoshii/golib/src/log"
 	"net"
 	"skywalker/agent"
 	"skywalker/config"
 	"skywalker/internal"
-	"skywalker/log"
 	"skywalker/utils"
 	"strings"
 )
