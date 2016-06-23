@@ -20,7 +20,7 @@ package stat
 import (
 	"fmt"
 	"github.com/hitoshii/golib/src/log"
-	"skywalker/utils"
+	"skywalker/util"
 )
 
 type StatPlugin struct {
@@ -36,10 +36,10 @@ type StatPlugin struct {
 }
 
 func (p *StatPlugin) Init(cfg map[string]interface{}) {
-	p.sfile = utils.GetMapString(cfg, "save")
+	p.sfile = util.GetMapString(cfg, "save")
 	if len(p.sfile) > 0 {
-		p.sfile = utils.ExpandPath(p.sfile)
-		utils.ReadJSONFile(p.sfile, &p)
+		p.sfile = util.ExpandPath(p.sfile)
+		util.ReadJSONFile(p.sfile, &p)
 		log.DEBUG("read stat from %s", p.sfile)
 	}
 }
@@ -85,11 +85,11 @@ func (p *StatPlugin) AtExit() {
 		return f
 	}
 	var tp StatPlugin
-	utils.ReadJSONFile(p.sfile, &tp)
+	util.ReadJSONFile(p.sfile, &tp)
 	fmt.Printf("Scope\t\tSent\t\tReceived\n")
 	fmt.Printf("Session\t\t%s\t%s\n", formatData(p.SA2S-tp.SA2S), formatData(p.S2SA-tp.S2SA))
 	fmt.Printf("Total\t\t%s\t%s\n", formatData(p.SA2S), formatData(p.S2SA))
 	if len(p.sfile) > 0 {
-		utils.SaveJSONFile(p.sfile, p)
+		util.SaveJSONFile(p.sfile, p)
 	}
 }

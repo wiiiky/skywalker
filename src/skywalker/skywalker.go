@@ -24,28 +24,34 @@ import (
 	"skywalker/config"
 	"skywalker/internal"
 	"skywalker/plugin"
-	"skywalker/utils"
-	"strconv"
+	"skywalker/util"
 	"strings"
 )
 
 func main() {
-	cfg := config.Config
-	tcpListener, err := net.Listen("tcp", cfg.BindAddr+":"+strconv.Itoa(int(cfg.BindPort)))
-	if err != nil {
-		log.ERROR("Couldn't Start Listening: %s", err.Error())
+	var tcpListener net.Listener
+	var udpListener *net.UDPConn
+	var err error
+
+	if tcpListener, err = util.TCPListen(config.GetAddress(), config.GetPort()); err != nil {
+		log.ERROR("Couldn't Listen TCP: %s", err.Error())
 		return
 	}
 	defer tcpListener.Close()
-	log.INFO("listen on %s:%d\n", cfg.BindAddr, cfg.BindPort)
+	if udpListener, err = util.UDPListen(config.GetAddress(), config.GetPort()); err != nil {
+		log.ERROR("Couldn't Listen UDP: %s", err.Error())
+		return
+	}
+	defer udpListener.Close()
+
+	log.INFO("Listen On %s\n", config.GetAddressPort())
 
 	for {
-		conn, err := tcpListener.Accept()
-		if err != nil {
+		if conn, err := tcpListener.Accept(); err == nil {
+			startTransfer(conn)
+		} else {
 			log.WARNING("Couldn't Accept: %s", err.Error())
-			continue
 		}
-		startTransfer(conn)
 	}
 }
 
@@ -229,7 +235,7 @@ func connectRemote(hostname string, sAgent agent.ServerAgent,
 	}
 	/* 获取服务器地址，并链接 */
 	addr, port := sAgent.GetRemoteAddress(addrinfo[0], addrinfo[1])
-	conn, result := utils.TcpConnect(addr, port)
+	conn, result := util.TCPConnect(addr, port)
 
 	/* 连接结果 */
 	var connResult internal.ConnectResult

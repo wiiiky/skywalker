@@ -21,7 +21,8 @@ import (
 	"flag"
 	"github.com/hitoshii/golib/src/log"
 	"skywalker/plugin"
-	"skywalker/utils"
+	"skywalker/util"
+	"strconv"
 )
 
 /* 服务配置 */
@@ -40,6 +41,18 @@ type ProxyConfig struct {
 	CacheTimeout int64 `json:"cacheTimeout"`
 
 	Plugins []plugin.PluginConfig `json:"plugins"`
+}
+
+func GetAddressPort() string {
+	return Config.BindAddr + ":" + strconv.Itoa(int(Config.BindPort))
+}
+
+func GetAddress() string {
+	return Config.BindAddr
+}
+
+func GetPort() uint16 {
+	return Config.BindPort
 }
 
 var (
@@ -61,25 +74,25 @@ var (
 func init() {
 	configFile := flag.String("c", "./config.json", "the config file")
 	flag.Parse()
-	if !utils.ReadJSONFile(*configFile, &Config) {
-		utils.FatalError("Fail To Load Config From %s", *configFile)
+	if !util.ReadJSONFile(*configFile, &Config) {
+		util.FatalError("Fail To Load Config From %s", *configFile)
 	}
 	log.Init(Config.Logger)
-	utils.Init(Config.CacheTimeout)
+	util.Init(Config.CacheTimeout)
 
 	/* 初始化代理 */
 	clientAgent := getClientAgent()
 	if clientAgent == nil {
-		utils.FatalError("Client Protocol [%s] Not Found!", Config.ClientProtocol)
+		util.FatalError("Client Protocol [%s] Not Found!", Config.ClientProtocol)
 	} else if err := clientAgent.OnInit(Config.ClientConfig); err != nil {
-		utils.FatalError("Fail To Initialize [%s]:%s", clientAgent.Name(), err.Error())
+		util.FatalError("Fail To Initialize [%s]:%s", clientAgent.Name(), err.Error())
 	}
 
 	serverAgent := getServerAgent()
 	if serverAgent == nil {
-		utils.FatalError("Server Protocol [%s] Not Found!", Config.ServerProtocol)
+		util.FatalError("Server Protocol [%s] Not Found!", Config.ServerProtocol)
 	} else if err := serverAgent.OnInit(Config.ServerConfig); err != nil {
-		utils.FatalError("Fail To Initialize [%s]:%s", serverAgent.Name(), err.Error())
+		util.FatalError("Fail To Initialize [%s]:%s", serverAgent.Name(), err.Error())
 	}
 
 	/* 初始化插件 */

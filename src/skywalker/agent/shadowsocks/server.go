@@ -23,7 +23,7 @@ import (
 	"skywalker/agent"
 	"skywalker/cipher"
 	"skywalker/internal"
-	"skywalker/utils"
+	"skywalker/util"
 	"strconv"
 	"strings"
 )
@@ -139,10 +139,10 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 			if !ok {
 				return agent.NewAgentError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
 			}
-			addr := utils.GetMapString(m, "serverAddr")
-			port := utils.GetMapInt(m, "serverPort")
-			password := utils.GetMapString(m, "password")
-			method := utils.GetMapString(m, "method")
+			addr := util.GetMapString(m, "serverAddr")
+			port := util.GetMapInt(m, "serverPort")
+			password := util.GetMapString(m, "password")
+			method := util.GetMapString(m, "method")
 			if len(addr) == 0 || port == 0 {
 				return agent.NewAgentError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
 			}
@@ -157,23 +157,23 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 	}
 
 	if len(serverAddrs) == 0 {
-		if serverAddr = utils.GetMapString(cfg, "serverAddr"); len(serverAddr) == 0 {
+		if serverAddr = util.GetMapString(cfg, "serverAddr"); len(serverAddr) == 0 {
 			return agent.NewAgentError(ERROR_INVALID_CONFIG, "no server address")
 		}
-		if port := utils.GetMapInt(cfg, "serverPort"); port > 0 {
+		if port := util.GetMapInt(cfg, "serverPort"); port > 0 {
 			serverPort = strconv.Itoa(int(port))
 		} else {
 			return agent.NewAgentError(ERROR_INVALID_CONFIG, "no server port")
 		}
-		go utils.GetHostAddress(serverAddr)
+		go util.GetHostAddress(serverAddr)
 	} else {
 		for _, addr := range serverAddrs {
-			go utils.GetHostAddress(addr.serverAddr)
+			go util.GetHostAddress(addr.serverAddr)
 		}
-		retry = int(utils.GetMapIntDefault(cfg, "retry", 3))
+		retry = int(util.GetMapIntDefault(cfg, "retry", 3))
 	}
-	password = utils.GetMapString(cfg, "password")
-	method = utils.GetMapStringDefault(cfg, "method", "aes-256-cfb")
+	password = util.GetMapString(cfg, "password")
+	method = util.GetMapStringDefault(cfg, "method", "aes-256-cfb")
 
 	serverConfig.serverAddr = serverAddr
 	serverConfig.serverPort = serverPort

@@ -15,12 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package utils
+package util
 
 import (
 	"net"
-	"time"
 	"skywalker/internal"
+	"strconv"
+	"time"
 )
 
 /*  DNS缓存 */
@@ -49,14 +50,27 @@ func GetHostAddress(host string) string {
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
-func TcpConnect(host string, port string) (net.Conn, int) {
+func TCPConnect(host string, port string) (net.Conn, int) {
 	ip := GetHostAddress(host)
 	if len(ip) == 0 {
 		return nil, internal.CONNECT_RESULT_UNKNOWN_HOST
 	}
 	addr := ip + ":" + port
-	if conn, err := net.DialTimeout("tcp", addr, 10 * time.Second); err == nil {
+	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err == nil {
 		return conn, internal.CONNECT_RESULT_OK
 	}
 	return nil, internal.CONNECT_RESULT_UNREACHABLE
+}
+
+func TCPListen(addr string, port uint16) (net.Listener, error) {
+	laddr := addr + ":" + strconv.Itoa(int(port))
+	return net.Listen("tcp", laddr)
+}
+
+func UDPListen(addr string, port uint16) (*net.UDPConn, error) {
+	laddr := net.UDPAddr{
+		Port: int(port),
+		IP:   net.ParseIP(addr),
+	}
+	return net.ListenUDP("udp", &laddr)
 }
