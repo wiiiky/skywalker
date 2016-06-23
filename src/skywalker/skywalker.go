@@ -25,33 +25,32 @@ import (
 	"skywalker/internal"
 	"skywalker/plugin"
 	"skywalker/utils"
+	"strconv"
 	"strings"
 )
 
 func main() {
 	cfg := config.Config
-	listener, err := net.Listen("tcp", cfg.BindAddr+":"+utils.ConvertToString(cfg.BindPort))
+	tcpListener, err := net.Listen("tcp", cfg.BindAddr+":"+strconv.Itoa(int(cfg.BindPort)))
 	if err != nil {
 		log.ERROR("Couldn't Start Listening: %s", err.Error())
 		return
 	}
-	defer listener.Close()
+	defer tcpListener.Close()
 	log.INFO("listen on %s:%d\n", cfg.BindAddr, cfg.BindPort)
 
-	var id uint = 1
 	for {
-		conn, err := listener.Accept()
+		conn, err := tcpListener.Accept()
 		if err != nil {
 			log.WARNING("Couldn't Accept: %s", err.Error())
 			continue
 		}
-		startTransfer(id, conn)
-		id += 1
+		startTransfer(conn)
 	}
 }
 
 /* 启动数据转发流程 */
-func startTransfer(id uint, conn net.Conn) {
+func startTransfer(conn net.Conn) {
 	cAgent := config.GetClientAgent()
 	sAgent := config.GetServerAgent()
 	if cAgent == nil || sAgent == nil {
@@ -60,8 +59,8 @@ func startTransfer(id uint, conn net.Conn) {
 	}
 	c2s := make(chan *internal.InternalPackage, 100)
 	s2c := make(chan *internal.InternalPackage, 100)
-	go clientGoroutine(id, cAgent, c2s, s2c, conn)
-	go serverGoroutine(id, sAgent, c2s, s2c)
+	go clientGoroutine(cAgent, c2s, s2c, conn)
+	go serverGoroutine(sAgent, c2s, s2c)
 }
 
 /*
@@ -150,7 +149,7 @@ func transferData(ic chan *internal.InternalPackage,
 }
 
 /* 处理客户端连接的goroutine */
-func clientGoroutine(id uint, cAgent agent.ClientAgent,
+func clientGoroutine(cAgent agent.ClientAgent,
 	c2s chan *internal.InternalPackage,
 	s2c chan *internal.InternalPackage,
 	cConn net.Conn) {
@@ -261,7 +260,7 @@ func connectRemote(hostname string, sAgent agent.ServerAgent,
  * 处理服务器连接的goroutine
  * 从客户端代理收到的第一个数据包一定是服务器地址，无论该数据包被标志成什么类型
  */
-func serverGoroutine(id uint, sAgent agent.ServerAgent,
+func serverGoroutine(sAgent agent.ServerAgent,
 	c2s chan *internal.InternalPackage,
 	s2c chan *internal.InternalPackage) {
 	defer close(s2c)

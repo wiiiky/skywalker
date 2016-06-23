@@ -19,27 +19,9 @@ package utils
 
 import (
 	"net"
+	"time"
 	"skywalker/internal"
-	"strconv"
 )
-
-/*
- * 将int、uint16类型的转化为字符串形式
- */
-func ConvertToString(port interface{}) string {
-	var portStr string
-	switch p := port.(type) {
-	case int:
-		portStr = strconv.Itoa(p)
-	case uint16:
-		portStr = strconv.Itoa(int(p))
-	case string:
-		portStr = p
-	default:
-		portStr = ""
-	}
-	return portStr
-}
 
 /*  DNS缓存 */
 var (
@@ -67,15 +49,14 @@ func GetHostAddress(host string) string {
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
-func TcpConnect(host string, port interface{}) (net.Conn, int) {
+func TcpConnect(host string, port string) (net.Conn, int) {
 	ip := GetHostAddress(host)
 	if len(ip) == 0 {
 		return nil, internal.CONNECT_RESULT_UNKNOWN_HOST
 	}
-	addr := ip + ":" + ConvertToString(port)
-	conn, err := net.DialTimeout("tcp", addr, 10000000000)
-	if err != nil {
-		return nil, internal.CONNECT_RESULT_UNREACHABLE
+	addr := ip + ":" + port
+	if conn, err := net.DialTimeout("tcp", addr, 10 * time.Second); err == nil {
+		return conn, internal.CONNECT_RESULT_OK
 	}
-	return conn, internal.CONNECT_RESULT_OK
+	return nil, internal.CONNECT_RESULT_UNREACHABLE
 }
