@@ -99,3 +99,6 @@ type ServerAgent interface {
 	/* 关闭链接，释放资源，收尾工作 */
 	OnClose(bool)
 }
+
+type newClientAgentFunc func() ClientAgent
+type newServerAgentFunc func() ServerAgent
