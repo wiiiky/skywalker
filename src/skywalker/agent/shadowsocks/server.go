@@ -184,7 +184,7 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 }
 
 /* 初始化读取配置 */
-func (a *ShadowSocksServerAgent) OnStart(cfg map[string]interface{}) error {
+func (a *ShadowSocksServerAgent) OnStart() error {
 	serverAddr, serverPort, password, method := serverConfig.serverInfo()
 	info := cipher.GetCipherInfo(strings.ToLower(method))
 	key := generateKey([]byte(password), info.KeySize)

@@ -87,7 +87,7 @@ func (a *ShadowSocksClientAgent) OnInit(cfg map[string]interface{}) error {
 	return nil
 }
 
-func (p *ShadowSocksClientAgent) OnStart(cfg map[string]interface{}) error {
+func (p *ShadowSocksClientAgent) OnStart() error {
 	key := generateKey([]byte(clientConfig.password), clientConfig.cipherInfo.KeySize)
 	iv := generateIV(clientConfig.cipherInfo.IvSize)
 

@@ -39,15 +39,14 @@ type ClientAgent interface {
 	/* 返回协议名 */
 	Name() string
 	/*
-	 * 程序初始化时调用，该方法全局只调用一次
+	 * 程序初始化时调用，该方法全局只调用一次，读取配置
 	 */
 	OnInit(map[string]interface{}) error
 	/*
-	 * 读取配置，初始化协议
 	 * 初始化成功，返回nil
 	 * 初始化失败，返回错误
 	 */
-	OnStart(map[string]interface{}) error
+	OnStart() error
 
 	/* 连接服务器结果 */
 	OnConnectResult(internal.ConnectResult) (interface{}, interface{}, error)
@@ -72,15 +71,14 @@ type ServerAgent interface {
 	Name() string
 
 	/*
-	 * 程序初始化时调用，全局只调用一次
+	 * 程序初始化时调用，全局只调用一次，读取配置
 	 */
 	OnInit(map[string]interface{}) error
 	/*
-	 * 读取配置，初始化协议
 	 * 初始化成功，返回nil
 	 * 初始化失败，返回错误
 	 */
-	OnStart(map[string]interface{}) error
+	OnStart() error
 
 	/*
 	 * 获取远程地址，参数是入站协议传递过来的远程服务器地址

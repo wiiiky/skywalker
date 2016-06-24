@@ -85,7 +85,7 @@ func (a *Socks5ServerAgent) OnInit(cfg map[string]interface{}) error {
 	return nil
 }
 
-func (a *Socks5ServerAgent) OnStart(cfg map[string]interface{}) error {
+func (a *Socks5ServerAgent) OnStart() error {
 	a.version = 5
 	a.nmethods = 1
 	a.methods = []byte{0x00}

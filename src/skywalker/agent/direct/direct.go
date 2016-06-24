@@ -35,7 +35,7 @@ func (a *DirectAgent) OnInit(cfg map[string]interface{}) error {
 	return nil
 }
 
-func (a *DirectAgent) OnStart(cfg map[string]interface{}) error {
+func (a *DirectAgent) OnStart() error {
 	return nil
 }
 

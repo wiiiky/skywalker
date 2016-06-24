@@ -103,13 +103,13 @@ func Init(cname string, ccfg map[string]interface{}, sname string, scfg map[stri
 /*
  * 初始化客户端代理
  */
-func GetClientAgent(name string, cfg map[string]interface{}) ClientAgent {
+func GetClientAgent(name string) ClientAgent {
 	agent := getClientAgent(name)
 	if agent == nil {
 		log.ERROR("Client Agent [%s] Not Found!", name)
 		return nil
 	}
-	if err := agent.OnStart(cfg); err != nil {
+	if err := agent.OnStart(); err != nil {
 		log.WARNING("Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
 		return nil
 	}
@@ -119,13 +119,13 @@ func GetClientAgent(name string, cfg map[string]interface{}) ClientAgent {
 /*
  * 初始化服务器代理
  */
-func GetServerAgent(name string, cfg map[string]interface{}) ServerAgent {
+func GetServerAgent(name string) ServerAgent {
 	agent := getServerAgent(name)
 	if agent == nil {
 		log.ERROR("Server Agent [%s] Not Found!", name)
 		return nil
 	}
-	if err := agent.OnStart(cfg); err != nil {
+	if err := agent.OnStart(); err != nil {
 		log.WARNING("Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())
 		return nil
 	}

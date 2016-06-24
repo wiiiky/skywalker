@@ -20,8 +20,8 @@ package config
 import (
 	"flag"
 	"github.com/hitoshii/golib/src/log"
-	"skywalker/plugin"
 	"skywalker/agent"
+	"skywalker/plugin"
 	"skywalker/util"
 	"strconv"
 )
@@ -91,7 +91,7 @@ var (
 func init() {
 	configFile := flag.String("c", "./config.json", "the config file")
 	flag.Parse()
-	if !util.ReadJSONFile(*configFile, &Config) {	/* 读取配置文件 */
+	if !util.ReadJSONFile(*configFile, &Config) { /* 读取配置文件 */
 		util.FatalError("Fail To Load Config From %s", *configFile)
 	}
 	/* 初始化日志 */

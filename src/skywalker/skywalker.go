@@ -57,8 +57,8 @@ func main() {
 
 /* 启动数据转发流程 */
 func startTransfer(conn net.Conn) {
-	cAgent := agent.GetClientAgent(config.GetClientAgentName(), config.GetClientAgentConfig())
-	sAgent := agent.GetServerAgent(config.GetServerAgentName(), config.GetServerAgentConfig())
+	cAgent := agent.GetClientAgent(config.GetClientAgentName())
+	sAgent := agent.GetServerAgent(config.GetServerAgentName())
 	if cAgent == nil || sAgent == nil {
 		conn.Close()
 		return

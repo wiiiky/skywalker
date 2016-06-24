@@ -50,7 +50,7 @@ func (a *HTTPClientAgent) OnInit(cfg map[string]interface{}) error {
 	return nil
 }
 
-func (a *HTTPClientAgent) OnStart(cfg map[string]interface{}) error {
+func (a *HTTPClientAgent) OnStart() error {
 	a.req = newHTTPRequest()
 	return nil
 }
