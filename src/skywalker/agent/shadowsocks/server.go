@@ -20,17 +20,12 @@ package shadowsocks
 import (
 	"bytes"
 	"github.com/hitoshii/golib/src/log"
-	"skywalker/agent"
 	"skywalker/cipher"
 	"skywalker/internal"
 	"skywalker/util"
 	"strconv"
 	"strings"
 )
-
-func NewShadowSocksServerAgent() agent.ServerAgent {
-	return &ShadowSocksServerAgent{}
-}
 
 /*
  * ShadowSocks Server Agent
@@ -137,14 +132,14 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 		for _, ele := range array {
 			m, ok := ele.(map[string]interface{})
 			if !ok {
-				return agent.NewAgentError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
+				return util.NewError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
 			}
 			addr := util.GetMapString(m, "serverAddr")
 			port := util.GetMapInt(m, "serverPort")
 			password := util.GetMapString(m, "password")
 			method := util.GetMapString(m, "method")
 			if len(addr) == 0 || port == 0 {
-				return agent.NewAgentError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
+				return util.NewError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
 			}
 			saddr := ssServerAddress{
 				serverAddr: addr,
@@ -158,12 +153,12 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 
 	if len(serverAddrs) == 0 {
 		if serverAddr = util.GetMapString(cfg, "serverAddr"); len(serverAddr) == 0 {
-			return agent.NewAgentError(ERROR_INVALID_CONFIG, "no server address")
+			return util.NewError(ERROR_INVALID_CONFIG, "no server address")
 		}
 		if port := util.GetMapInt(cfg, "serverPort"); port > 0 {
 			serverPort = strconv.Itoa(int(port))
 		} else {
-			return agent.NewAgentError(ERROR_INVALID_CONFIG, "no server port")
+			return util.NewError(ERROR_INVALID_CONFIG, "no server port")
 		}
 		go util.GetHostAddress(serverAddr)
 	} else {
@@ -217,7 +212,7 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result internal.ConnectResult) 
 	if result.Result == internal.CONNECT_RESULT_OK {
 		port, err := strconv.Atoi(a.targetPort)
 		if err != nil {
-			return nil, nil, agent.NewAgentError(ERROR_INVALID_TARGET, "invalid target port")
+			return nil, nil, util.NewError(ERROR_INVALID_TARGET, "invalid target port")
 		}
 		plain := buildAddressRequest(a.targetAddr, uint16(port))
 		buf := bytes.Buffer{}
@@ -233,7 +228,7 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result internal.ConnectResult) 
 func (a *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {
 	if a.decrypter == nil {
 		if len(data) < a.cipherInfo.IvSize {
-			return nil, nil, agent.NewAgentError(ERROR_INVALID_PACKAGE, "invalid package")
+			return nil, nil, util.NewError(ERROR_INVALID_PACKAGE, "invalid package")
 		}
 		iv := data[:a.cipherInfo.IvSize]
 		data = data[a.cipherInfo.IvSize:]

@@ -15,25 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package agent
+package util
 
 import (
 	"fmt"
 )
 
-/*
- * 通用错误结构
- */
-type AgentError struct {
-	errcode int
-	message string
+type CodeError struct {
+	code int
+	msg  string
 }
 
-func (e *AgentError) Error() string {
-	return fmt.Sprintf("[%d]%s", e.errcode, e.message)
+func (e *CodeError) Error() string {
+	return fmt.Sprintf("[%d]%s", e.code, e.msg)
 }
 
-func NewAgentError(errcode int, format string, params ...interface{}) *AgentError {
-	message := fmt.Sprintf(format, params...)
-	return &AgentError{errcode, message}
+func NewError(code int, format string, params ...interface{}) *CodeError {
+	msg := fmt.Sprintf(format, params...)
+	return &CodeError{code: code, msg: msg}
 }

@@ -30,16 +30,40 @@ import (
 type newClientAgentFunc func() agent.ClientAgent
 type newServerAgentFunc func() agent.ServerAgent
 
+func NewSocks5ClientAgent() agent.ClientAgent {
+	return &socks5.Socks5ClientAgent{}
+}
+
+func NewSocks5ServerAgent() agent.ServerAgent {
+	return &socks5.Socks5ServerAgent{}
+}
+
+func NewShadowSocksClientAgent() agent.ClientAgent {
+	return &shadowsocks.ShadowSocksClientAgent{}
+}
+
+func NewShadowSocksServerAgent() agent.ServerAgent {
+	return &shadowsocks.ShadowSocksServerAgent{}
+}
+
+func NewHTTPClientAgent() agent.ClientAgent {
+	return &http.HTTPClientAgent{}
+}
+
+func NewDirectAgent() agent.ServerAgent {
+	return &direct.DirectAgent{}
+}
+
 var (
 	clientMap = map[string]newClientAgentFunc{
-		"http":        http.NewHTTPClientAgent,
-		"socks5":      socks5.NewSocks5ClientAgent,
-		"shadowsocks": shadowsocks.NewShadowSocksClientAgent,
+		"http":        NewHTTPClientAgent,
+		"socks5":      NewSocks5ClientAgent,
+		"shadowsocks": NewShadowSocksClientAgent,
 	}
 	serverMap = map[string]newServerAgentFunc{
-		"socks5":      socks5.NewSocks5ServerAgent,
-		"direct":      direct.NewDirectAgent,
-		"shadowsocks": shadowsocks.NewShadowSocksServerAgent,
+		"socks5":      NewSocks5ServerAgent,
+		"direct":      NewDirectAgent,
+		"shadowsocks": NewShadowSocksServerAgent,
 	}
 )
 

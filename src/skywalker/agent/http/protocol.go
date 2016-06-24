@@ -22,7 +22,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
-	"skywalker/agent"
+	"skywalker/util"
 	"strconv"
 	"strings"
 )
@@ -202,17 +202,17 @@ func (req *httpRequest) parse(data []byte) error {
 		}
 	}
 	if len(firstline) != 3 {
-		return agent.NewAgentError(ERROR_INVALID_FORMAT, "invalid request line")
+		return util.NewError(ERROR_INVALID_FORMAT, "invalid request line")
 	}
 	/* 检查方法是否有效 */
 	if method = parseRequestMethod(string(firstline[0])); len(method) == 0 {
-		return agent.NewAgentError(ERROR_INVALID_METHOD, "invalid method %s", firstline[0])
+		return util.NewError(ERROR_INVALID_METHOD, "invalid method %s", firstline[0])
 	}
 	if uri = parseRequestURI(method, string(firstline[1])); uri == nil {
-		return agent.NewAgentError(ERROR_INVALID_URI, "invalid uri %s", firstline[1])
+		return util.NewError(ERROR_INVALID_URI, "invalid uri %s", firstline[1])
 	}
 	if version = parseRequestVersion(string(firstline[2])); len(version) == 0 {
-		return agent.NewAgentError(ERROR_INVALID_VERSION, "invalid http version %s",
+		return util.NewError(ERROR_INVALID_VERSION, "invalid http version %s",
 			firstline[2])
 	}
 
@@ -225,7 +225,7 @@ func (req *httpRequest) parse(data []byte) error {
 	for _, line := range lines {
 		kv := bytes.SplitN(line, []byte(":"), 2)
 		if len(kv) != 2 {
-			return agent.NewAgentError(ERROR_INVALID_HEADER, "invalid header format")
+			return util.NewError(ERROR_INVALID_HEADER, "invalid header format")
 		}
 		key := string(bytes.Trim(kv[0], " "))
 		value := string(bytes.Trim(kv[1], " "))
@@ -238,7 +238,7 @@ func (req *httpRequest) parse(data []byte) error {
 			host = headers["Host"]
 		}
 		if len(host) <= 0 {
-			return agent.NewAgentError(ERROR_INVALID_HOST, "host not found")
+			return util.NewError(ERROR_INVALID_HOST, "host not found")
 		}
 		headers["Host"] = host
 		req.Method = method

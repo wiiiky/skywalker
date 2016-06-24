@@ -18,8 +18,8 @@
 package socks5
 
 import (
-	"skywalker/agent"
 	"skywalker/internal"
+	"skywalker/util"
 	"strconv"
 )
 
@@ -34,10 +34,6 @@ const (
 	state_transfer = 2 /* 转发数据 */
 	state_error    = 3 /* 已经出错 */
 )
-
-func NewSocks5ClientAgent() agent.ClientAgent {
-	return &Socks5ClientAgent{}
-}
 
 type Socks5ClientAgent struct {
 	version  uint8
@@ -100,10 +96,10 @@ func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, e
 			return nil, nil, err
 		} else if ver != p.version {
 			p.state = state_error
-			return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
+			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
 		} else if cmd != CMD_CONNECT {
 			p.state = state_error
-			return nil, nil, agent.NewAgentError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", cmd)
+			return nil, nil, util.NewError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", cmd)
 		}
 		p.atype = atype
 		p.address = address

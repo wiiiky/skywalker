@@ -19,14 +19,9 @@ package http
 
 import (
 	"github.com/hitoshii/golib/src/log"
-	"skywalker/agent"
 	"skywalker/internal"
 	"skywalker/util"
 )
-
-func NewHTTPClientAgent() agent.ClientAgent {
-	return &HTTPClientAgent{}
-}
 
 /* 每次代理的请求数据 */
 type HTTPClientAgent struct {
@@ -107,7 +102,7 @@ func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, err
 			return nil, nil, err
 		} else {
 			if !a.isAuthenticated() { /* 代理认证 */
-				return nil, PROXY_AUTHORIZATION_REQUIRED, agent.NewAgentError(ERROR_AUTH_REQUIRED, "Proxy Authorization Required")
+				return nil, PROXY_AUTHORIZATION_REQUIRED, util.NewError(ERROR_AUTH_REQUIRED, "Proxy Authorization Required")
 			}
 			if req.Status == REQUEST_STATUS_FULL_REQUEST { /* 解析到有效的HTTP请求 */
 				host := req.getHost()

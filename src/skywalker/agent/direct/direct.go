@@ -18,7 +18,6 @@
 package direct
 
 import (
-	"skywalker/agent"
 	"skywalker/internal"
 )
 
@@ -26,10 +25,6 @@ import (
  * 直连代理只能用作ServerAgent
  */
 type DirectAgent struct {
-}
-
-func NewDirectAgent() agent.ServerAgent {
-	return &DirectAgent{}
 }
 
 func (a *DirectAgent) Name() string {
