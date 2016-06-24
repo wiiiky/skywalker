@@ -62,11 +62,13 @@ func TCPConnect(host string, port string) (net.Conn, int) {
 	return nil, internal.CONNECT_RESULT_UNREACHABLE
 }
 
+/* 监听TCP端口 */
 func TCPListen(addr string, port uint16) (net.Listener, error) {
 	laddr := addr + ":" + strconv.Itoa(int(port))
 	return net.Listen("tcp", laddr)
 }
 
+/* 监听UDP端口 */
 func UDPListen(addr string, port uint16) (*net.UDPConn, error) {
 	laddr := net.UDPAddr{
 		Port: int(port),

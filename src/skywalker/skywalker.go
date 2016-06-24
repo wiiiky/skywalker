@@ -30,19 +30,19 @@ import (
 
 func main() {
 	var tcpListener net.Listener
-	var udpListener *net.UDPConn
+	// var udpListener *net.UDPConn
 	var err error
 
 	if tcpListener, err = util.TCPListen(config.GetAddress(), config.GetPort()); err != nil {
 		log.ERROR("Couldn't Listen TCP: %s", err.Error())
 		return
 	}
-	defer tcpListener.Close()
-	if udpListener, err = util.UDPListen(config.GetAddress(), config.GetPort()); err != nil {
-		log.ERROR("Couldn't Listen UDP: %s", err.Error())
-		return
-	}
-	defer udpListener.Close()
+	// defer tcpListener.Close()
+	// if udpListener, err = util.UDPListen(config.GetAddress(), config.GetPort()); err != nil {
+	// 	log.ERROR("Couldn't Listen UDP: %s", err.Error())
+	// 	return
+	// }
+	// defer udpListener.Close()
 
 	log.INFO("Listen On %s\n", config.GetAddressPort())
 
@@ -73,7 +73,7 @@ func startTransfer(conn net.Conn) {
  * 启动一个goroutine来接收网络数据，并转发给一个channel
  * 相当于将对网络数据的监听转化为对channel的监听
  */
-func getConnectionChannel(conn net.Conn) chan []byte {
+func createConnChan(conn net.Conn) chan []byte {
 	channel := make(chan []byte)
 	go func(conn net.Conn, channel chan []byte) {
 		defer close(channel)
@@ -162,7 +162,7 @@ func clientGoroutine(cAgent agent.ClientAgent,
 	defer cConn.Close()
 	defer close(c2s)
 
-	cChan := getConnectionChannel(cConn)
+	cChan := createConnChan(cConn)
 
 	var chain string
 	closed_by_client := true
@@ -259,7 +259,7 @@ func connectRemote(hostname string, sAgent agent.ServerAgent,
 		return nil, nil
 	}
 
-	return conn, getConnectionChannel(conn)
+	return conn, createConnChan(conn)
 }
 
 /*
