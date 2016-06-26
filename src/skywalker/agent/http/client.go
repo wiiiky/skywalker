@@ -63,8 +63,8 @@ var (
 	PROXY_AUTHORIZATION_REQUIRED = []byte("HTTP/1.1 407 Proxy Authentication Required\r\n" + HEADER_PROXY_AGENT + HEADER_PROXY_AUTHENTICATE + "\r\n")
 )
 
-func (a *HTTPClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
-	if result.Result == internal.CONNECT_RESULT_OK {
+func (a *HTTPClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
+	if result == internal.CONNECT_RESULT_OK {
 		if a.req.Method == "CONNECT" { /* 连接成功且方法是CONNECT */
 			return nil, CONNECT_SUCCESS, nil
 		}

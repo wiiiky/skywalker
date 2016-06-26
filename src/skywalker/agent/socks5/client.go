@@ -61,13 +61,13 @@ func (a *Socks5ClientAgent) OnStart() error {
 }
 
 /* 给客户端返回连接结果 */
-func (p *Socks5ClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
+func (p *Socks5ClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
 	var rep uint8 = REPLY_GENERAL_FAILURE
-	if result.Result == internal.CONNECT_RESULT_OK {
+	if result == internal.CONNECT_RESULT_OK {
 		rep = REPLY_SUCCEED
-	} else if result.Result == internal.CONNECT_RESULT_UNKNOWN_HOST {
+	} else if result == internal.CONNECT_RESULT_UNKNOWN_HOST {
 		rep = REPLY_HOST_UNREACHABLE
-	} else if result.Result == internal.CONNECT_RESULT_UNREACHABLE {
+	} else if result == internal.CONNECT_RESULT_UNREACHABLE {
 		rep = REPLY_NETWORK_UNREACHABLE
 	}
 	return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil

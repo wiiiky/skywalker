@@ -17,9 +17,58 @@
 
 package internal
 
-import (
-	"net"
+type Command struct {
+	cmd  int
+	data interface{}
+}
+
+/* 连接服务器的数据 */
+type connectData struct {
+	host string
+	port int
+}
+
+/* 连接服务器结果的数据 */
+type connectResult struct {
+	connectData
+	result int
+}
+
+func (c *Command) Type() int {
+	return c.cmd
+}
+
+func (c *Command) GetConnectData() (string, int) {
+	data := c.data.(connectData)
+	return data.host, data.port
+}
+
+func (c *Command) GetTransferData() [][]byte {
+	switch d := c.data.(type) {
+	case string:
+		return [][]byte{[]byte(d)}
+	case []byte:
+		return [][]byte{d}
+	case [][]byte:
+		return d
+	}
+	return nil
+}
+
+const (
+	CMD_CONNECT        = 0
+	CMD_TRANSFER       = 1
+	CMD_CONNECT_RESULT = 2
 )
+
+func newConnectCommand(host string, port int) *Command {
+	data := connectData{host: host, port: port}
+	return &Command{cmd: CMD_CONNECT, data: data}
+}
+
+func newTransferCommand(data interface{}) *Command {
+	return &Command{cmd: CMD_TRANSFER, data: data}
+}
 
 /*
  * Internal协议用于CA和SA的通信
@@ -57,9 +106,10 @@ const (
 type ConnectResult struct {
 	Result   int
 	Hostname string
-	Address  net.Addr
+	Host     string
+	Port     int
 }
 
-func NewConnectResult(result int, hostname string, address net.Addr) ConnectResult {
-	return ConnectResult{result, hostname, address}
+func NewConnectResult(result int, hostname string, host string, port int) ConnectResult {
+	return ConnectResult{result, hostname, host, port}
 }

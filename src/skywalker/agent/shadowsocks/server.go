@@ -208,8 +208,8 @@ func (a *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (str
 	return a.serverAddr, a.serverPort
 }
 
-func (a *ShadowSocksServerAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
-	if result.Result == internal.CONNECT_RESULT_OK {
+func (a *ShadowSocksServerAgent) OnConnectResult(result int, host string, p int) (interface{}, interface{}, error) {
+	if result == internal.CONNECT_RESULT_OK {
 		port, err := strconv.Atoi(a.targetPort)
 		if err != nil {
 			return nil, nil, util.NewError(ERROR_INVALID_TARGET, "invalid target port")

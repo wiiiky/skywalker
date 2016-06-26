@@ -57,15 +57,15 @@ func (c *lruCache) Timeout() {
 }
 
 func (c *lruCache) Get(key string) interface{} {
-    var value interface{}
+	var value interface{}
 	c.lock()
 	if val, ok := c.data[key]; ok {
-	    now := time.Now().Unix()
-	    if c.timeout == 0 || now-val.timestamp < c.timeout {
-		    value = val.value
-	    }else{  /* 已经超时 */
-	        delete(c.data, key)
-	    }
+		now := time.Now().Unix()
+		if c.timeout == 0 || now-val.timestamp < c.timeout {
+			value = val.value
+		} else { /* 已经超时 */
+			delete(c.data, key)
+		}
 	}
 	c.unlock()
 	return value

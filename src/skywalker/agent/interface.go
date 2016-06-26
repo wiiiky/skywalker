@@ -17,10 +17,6 @@
 
 package agent
 
-import (
-	"skywalker/internal"
-)
-
 /*
  * 代理模型
  *
@@ -49,7 +45,7 @@ type ClientAgent interface {
 	OnStart() error
 
 	/* 连接服务器结果 */
-	OnConnectResult(internal.ConnectResult) (interface{}, interface{}, error)
+	OnConnectResult(int, string, int) (interface{}, interface{}, error)
 
 	/* 从客户端接收到数据 */
 	FromClient([]byte) (interface{}, interface{}, error)
@@ -87,7 +83,7 @@ type ServerAgent interface {
 	GetRemoteAddress(string, string) (string, string)
 
 	/* 连接结果 */
-	OnConnectResult(internal.ConnectResult) (interface{}, interface{}, error)
+	OnConnectResult(int, string, int) (interface{}, interface{}, error)
 
 	/* 从服务器接收到数据 */
 	FromServer([]byte) (interface{}, interface{}, error)

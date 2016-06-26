@@ -19,7 +19,6 @@ package shadowsocks
 
 import (
 	"skywalker/cipher"
-	"skywalker/internal"
 	"skywalker/util"
 	"strconv"
 	"strings"
@@ -101,7 +100,7 @@ func (p *ShadowSocksClientAgent) OnStart() error {
 	return nil
 }
 
-func (p *ShadowSocksClientAgent) OnConnectResult(result internal.ConnectResult) (interface{}, interface{}, error) {
+func (p *ShadowSocksClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
 	return nil, nil, nil
 }
 

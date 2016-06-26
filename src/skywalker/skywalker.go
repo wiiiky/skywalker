@@ -25,6 +25,7 @@ import (
 	"skywalker/internal"
 	"skywalker/plugin"
 	"skywalker/util"
+	"strconv"
 	"strings"
 )
 
@@ -203,7 +204,7 @@ RUNNING:
 					chain = cConn.RemoteAddr().String() + " <==> " + result.Hostname
 					log.INFO("%s Connected", chain)
 				}
-				tdata, rdata, err := cAgent.OnConnectResult(result)
+				tdata, rdata, err := cAgent.OnConnectResult(result.Result, result.Host, result.Port)
 				err = transferData(c2s, cConn, tdata, rdata, err)
 				if result.Result != internal.CONNECT_RESULT_OK || err != nil {
 					closed_by_client = false
@@ -238,16 +239,17 @@ func connectRemote(hostname string, sAgent agent.ServerAgent,
 	conn, result := util.TCPConnect(addr, port)
 
 	/* 连接结果 */
+	p, _ := strconv.Atoi(port)
 	var connResult internal.ConnectResult
 	if result != internal.CONNECT_RESULT_OK {
-		connResult = internal.NewConnectResult(result, hostname, nil)
+		connResult = internal.NewConnectResult(result, hostname, addr, p)
 	} else {
-		connResult = internal.NewConnectResult(result, hostname, conn.RemoteAddr())
+		connResult = internal.NewConnectResult(result, hostname, addr, p)
 	}
 	/* 给客户端代理发送连接结果反馈 */
 	s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT, connResult)
 	/* 服务端代理链接结果反馈 */
-	tdata, rdata, err := sAgent.OnConnectResult(connResult)
+	tdata, rdata, err := sAgent.OnConnectResult(result, addr, p)
 	if connResult.Result != internal.CONNECT_RESULT_OK {
 		return nil, nil
 	}
