@@ -19,8 +19,8 @@ package shadowsocks
 
 import (
 	"skywalker/cipher"
+	"skywalker/core"
 	"skywalker/util"
-	"strconv"
 	"strings"
 )
 
@@ -105,7 +105,7 @@ func (p *ShadowSocksClientAgent) OnConnectResult(result int, host string, port i
 }
 
 func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
-	var tdata [][]byte
+	var tdata []*core.Command
 
 	if p.decrypter == nil {
 		/* 第一个数据包，应该包含IV和请求数据 */
@@ -127,11 +127,11 @@ func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface
 			return nil, nil, err
 		}
 		p.connected = true
-		tdata = append(tdata, []byte(addr+":"+strconv.Itoa(int(port))))
+		tdata = append(tdata, core.NewConnectCommand(addr, int(port)))
 		data = left
 	}
-	if data != nil && len(data) > 0 {
-		tdata = append(tdata, data)
+	if len(data) > 0 {
+		tdata = append(tdata, core.NewTransferCommand(data))
 	}
 	return tdata, nil, nil
 }

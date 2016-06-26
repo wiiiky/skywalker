@@ -80,7 +80,7 @@ type ServerAgent interface {
 	 * 获取远程地址，参数是入站协议传递过来的远程服务器地址
 	 * 出战协议可以使用该地址也可以覆盖，使用自己定义的地址
 	 */
-	GetRemoteAddress(string, string) (string, string)
+	GetRemoteAddress(string, int) (string, int)
 
 	/* 连接结果 */
 	OnConnectResult(int, string, int) (interface{}, interface{}, error)

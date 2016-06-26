@@ -18,15 +18,14 @@
 package main
 
 import (
+	"fmt"
 	"github.com/hitoshii/golib/src/log"
 	"net"
 	"skywalker/agent"
 	"skywalker/config"
-	"skywalker/internal"
+	"skywalker/core"
 	"skywalker/plugin"
 	"skywalker/util"
-	"strconv"
-	"strings"
 )
 
 func main() {
@@ -38,7 +37,7 @@ func main() {
 		log.ERROR("Couldn't Listen TCP: %s", err.Error())
 		return
 	}
-	// defer tcpListener.Close()
+	defer tcpListener.Close()
 	// if udpListener, err = util.UDPListen(config.GetAddress(), config.GetPort()); err != nil {
 	// 	log.ERROR("Couldn't Listen UDP: %s", err.Error())
 	// 	return
@@ -64,8 +63,8 @@ func startTransfer(conn net.Conn) {
 		conn.Close()
 		return
 	}
-	c2s := make(chan *internal.InternalPackage, 100)
-	s2c := make(chan *internal.InternalPackage, 100)
+	c2s := make(chan *core.Command, 100)
+	s2c := make(chan *core.Command, 100)
 	go clientGoroutine(cAgent, c2s, s2c, conn)
 	go serverGoroutine(sAgent, c2s, s2c)
 }
@@ -97,42 +96,20 @@ func createConnChan(conn net.Conn) chan []byte {
  * @tdata 需要转发的数据(Transfer Data)，将发送给ic
  * @rdata 需要返回给数据(Response Data)，将发送给conn
  */
-func transferData(ic chan *internal.InternalPackage,
+func transferData(ic chan *core.Command,
 	conn net.Conn, tdata interface{},
 	rdata interface{}, err error) error {
 	/* 转发数据 */
-	transferIc := func(d []byte) {
-		ic <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_DATA, d)
-	}
 	switch data := tdata.(type) {
-	case string:
-		transferIc([]byte(data))
-	case []byte:
-		transferIc(data)
-	case [][]byte:
-		for _, d := range data {
-			transferIc(d)
-		}
-	case *internal.InternalPackage:
+	case *core.Command:
 		ic <- data
-	case internal.InternalPackage:
-		ic <- &data
-	case []interface{}:
-		for _, d := range data {
-			switch e := d.(type) {
-			case string:
-				transferIc([]byte(e))
-			case []byte:
-				transferIc(e)
-			case [][]byte:
-				for _, f := range e {
-					transferIc(f)
-				}
-			case *internal.InternalPackage:
-				ic <- e
-			case internal.InternalPackage:
-				ic <- &e
-			}
+	case []byte:
+		ic <- core.NewTransferCommand(data)
+	case string:
+		ic <- core.NewTransferCommand(data)
+	case []*core.Command:
+		for _, cmd := range data {
+			ic <- cmd
 		}
 	}
 	/* 发送到远端连接 */
@@ -157,15 +134,15 @@ func transferData(ic chan *internal.InternalPackage,
 
 /* 处理客户端连接的goroutine */
 func clientGoroutine(cAgent agent.ClientAgent,
-	c2s chan *internal.InternalPackage,
-	s2c chan *internal.InternalPackage,
+	c2s chan *core.Command,
+	s2c chan *core.Command,
 	cConn net.Conn) {
 	defer cConn.Close()
 	defer close(c2s)
 
 	cChan := createConnChan(cConn)
 
-	var chain string
+	chain := cConn.RemoteAddr().String()
 	closed_by_client := true
 RUNNING:
 	for {
@@ -176,37 +153,37 @@ RUNNING:
 				break RUNNING
 			}
 			plugin.CallPluginsMethod("FromClientToClientAgent", data)
-			tdata, rdata, err := cAgent.FromClient(data)
+			cmd, rdata, err := cAgent.FromClient(data)
 			plugin.CallPluginsMethod("FromClientAgentToClient", rdata)
-			if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
+			if _err := transferData(c2s, cConn, cmd, rdata, err); _err != nil {
 				log.DEBUG("transfer data from client agent to server agent error, %s",
 					_err.Error())
 				break RUNNING
 			}
-		case pkg, ok := <-s2c:
+		case cmd, ok := <-s2c:
 			/* 来自服务端代理的数据 */
 			if ok == false {
 				closed_by_client = false
 				break RUNNING
-			} else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
-				plugin.CallPluginsMethod("FromServerAgentToClientAgent", pkg.Data.([]byte))
-				tdata, rdata, err := cAgent.FromServerAgent(pkg.Data.([]byte))
-				plugin.CallPluginsMethod("FromClientAgentToClient", rdata)
-				if _err := transferData(c2s, cConn, tdata, rdata, err); _err != nil {
-					closed_by_client = false
-					log.DEBUG("receive data from server agent to client agent error, %s",
-						_err.Error())
-					break RUNNING
+			} else if cmd.Type() == core.CMD_TRANSFER {
+				for _, data := range cmd.GetTransferData() {
+					cmd, rdata, err := cAgent.FromServerAgent(data)
+					if _err := transferData(c2s, cConn, cmd, rdata, err); _err != nil {
+						closed_by_client = false
+						log.DEBUG("receive data from server agent to client agent error, %s",
+							_err.Error())
+						break RUNNING
+					}
 				}
-			} else if pkg.CMD == internal.INTERNAL_PROTOCOL_CONNECT_RESULT {
-				result := pkg.Data.(internal.ConnectResult)
-				if result.Result == internal.CONNECT_RESULT_OK {
-					chain = cConn.RemoteAddr().String() + " <==> " + result.Hostname
+			} else if cmd.Type() == core.CMD_CONNECT_RESULT {
+				result, host, port := cmd.GetConnectResult()
+				if result == core.CONNECT_RESULT_OK {
+					chain = fmt.Sprintf("%s <==> %s:%v", cConn.RemoteAddr().String(), host, port)
 					log.INFO("%s Connected", chain)
 				}
-				tdata, rdata, err := cAgent.OnConnectResult(result.Result, result.Host, result.Port)
-				err = transferData(c2s, cConn, tdata, rdata, err)
-				if result.Result != internal.CONNECT_RESULT_OK || err != nil {
+				cmd, rdata, err := cAgent.OnConnectResult(result, host, port)
+				err = transferData(c2s, cConn, cmd, rdata, err)
+				if result != core.CONNECT_RESULT_OK || err != nil {
 					closed_by_client = false
 					break RUNNING
 				}
@@ -228,35 +205,33 @@ RUNNING:
  * 成功返回net.Conn和对应的channel
  * 失败返回nil,nil
  */
-func connectRemote(hostname string, sAgent agent.ServerAgent,
-	s2c chan *internal.InternalPackage) (net.Conn, chan []byte) {
-	addrinfo := strings.Split(hostname, ":")
-	if len(addrinfo) != 2 {
-		return nil, nil
-	}
+func connectRemote(_host string, _port int, sAgent agent.ServerAgent,
+	s2c chan *core.Command) (net.Conn, chan []byte) {
 	/* 获取服务器地址，并链接 */
-	addr, port := sAgent.GetRemoteAddress(addrinfo[0], addrinfo[1])
-	conn, result := util.TCPConnect(addr, port)
+	host, port := sAgent.GetRemoteAddress(_host, _port)
+	conn, result := util.TCPConnect(host, port)
 
 	/* 连接结果 */
-	p, _ := strconv.Atoi(port)
-	var connResult internal.ConnectResult
-	if result != internal.CONNECT_RESULT_OK {
-		connResult = internal.NewConnectResult(result, hostname, addr, p)
+	var resultCMD *core.Command
+	if result != core.CONNECT_RESULT_OK {
+		resultCMD = core.NewConnectResultCommand(result, _host, _port)
 	} else {
-		connResult = internal.NewConnectResult(result, hostname, addr, p)
+		resultCMD = core.NewConnectResultCommand(result, _host, _port)
 	}
 	/* 给客户端代理发送连接结果反馈 */
-	s2c <- internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT_RESULT, connResult)
+	s2c <- resultCMD
 	/* 服务端代理链接结果反馈 */
-	tdata, rdata, err := sAgent.OnConnectResult(result, addr, p)
-	if connResult.Result != internal.CONNECT_RESULT_OK {
+	cmd, rdata, err := sAgent.OnConnectResult(result, host, port)
+	if result != core.CONNECT_RESULT_OK || err != nil {
+		if conn != nil {
+			conn.Close()
+		}
 		return nil, nil
 	}
 
 	/* 发送服务端代理的处理后数据 */
-	if _err := transferData(s2c, conn, tdata, rdata, err); _err != nil {
-		log.DEBUG("server agent OnConnectResult error, %s", _err.Error())
+	if err := transferData(s2c, conn, cmd, rdata, err); err != nil {
+		log.DEBUG("server agent OnConnectResult error, %s", err.Error())
 		conn.Close()
 		return nil, nil
 	}
@@ -269,16 +244,17 @@ func connectRemote(hostname string, sAgent agent.ServerAgent,
  * 从客户端代理收到的第一个数据包一定是服务器地址，无论该数据包被标志成什么类型
  */
 func serverGoroutine(sAgent agent.ServerAgent,
-	c2s chan *internal.InternalPackage,
-	s2c chan *internal.InternalPackage) {
+	c2s chan *core.Command,
+	s2c chan *core.Command) {
 	defer close(s2c)
 
 	/* 获取服务器地址 */
-	pkg, ok := <-c2s
-	if ok == false {
+	cmd, ok := <-c2s
+	if ok == false || cmd.Type() != core.CMD_CONNECT {
 		return
 	}
-	sConn, sChan := connectRemote(string(pkg.Data.([]byte)), sAgent, s2c)
+	host, port := cmd.GetConnectData()
+	sConn, sChan := connectRemote(host, port, sAgent, s2c)
 	if sConn == nil {
 		return
 	}
@@ -293,34 +269,33 @@ RUNNING:
 				closed_by_client = false
 				break RUNNING
 			}
-			plugin.CallPluginsMethod("FromServerToServerAgent", data)
-			tdata, rdata, err := sAgent.FromServer(data)
-			plugin.CallPluginsMethod("FromServerAgentToServer", rdata)
-			if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
+			cmd, rdata, err := sAgent.FromServer(data)
+			if err := transferData(s2c, sConn, cmd, rdata, err); err != nil {
 				closed_by_client = false
 				log.DEBUG("transfer data from server agent to client agent error, %s",
-					_err.Error())
+					err.Error())
 				break RUNNING
 			}
-		case pkg, ok := <-c2s:
+		case cmd, ok := <-c2s:
 			/* 来自客户端代理的数据 */
 			if ok == false {
 				break RUNNING
-			} else if pkg.CMD == internal.INTERNAL_PROTOCOL_DATA {
-				plugin.CallPluginsMethod("FromClientAgentToServerAgent", pkg.Data.([]byte))
-				tdata, rdata, err := sAgent.FromClientAgent(pkg.Data.([]byte))
-				plugin.CallPluginsMethod("FromServerAgentToServer", rdata)
-				if _err := transferData(s2c, sConn, tdata, rdata, err); _err != nil {
-					log.DEBUG("receive data from client agent to server agent error, %s",
-						_err.Error())
-					break RUNNING
+			}
+			if cmd.Type() == core.CMD_TRANSFER {
+				for _, data := range cmd.GetTransferData() {
+					cmd, rdata, err := sAgent.FromClientAgent(data)
+					if _err := transferData(s2c, sConn, cmd, rdata, err); _err != nil {
+						log.DEBUG("receive data from client agent to server agent error, %s",
+							_err.Error())
+						break RUNNING
+					}
 				}
-			} else if pkg.CMD == internal.INTERNAL_PROTOCOL_CONNECT {
+			} else if cmd.Type() == core.CMD_CONNECT {
 				/* 需要重新链接服务器 */
 				sConn.Close()
-				sConn, sChan = connectRemote(string(pkg.Data.([]byte)), sAgent, s2c)
-				if sConn == nil {
-					return
+				host, port := cmd.GetConnectData()
+				if sConn, sChan = connectRemote(host, port, sAgent, s2c); sConn == nil {
+					break RUNNING
 				}
 			} else {
 				log.WARNING("Unknown Package From Client Agent, IGNORED!")

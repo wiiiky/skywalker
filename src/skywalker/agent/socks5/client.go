@@ -18,9 +18,8 @@
 package socks5
 
 import (
-	"skywalker/internal"
+	"skywalker/core"
 	"skywalker/util"
-	"strconv"
 )
 
 /*
@@ -63,11 +62,11 @@ func (a *Socks5ClientAgent) OnStart() error {
 /* 给客户端返回连接结果 */
 func (p *Socks5ClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
 	var rep uint8 = REPLY_GENERAL_FAILURE
-	if result == internal.CONNECT_RESULT_OK {
+	if result == core.CONNECT_RESULT_OK {
 		rep = REPLY_SUCCEED
-	} else if result == internal.CONNECT_RESULT_UNKNOWN_HOST {
+	} else if result == core.CONNECT_RESULT_UNKNOWN_HOST {
 		rep = REPLY_HOST_UNREACHABLE
-	} else if result == internal.CONNECT_RESULT_UNREACHABLE {
+	} else if result == core.CONNECT_RESULT_UNREACHABLE {
 		rep = REPLY_NETWORK_UNREACHABLE
 	}
 	return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil
@@ -105,11 +104,10 @@ func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, e
 		p.address = address
 		p.port = port
 		p.state = state_transfer
-		addrinfo := address + ":" + strconv.Itoa(int(port))
 		if left == nil {
-			return addrinfo, nil, nil
+			return core.NewConnectCommand(address, int(port)), nil, nil
 		}
-		return [][]byte{[]byte(addrinfo), left}, nil, nil
+		return []*core.Command{core.NewConnectCommand(address, int(port)), core.NewTransferCommand(left)}, nil, nil
 	case state_transfer: /* 直接转发数据 */
 		return data, nil, nil
 	}

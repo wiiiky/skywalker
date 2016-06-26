@@ -21,9 +21,8 @@ import (
 	"bytes"
 	"github.com/hitoshii/golib/src/log"
 	"skywalker/cipher"
-	"skywalker/internal"
+	"skywalker/core"
 	"skywalker/util"
-	"strconv"
 	"strings"
 )
 
@@ -40,9 +39,9 @@ type ShadowSocksServerAgent struct {
 	iv         []byte
 
 	serverAddr string
-	serverPort string
+	serverPort int
 	targetAddr string
-	targetPort string
+	targetPort int
 
 	/* SS连接是否成功 */
 	connected bool
@@ -50,7 +49,7 @@ type ShadowSocksServerAgent struct {
 
 type ssServerAddress struct {
 	serverAddr string
-	serverPort string
+	serverPort int
 	password   string
 	method     string
 }
@@ -58,7 +57,7 @@ type ssServerAddress struct {
 /* 配置参数 */
 type ssServerConfig struct {
 	serverAddr string
-	serverPort string
+	serverPort int
 	password   string
 	method     string
 
@@ -84,14 +83,15 @@ func (scfg *ssServerConfig) changeServer(server string) {
 				scfg.sindex = 0
 			}
 			addr := scfg.serverAddrs[scfg.sindex]
-			log.DEBUG("change server to %s:%s", addr.serverAddr, addr.serverPort)
+			log.DEBUG("change server to %s:%v", addr.serverAddr, addr.serverPort)
 		}
 	}
 }
 
 /* 返回当前服务的信息 */
-func (scfg *ssServerConfig) serverInfo() (string, string, string, string) {
-	var password, method, serverAddr, serverPort string
+func (scfg *ssServerConfig) serverInfo() (string, int, string, string) {
+	var password, method, serverAddr string
+	var serverPort int
 	if len(scfg.serverAddrs) > 0 {
 		addrinfo := scfg.serverAddrs[serverConfig.sindex]
 		password = addrinfo.password
@@ -108,7 +108,7 @@ func (scfg *ssServerConfig) serverInfo() (string, string, string, string) {
 	if len(serverAddr) == 0 {
 		serverAddr = scfg.serverAddr
 	}
-	if len(serverPort) == 0 {
+	if serverPort <= 0 {
 		serverPort = scfg.serverPort
 	}
 	return serverAddr, serverPort, password, method
@@ -119,7 +119,8 @@ func (p *ShadowSocksServerAgent) Name() string {
 }
 
 func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
-	var serverAddr, serverPort, password, method string
+	var serverAddr, password, method string
+	var serverPort int
 	var serverAddrs []ssServerAddress
 	var val interface{}
 	var retry int = 3
@@ -143,7 +144,7 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 			}
 			saddr := ssServerAddress{
 				serverAddr: addr,
-				serverPort: strconv.Itoa(int(port)),
+				serverPort: int(port),
 				password:   password,
 				method:     method,
 			}
@@ -156,7 +157,7 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 			return util.NewError(ERROR_INVALID_CONFIG, "no server address")
 		}
 		if port := util.GetMapInt(cfg, "serverPort"); port > 0 {
-			serverPort = strconv.Itoa(int(port))
+			serverPort = int(port)
 		} else {
 			return util.NewError(ERROR_INVALID_CONFIG, "no server port")
 		}
@@ -201,7 +202,7 @@ func (a *ShadowSocksServerAgent) OnStart() error {
 	return nil
 }
 
-func (a *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (string, string) {
+func (a *ShadowSocksServerAgent) GetRemoteAddress(addr string, port int) (string, int) {
 	a.targetAddr = addr
 	a.targetPort = port
 
@@ -209,12 +210,8 @@ func (a *ShadowSocksServerAgent) GetRemoteAddress(addr string, port string) (str
 }
 
 func (a *ShadowSocksServerAgent) OnConnectResult(result int, host string, p int) (interface{}, interface{}, error) {
-	if result == internal.CONNECT_RESULT_OK {
-		port, err := strconv.Atoi(a.targetPort)
-		if err != nil {
-			return nil, nil, util.NewError(ERROR_INVALID_TARGET, "invalid target port")
-		}
-		plain := buildAddressRequest(a.targetAddr, uint16(port))
+	if result == core.CONNECT_RESULT_OK {
+		plain := buildAddressRequest(a.targetAddr, uint16(a.targetPort))
 		buf := bytes.Buffer{}
 		buf.Write(a.iv)
 		buf.Write(a.encrypter.Encrypt(plain))

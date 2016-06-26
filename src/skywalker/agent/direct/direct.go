@@ -35,11 +35,11 @@ func (a *DirectAgent) OnStart() error {
 	return nil
 }
 
-func (a *DirectAgent) GetRemoteAddress(addr string, port string) (string, string) {
+func (a *DirectAgent) GetRemoteAddress(addr string, port int) (string, int) {
 	return addr, port
 }
 
-func (a *DirectAgent) OnConnectResult(request int, host string, port int) (interface{}, interface{}, error) {
+func (a *DirectAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
 	return nil, nil, nil
 }
 

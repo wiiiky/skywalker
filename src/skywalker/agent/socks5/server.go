@@ -19,9 +19,8 @@ package socks5
 
 import (
 	"net"
-	"skywalker/internal"
+	"skywalker/core"
 	"skywalker/util"
-	"strconv"
 )
 
 type Socks5ServerAgent struct {
@@ -40,7 +39,7 @@ type Socks5ServerAgent struct {
 
 type socks5Config struct {
 	serverAddr string
-	serverPort string
+	serverPort int
 }
 
 var (
@@ -53,33 +52,17 @@ func (a *Socks5ServerAgent) Name() string {
 
 /* 初始化，读取配置 */
 func (a *Socks5ServerAgent) OnInit(cfg map[string]interface{}) error {
-	var serverAddr, serverPort string
-	var ok bool
-	var val interface{}
+	var serverAddr string
+	var serverPort int
 
-	val, ok = cfg["serverAddr"]
-	if ok == false {
+	if serverAddr = util.GetMapString(cfg, "serverAddr"); len(serverAddr) == 0 {
 		return util.NewError(ERROR_INVALID_CONFIG, "serverAddr not found")
 	}
-	serverAddr, ok = val.(string)
-	if ok == false {
-		return util.NewError(ERROR_INVALID_CONFIG, "serverAddr must be type of string")
-	}
 
-	val, ok = cfg["serverPort"]
-	if ok == false {
-		return util.NewError(ERROR_INVALID_CONFIG, "serverPort not found")
-	}
-	switch port := val.(type) {
-	case int:
-		serverPort = strconv.Itoa(port)
-	case string:
-		serverPort = port
-	case float64:
-		serverPort = strconv.Itoa(int(port))
-	default:
+	if serverPort = int(util.GetMapInt(cfg, "serverPort")); serverPort < 0 {
 		return util.NewError(ERROR_INVALID_CONFIG, "serverPort is illegal")
 	}
+
 	s5Config.serverAddr = serverAddr
 	s5Config.serverPort = serverPort
 	return nil
@@ -94,10 +77,9 @@ func (a *Socks5ServerAgent) OnStart() error {
 	return nil
 }
 
-func (a *Socks5ServerAgent) GetRemoteAddress(addr string, port string) (string, string) {
+func (a *Socks5ServerAgent) GetRemoteAddress(addr string, port int) (string, int) {
 	a.address = addr
-	p, _ := strconv.Atoi(port)
-	a.port = uint16(p)
+	a.port = uint16(port)
 	ip := net.ParseIP(addr)
 	if ip == nil {
 		a.atype = ATYPE_DOMAINNAME
@@ -110,7 +92,7 @@ func (a *Socks5ServerAgent) GetRemoteAddress(addr string, port string) (string, 
 }
 
 func (a *Socks5ServerAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
-	if result == internal.CONNECT_RESULT_OK {
+	if result == core.CONNECT_RESULT_OK {
 		req := buildVersionRequest(a.version, a.nmethods, a.methods)
 		return nil, req, nil
 	} else {

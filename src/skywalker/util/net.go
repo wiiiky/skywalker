@@ -19,7 +19,7 @@ package util
 
 import (
 	"net"
-	"skywalker/internal"
+	"skywalker/core"
 	"strconv"
 	"time"
 )
@@ -50,16 +50,16 @@ func GetHostAddress(host string) string {
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
-func TCPConnect(host string, port string) (net.Conn, int) {
+func TCPConnect(host string, port int) (net.Conn, int) {
 	ip := GetHostAddress(host)
 	if len(ip) == 0 {
-		return nil, internal.CONNECT_RESULT_UNKNOWN_HOST
+		return nil, core.CONNECT_RESULT_UNKNOWN_HOST
 	}
-	addr := ip + ":" + port
+	addr := ip + ":" + strconv.Itoa(port)
 	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err == nil {
-		return conn, internal.CONNECT_RESULT_OK
+		return conn, core.CONNECT_RESULT_OK
 	}
-	return nil, internal.CONNECT_RESULT_UNREACHABLE
+	return nil, core.CONNECT_RESULT_UNREACHABLE
 }
 
 /* 监听TCP端口 */

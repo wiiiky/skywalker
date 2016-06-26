@@ -19,8 +19,10 @@ package http
 
 import (
 	"github.com/hitoshii/golib/src/log"
-	"skywalker/internal"
+	"net"
+	"skywalker/core"
 	"skywalker/util"
+	"strconv"
 )
 
 /* 每次代理的请求数据 */
@@ -64,7 +66,7 @@ var (
 )
 
 func (a *HTTPClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
-	if result == internal.CONNECT_RESULT_OK {
+	if result == core.CONNECT_RESULT_OK {
 		if a.req.Method == "CONNECT" { /* 连接成功且方法是CONNECT */
 			return nil, CONNECT_SUCCESS, nil
 		}
@@ -82,13 +84,24 @@ func (a *HTTPClientAgent) isAuthenticated() bool {
 	return true
 }
 
+func splitHostPort(hostport string) (string, int) {
+	host := hostport
+	port := 80
+	if h, p, err := net.SplitHostPort(hostport); err == nil {
+		host = h
+		port, err = strconv.Atoi(p)
+	}
+	return host, port
+}
+
 /* 发送请求到指定服务器 */
-func (a *HTTPClientAgent) sendRequest(host string, request []byte) (interface{}, interface{}, error) {
-	if a.host != host { /* 如果请求的服务器与上一次不一样则重新连接 */
-		a.host = host
-		c := internal.NewInternalPackage(internal.INTERNAL_PROTOCOL_CONNECT,
-			[]byte(host))
-		return []interface{}{c, request}, nil, nil
+func (a *HTTPClientAgent) sendRequest(hostport string, request []byte) (interface{}, interface{}, error) {
+	if a.host != hostport { /* 如果请求的服务器与上一次不一样则重新连接 */
+		a.host = hostport
+		host, port := splitHostPort(hostport)
+		connectCMD := core.NewConnectCommand(host, port)
+		transferCMD := core.NewTransferCommand(request)
+		return []*core.Command{connectCMD, transferCMD}, nil, nil
 	}
 	return request, nil, nil
 }
@@ -107,7 +120,8 @@ func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, err
 			if req.Status == REQUEST_STATUS_FULL_REQUEST { /* 解析到有效的HTTP请求 */
 				host := req.getHost()
 				if req.Method == "CONNECT" {
-					return []byte(host), nil, nil
+					h, p := splitHostPort(host)
+					return core.NewConnectCommand(h, p), nil, nil
 				} else {
 					request := req.buildRequest()
 					req.reset()
