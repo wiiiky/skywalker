@@ -20,13 +20,9 @@ package plugin
 type SkyWalkerPlugin interface {
 	Init(map[string]interface{})
 
-	FromClientToClientAgent([]byte)
-	FromClientAgentToServerAgent([]byte)
-	FromServerAgentToServer([]byte)
-
-	FromServerToServerAgent([]byte)
-	FromServerAgentToClientAgent([]byte)
-	FromClientAgentToClient([]byte)
-
+	FromClient([]byte)
+	ToClient([]byte)
+	FromServer([]byte)
+	ToServer([]byte)
 	AtExit()
 }

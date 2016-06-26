@@ -24,13 +24,10 @@ import (
 )
 
 type StatPlugin struct {
-	C2CA  uint64 `json:"c2ca"`
-	CA2SA uint64 `json:"ca2sa"`
-	SA2S  uint64 `json:"sa2s"`
-
-	S2SA  uint64 `json:"s2sa"`
-	SA2CA uint64 `json:"sa2ca"`
-	CA2C  uint64 `json:"ca2c"`
+	CSent     uint64 `json:"clientSent"`
+	CReceived uint64 `json:"clientReceived"`
+	SSent     uint64 `json:"serverSent"`
+	SRecevied uint64 `json:"serverRecevied"`
 
 	sfile string /* 用户保存流量数据的文件 */
 }
@@ -44,28 +41,20 @@ func (p *StatPlugin) Init(cfg map[string]interface{}) {
 	}
 }
 
-func (p *StatPlugin) FromClientToClientAgent(data []byte) {
-	p.C2CA += uint64(len(data))
+func (p *StatPlugin) FromClient(data []byte) {
+	p.CSent += uint64(len(data))
 }
 
-func (p *StatPlugin) FromClientAgentToServerAgent(data []byte) {
-	p.CA2SA += uint64(len(data))
+func (p *StatPlugin) ToClient(data []byte) {
+	p.CReceived += uint64(len(data))
 }
 
-func (p *StatPlugin) FromServerAgentToServer(data []byte) {
-	p.SA2S += uint64(len(data))
+func (p *StatPlugin) FromServer(data []byte) {
+	p.SRecevied += uint64(len(data))
 }
 
-func (p *StatPlugin) FromServerToServerAgent(data []byte) {
-	p.S2SA += uint64(len(data))
-}
-
-func (p *StatPlugin) FromServerAgentToClientAgent(data []byte) {
-	p.SA2CA += uint64(len(data))
-}
-
-func (p *StatPlugin) FromClientAgentToClient(data []byte) {
-	p.CA2C += uint64(len(data))
+func (p *StatPlugin) ToServer(data []byte) {
+	p.SSent += uint64(len(data))
 }
 
 func (p *StatPlugin) AtExit() {
@@ -87,8 +76,8 @@ func (p *StatPlugin) AtExit() {
 	var tp StatPlugin
 	util.ReadJSONFile(p.sfile, &tp)
 	fmt.Printf("Scope\t\tSent\t\tReceived\n")
-	fmt.Printf("Session\t\t%s\t%s\n", formatData(p.SA2S-tp.SA2S), formatData(p.S2SA-tp.S2SA))
-	fmt.Printf("Total\t\t%s\t%s\n", formatData(p.SA2S), formatData(p.S2SA))
+	fmt.Printf("Session\t\t%s\t%s\n", formatData(p.SSent-tp.SSent), formatData(p.CReceived-tp.CReceived))
+	fmt.Printf("Total\t\t%s\t%s\n", formatData(p.SSent), formatData(p.CReceived))
 	if len(p.sfile) > 0 {
 		util.SaveJSONFile(p.sfile, p)
 	}
