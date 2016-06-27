@@ -27,7 +27,7 @@ import (
 )
 
 /* 服务配置 */
-type ProxyConfig struct {
+type SkyWalkerConfig struct {
 	BindAddr string `json:"bindAddr"`
 	BindPort uint16 `json:"bindPort"`
 
@@ -45,36 +45,36 @@ type ProxyConfig struct {
 }
 
 func GetAddressPort() string {
-	return Config.BindAddr + ":" + strconv.Itoa(int(Config.BindPort))
+	return gConfig.BindAddr + ":" + strconv.Itoa(int(gConfig.BindPort))
 }
 
 func GetAddress() string {
-	return Config.BindAddr
+	return gConfig.BindAddr
 }
 
 func GetPort() uint16 {
-	return Config.BindPort
+	return gConfig.BindPort
 }
 
 func GetClientAgentName() string {
-	return Config.ClientProtocol
+	return gConfig.ClientProtocol
 }
 
 func GetClientAgentConfig() map[string]interface{} {
-	return Config.ClientConfig
+	return gConfig.ClientConfig
 }
 
 func GetServerAgentName() string {
-	return Config.ServerProtocol
+	return gConfig.ServerProtocol
 }
 
 func GetServerAgentConfig() map[string]interface{} {
-	return Config.ServerConfig
+	return gConfig.ServerConfig
 }
 
 var (
 	/* 默认配置 */
-	Config = ProxyConfig{
+	gConfig = SkyWalkerConfig{
 		BindAddr:     "127.0.0.1",
 		BindPort:     12345,
 		CacheTimeout: 300,
@@ -91,15 +91,15 @@ var (
 func init() {
 	configFile := flag.String("c", "./config.json", "the config file")
 	flag.Parse()
-	if !util.ReadJSONFile(*configFile, &Config) { /* 读取配置文件 */
+	if !util.ReadJSONFile(*configFile, &gConfig) { /* 读取配置文件 */
 		util.FatalError("Fail To Load Config From %s", *configFile)
 	}
 	/* 初始化日志 */
-	log.Init(Config.Logger)
+	log.Init(gConfig.Logger)
 	/* 初始化缓存 */
-	util.Init(Config.CacheTimeout)
+	util.Init(gConfig.CacheTimeout)
 	/* 初始化代理 */
-	agent.Init(Config.ClientProtocol, Config.ClientConfig, Config.ServerProtocol, Config.ServerConfig)
+	agent.Init(gConfig.ClientProtocol, gConfig.ClientConfig, gConfig.ServerProtocol, gConfig.ServerConfig)
 	/* 初始化插件 */
-	plugin.Init(Config.Plugins)
+	plugin.Init(gConfig.Plugins)
 }

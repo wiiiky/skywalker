@@ -76,3 +76,23 @@ func UDPListen(addr string, port uint16) (*net.UDPConn, error) {
 	}
 	return net.ListenUDP("udp", &laddr)
 }
+
+/*
+ * 启动一个goroutine来接收网络数据，并转发给一个channel
+ * 将对网络链接的监听转化为对channel的监听
+ */
+func CreateConnChannel(conn net.Conn) chan []byte {
+	channel := make(chan []byte)
+	go func(conn net.Conn, channel chan []byte) {
+		defer close(channel)
+		for {
+			buf := make([]byte, 4096)
+			n, err := conn.Read(buf)
+			if err != nil {
+				break
+			}
+			channel <- buf[:n]
+		}
+	}(conn, channel)
+	return channel
+}
