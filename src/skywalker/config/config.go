@@ -28,20 +28,21 @@ import (
 
 /* 服务配置 */
 type SkyWalkerConfig struct {
-	BindAddr string `json:"bindAddr"`
-	BindPort uint16 `json:"bindPort"`
+	BindAddr string 						`json:"bindAddr"`
+	BindPort uint16 						`json:"bindPort"`
 
-	ClientProtocol string                 `json:"clientProtocol"`
-	ClientConfig   map[string]interface{} `json:"clientConfig"`
+	ClientProtocol string                 	`json:"clientProtocol"`
+	ClientConfig   map[string]interface{} 	`json:"clientConfig"`
 
-	ServerProtocol string                 `json:"serverProtocol"`
-	ServerConfig   map[string]interface{} `json:"serverConfig"`
+	ServerProtocol string                 	`json:"serverProtocol"`
+	ServerConfig   map[string]interface{} 	`json:"serverConfig"`
 
-	Logger []log.LoggerConfig `json:"logger"`
+	Logger []log.LoggerConfig 				`json:"logger"`
 
-	CacheTimeout int64 `json:"cacheTimeout"`
+	CacheTimeout int64 						`json:"cacheTimeout"`
 
-	Plugins []plugin.PluginConfig `json:"plugins"`
+	Plugins []plugin.PluginConfig 			`json:"plugins"`
+	Daemon bool								`json:"daemon"`
 }
 
 func GetAddressPort() string {
@@ -85,6 +86,7 @@ var (
 			log.LoggerConfig{"WARNING", "STDERR"},
 			log.LoggerConfig{"ERROR", "STDERR"},
 		},
+		Daemon:false,
 	}
 )
 

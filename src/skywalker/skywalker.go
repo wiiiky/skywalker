@@ -20,34 +20,61 @@ package main
 import (
 	"github.com/hitoshii/golib/src/log"
 	"net"
+	"os"
+	"os/signal"
 	"skywalker/config"
 	"skywalker/transfer"
 	"skywalker/util"
 )
 
-func main() {
-	var tcpListener net.Listener
-	// var udpListener *net.UDPConn
-	var err error
-
-	if tcpListener, err = util.TCPListen(config.GetAddress(), config.GetPort()); err != nil {
-		log.ERROR("Couldn't Listen TCP: %s", err.Error())
-		return
-	}
+func tcpTransfer(tcpListener net.Listener){
 	defer tcpListener.Close()
-	// if udpListener, err = util.UDPListen(config.GetAddress(), config.GetPort()); err != nil {
-	// 	log.ERROR("Couldn't Listen UDP: %s", err.Error())
-	// 	return
-	// }
-	// defer udpListener.Close()
 
-	log.INFO("Listen On %s\n", config.GetAddressPort())
+	log.INFO("Listen TCP On %s", tcpListener.Addr())
 
 	for {
 		if conn, err := tcpListener.Accept(); err == nil {
 			transfer.StartTCPTransfer(conn)
 		} else {
-			log.WARNING("Couldn't Accept: %s", err.Error())
+			log.WARNING("Couldn't Accept: %s", err)
 		}
 	}
+}
+
+func udpTransfer(udpListener *net.UDPConn){
+	defer udpListener.Close()
+
+	log.INFO("Listen UDP On %s", udpListener.LocalAddr())
+
+	buf := make([]byte, 1<<16)
+	for {
+		if n, addr, err := udpListener.ReadFromUDP(buf); err == nil {
+			transfer.StartUDPTransfer(udpListener, buf, n, addr)
+		} else {
+			log.WARNING("Read From UDP Error: %s", err)
+		}
+	}
+}
+
+func main() {
+	var tcpListener net.Listener
+	var udpListener *net.UDPConn
+	var err error
+
+	if tcpListener, err = util.TCPListen(config.GetAddress(), config.GetPort()); err != nil {
+		log.ERROR("Couldn't Listen TCP: %s", err)
+		return
+	}
+	if udpListener, err = util.UDPListen(config.GetAddress(), config.GetPort()); err != nil {
+		log.ERROR("Couldn't Listen UDP: %s", err)
+		return
+	}
+
+	go tcpTransfer(tcpListener)
+	go udpTransfer(udpListener)
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	s := <-c
+	log.INFO("Got Signal: %s", s)
 }
