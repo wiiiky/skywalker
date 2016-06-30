@@ -25,6 +25,7 @@ import (
 	"skywalker/config"
 	"skywalker/transfer"
 	"skywalker/util"
+	"skywalker/plugin"
 )
 
 func tcpTransfer(tcpListener net.Listener){
@@ -76,5 +77,6 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	s := <-c
-	log.INFO("Got Signal: %s", s)
+	log.INFO("Signal: %s", s)
+	plugin.AtExit()
 }

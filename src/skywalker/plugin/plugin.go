@@ -19,11 +19,8 @@ package plugin
 
 import (
 	"github.com/hitoshii/golib/src/log"
-	"os"
-	"os/signal"
 	"reflect"
 	"skywalker/plugin/stat"
-	"syscall"
 )
 
 type newPluginFunc func() SkyWalkerPlugin
@@ -57,19 +54,12 @@ func Init(ps []PluginConfig) {
 			gPlugins = append(gPlugins, p)
 		}
 	}
+}
 
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt, os.Kill, syscall.SIGTERM)
-
-	/* 程序退出 FIXME 有待优化 */
-	go func() {
-		<-ch
-		signal.Stop(ch)
-		for _, plugin := range gPlugins {
-			plugin.AtExit()
-		}
-		os.Exit(0)
-	}()
+func AtExit() {
+	for _, plugin := range gPlugins {
+		plugin.AtExit()
+	}
 }
 
 /* 调用插件方法 */
