@@ -61,7 +61,6 @@ var (
 	HEADER_PROXY_AGENT           = "Proxy-agent: SkyWalker Proxy/0.1\r\n"
 	HEADER_PROXY_AUTHENTICATE    = "Proxy-Authenticate: Basic realm=\"SkyWalker Proxy Auth\""
 	CONNECT_SUCCESS              = []byte("HTTP/1.1 200 Connection established\r\n" + HEADER_PROXY_AGENT + "\r\n")
-	CONNECT_FAIL                 = []byte("HTTP/1.1 ")
 	PROXY_AUTHORIZATION_REQUIRED = []byte("HTTP/1.1 407 Proxy Authentication Required\r\n" + HEADER_PROXY_AGENT + HEADER_PROXY_AUTHENTICATE + "\r\n")
 )
 

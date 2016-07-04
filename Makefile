@@ -11,4 +11,4 @@ fmt:
 	find . -name '*.go'|xargs gofmt -w
 
 clean:
-	rm -rf bin/luker
+	rm -rf bin/skywalker
