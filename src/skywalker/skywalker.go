@@ -23,12 +23,12 @@ import (
 	"os"
 	"os/signal"
 	"skywalker/config"
+	"skywalker/plugin"
 	"skywalker/transfer"
 	"skywalker/util"
-	"skywalker/plugin"
 )
 
-func tcpTransfer(tcpListener net.Listener){
+func tcpTransfer(tcpListener net.Listener) {
 	defer tcpListener.Close()
 
 	log.INFO("Listen TCP On %s", tcpListener.Addr())
@@ -42,7 +42,7 @@ func tcpTransfer(tcpListener net.Listener){
 	}
 }
 
-func udpTransfer(udpListener *net.UDPConn){
+func udpTransfer(udpListener *net.UDPConn) {
 	defer udpListener.Close()
 
 	log.INFO("Listen UDP On %s", udpListener.LocalAddr())

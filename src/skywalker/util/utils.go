@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/user"
+	"path"
 )
 
 func GetMapString(m map[string]interface{}, name string) string {
@@ -65,20 +66,25 @@ func GetMapIntDefault(m map[string]interface{}, name string, def int64) int64 {
 	return def
 }
 
-func ExpandPath(path string) string {
-	if len(path) >= 2 && path[:2] == "~/" {
-		user, _ := user.Current()
-		return user.HomeDir + path[1:]
+/* 如果路径中已~开头，则将其展开成用户主目录 */
+func ResolveHomePath(fpath string) string {
+	if user, err := user.Current(); err == nil {
+		if fpath == "~" {
+			return user.HomeDir
+		} else if len(fpath) >= 2 && fpath[:2] == "~/" {
+			return path.Join(user.HomeDir, fpath[1:])
+		}
 	}
-	return path
+	return fpath
 }
 
+/* 提示错误，退出程序 */
 func FatalError(format string, params ...interface{}) {
 	fmt.Printf("*ERROR* "+format+"\n", params...)
 	os.Exit(1)
 }
 
-func ReadJSONFile(path string, v interface{}) bool {
+func LoadJsonFile(path string, v interface{}) bool {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return false
@@ -90,7 +96,7 @@ func ReadJSONFile(path string, v interface{}) bool {
 	return true
 }
 
-func SaveJSONFile(path string, v interface{}) bool {
+func DumpJsonFile(path string, v interface{}) bool {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return false

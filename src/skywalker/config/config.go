@@ -28,21 +28,21 @@ import (
 
 /* 服务配置 */
 type SkyWalkerConfig struct {
-	BindAddr string 						`json:"bindAddr"`
-	BindPort uint16 						`json:"bindPort"`
+	BindAddr string `json:"bindAddr"`
+	BindPort uint16 `json:"bindPort"`
 
-	ClientProtocol string                 	`json:"clientProtocol"`
-	ClientConfig   map[string]interface{} 	`json:"clientConfig"`
+	ClientProtocol string                 `json:"clientProtocol"`
+	ClientConfig   map[string]interface{} `json:"clientConfig"`
 
-	ServerProtocol string                 	`json:"serverProtocol"`
-	ServerConfig   map[string]interface{} 	`json:"serverConfig"`
+	ServerProtocol string                 `json:"serverProtocol"`
+	ServerConfig   map[string]interface{} `json:"serverConfig"`
 
-	Logger []log.LoggerConfig 				`json:"logger"`
+	Logger []log.LoggerConfig `json:"logger"`
 
-	CacheTimeout int64 						`json:"cacheTimeout"`
+	CacheTimeout int64 `json:"cacheTimeout"`
 
-	Plugins []plugin.PluginConfig 			`json:"plugins"`
-	Daemon bool								`json:"daemon"`
+	Plugins []plugin.PluginConfig `json:"plugins"`
+	Daemon  bool                  `json:"daemon"`
 }
 
 func GetAddressPort() string {
@@ -86,14 +86,14 @@ var (
 			log.LoggerConfig{"WARNING", "STDERR"},
 			log.LoggerConfig{"ERROR", "STDERR"},
 		},
-		Daemon:false,
+		Daemon: false,
 	}
 )
 
 func init() {
 	configFile := flag.String("c", "./config.json", "the config file")
 	flag.Parse()
-	if !util.ReadJSONFile(*configFile, &gConfig) { /* 读取配置文件 */
+	if !util.LoadJsonFile(*configFile, &gConfig) { /* 读取配置文件 */
 		util.FatalError("Fail To Load Config From %s", *configFile)
 	}
 	/* 初始化日志 */

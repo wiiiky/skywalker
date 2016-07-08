@@ -35,8 +35,8 @@ type StatPlugin struct {
 func (p *StatPlugin) Init(cfg map[string]interface{}) {
 	p.sfile = util.GetMapString(cfg, "save")
 	if len(p.sfile) > 0 {
-		p.sfile = util.ExpandPath(p.sfile)
-		util.ReadJSONFile(p.sfile, &p)
+		p.sfile = util.ResolveHomePath(p.sfile)
+		util.LoadJsonFile(p.sfile, &p)
 		log.DEBUG("read stat from %s", p.sfile)
 	}
 }
@@ -74,11 +74,11 @@ func (p *StatPlugin) AtExit() {
 		return f
 	}
 	var tp StatPlugin
-	util.ReadJSONFile(p.sfile, &tp)
+	util.LoadJsonFile(p.sfile, &tp)
 	fmt.Printf("Scope\t\tSent\t\tReceived\n")
 	fmt.Printf("Session\t\t%s\t%s\n", formatData(p.SSent-tp.SSent), formatData(p.CReceived-tp.CReceived))
 	fmt.Printf("Total\t\t%s\t%s\n", formatData(p.SSent), formatData(p.CReceived))
 	if len(p.sfile) > 0 {
-		util.SaveJSONFile(p.sfile, p)
+		util.DumpJsonFile(p.sfile, p)
 	}
 }

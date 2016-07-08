@@ -18,12 +18,12 @@
 package transfer
 
 import (
-	"net"
 	"github.com/hitoshii/golib/src/log"
+	"net"
 )
 
 func StartUDPTransfer(conn *net.UDPConn, data []byte, n int, addr *net.UDPAddr) {
-	if _, e := conn.WriteToUDP(data[:n], addr); e !=nil{
-		log.ERROR("Write UDP Package Error: %s",e)
+	if _, e := conn.WriteToUDP(data[:n], addr); e != nil {
+		log.ERROR("Write UDP Package Error: %s", e)
 	}
 }
