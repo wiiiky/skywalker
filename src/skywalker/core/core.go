@@ -28,6 +28,14 @@ type connectData struct {
 	port int
 }
 
+/* 连接远程服务器的结果 */
+const (
+	CONNECT_RESULT_OK            = 0
+	CONNECT_RESULT_UNKNOWN_HOST  = 1
+	CONNECT_RESULT_UNREACHABLE   = 2
+	CONNECT_RESULT_UNKNOWN_ERROR = 3
+)
+
 /* 连接服务器结果的数据 */
 type connectResult struct {
 	connectData
@@ -80,11 +88,3 @@ func NewConnectResultCommand(code int, host string, port int) *Command {
 	data := connectResult{connectData: connectData{host: host, port: port}, code: code}
 	return &Command{cmd: CMD_CONNECT_RESULT, data: data}
 }
-
-/* 连接远程服务器的结果 */
-const (
-	CONNECT_RESULT_OK            = 0
-	CONNECT_RESULT_UNKNOWN_HOST  = 1
-	CONNECT_RESULT_UNREACHABLE   = 2
-	CONNECT_RESULT_UNKNOWN_ERROR = 3
-)

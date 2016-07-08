@@ -48,9 +48,9 @@ type ClientAgent interface {
 	OnConnectResult(int, string, int) (interface{}, interface{}, error)
 
 	/* 从客户端接收到数据 */
-	FromClient([]byte) (interface{}, interface{}, error)
-	/* 从服务器接收到数据 */
-	FromServerAgent([]byte) (interface{}, interface{}, error)
+	ReadFromClient([]byte) (interface{}, interface{}, error)
+	/* 从SA接收到数据 */
+	ReadFromSA([]byte) (interface{}, interface{}, error)
 
 	/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
 	OnClose(bool)
@@ -86,9 +86,9 @@ type ServerAgent interface {
 	OnConnectResult(int, string, int) (interface{}, interface{}, error)
 
 	/* 从服务器接收到数据 */
-	FromServer([]byte) (interface{}, interface{}, error)
-	/* 从客户端接收到数据 */
-	FromClientAgent([]byte) (interface{}, interface{}, error)
+	ReadFromServer([]byte) (interface{}, interface{}, error)
+	/* 从CA接收到数据 */
+	ReadFromCA([]byte) (interface{}, interface{}, error)
 
 	/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
 	OnClose(bool)

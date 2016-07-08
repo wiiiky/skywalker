@@ -72,7 +72,7 @@ func (p *Socks5ClientAgent) OnConnectResult(result int, host string, port int) (
 	return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil
 }
 
-func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
+func (p *Socks5ClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
 	switch p.state {
 	case state_init: /* 接收客户端的握手请求并返回响应 */
 		ver, nmethods, methods, err := parseVersionRequest(data)
@@ -114,7 +114,7 @@ func (p *Socks5ClientAgent) FromClient(data []byte) (interface{}, interface{}, e
 	return nil, nil, nil
 }
 
-func (p *Socks5ClientAgent) FromServerAgent(data []byte) (interface{}, interface{}, error) {
+func (p *Socks5ClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
 	return nil, data, nil
 }
 

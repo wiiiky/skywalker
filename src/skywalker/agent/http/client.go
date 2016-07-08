@@ -106,7 +106,7 @@ func (a *HTTPClientAgent) sendRequest(hostport string, request []byte) (interfac
 }
 
 /* 从客户端接收到数据 */
-func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
+func (a *HTTPClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
 	req := a.req
 	if req.Status == REQUEST_STATUS_UNKNOWN { /* 还没有解析到HTTP请求 */
 		err := req.feed(data)
@@ -144,7 +144,7 @@ func (a *HTTPClientAgent) FromClient(data []byte) (interface{}, interface{}, err
 	return data, nil, nil
 }
 
-func (a *HTTPClientAgent) FromServerAgent(data []byte) (interface{}, interface{}, error) {
+func (a *HTTPClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
 	return nil, data, nil
 }
 

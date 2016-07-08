@@ -18,6 +18,7 @@
 package util
 
 import (
+	"github.com/hitoshii/golib/src/log"
 	"sync"
 	"time"
 )
@@ -64,6 +65,7 @@ func (c *lruCache) Get(key string) interface{} {
 		if c.timeout == 0 || now-val.timestamp < c.timeout {
 			value = val.value
 		} else { /* 已经超时 */
+			log.DEBUG("Cache %s timeouts", key)
 			delete(c.data, key)
 		}
 	}

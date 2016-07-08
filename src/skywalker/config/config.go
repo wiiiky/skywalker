@@ -78,7 +78,7 @@ var (
 	gConfig = SkyWalkerConfig{
 		BindAddr:     "127.0.0.1",
 		BindPort:     12345,
-		CacheTimeout: 300,
+		CacheTimeout: 3600,
 		/* 默认的日志输出 */
 		Logger: []log.LoggerConfig{
 			log.LoggerConfig{"DEBUG", "STDOUT"},
@@ -94,7 +94,7 @@ func init() {
 	configFile := flag.String("c", "./config.json", "the config file")
 	flag.Parse()
 	if !util.LoadJsonFile(*configFile, &gConfig) { /* 读取配置文件 */
-		util.FatalError("Fail To Load Config From %s", *configFile)
+		util.FatalError("Fail To Load Config File %s", *configFile)
 	}
 	/* 初始化日志 */
 	log.Init(gConfig.Logger)

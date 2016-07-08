@@ -20,9 +20,9 @@ package plugin
 type SkyWalkerPlugin interface {
 	Init(map[string]interface{})
 
-	FromClient([]byte)
+	ReadFromClient([]byte)
 	ToClient([]byte)
-	FromServer([]byte)
+	ReadFromServer([]byte)
 	ToServer([]byte)
 	AtExit()
 }

@@ -22,7 +22,6 @@ import (
 	"github.com/hitoshii/golib/src/log"
 	"net"
 	"skywalker/agent"
-	"skywalker/config"
 	"skywalker/core"
 	"skywalker/plugin"
 	"skywalker/util"
@@ -34,8 +33,8 @@ import (
 
 /* 启动数据转发流程 */
 func StartTCPTransfer(conn net.Conn) {
-	cAgent := agent.GetClientAgent(config.GetClientAgentName())
-	sAgent := agent.GetServerAgent(config.GetServerAgentName())
+	cAgent := agent.GetClientAgent()
+	sAgent := agent.GetServerAgent()
 	if cAgent == nil || sAgent == nil {
 		conn.Close()
 		return
@@ -109,11 +108,11 @@ RUNNING:
 			if ok == false {
 				break RUNNING
 			}
-			plugin.CallPluginsMethod("FromClient", data)
-			cmd, rdata, err := cAgent.FromClient(data)
-			if _err := transferData(c2s, cConn, cmd, rdata, err); _err != nil {
+			plugin.CallPluginsMethod("ReadFromClient", data)
+			cmd, rdata, err := cAgent.ReadFromClient(data)
+			if err := transferData(c2s, cConn, cmd, rdata, err); err != nil {
 				log.DEBUG("transfer data from client agent to server agent error, %s",
-					_err.Error())
+					err.Error())
 				break RUNNING
 			}
 		case cmd, ok := <-s2c:
@@ -123,12 +122,12 @@ RUNNING:
 				break RUNNING
 			} else if cmd.Type() == core.CMD_TRANSFER {
 				for _, data := range cmd.GetTransferData() {
-					cmd, rdata, err := cAgent.FromServerAgent(data)
+					cmd, rdata, err := cAgent.ReadFromSA(data)
 					plugin.CallPluginsMethod("ToClient", rdata)
-					if _err := transferData(c2s, cConn, cmd, rdata, err); _err != nil {
+					if err := transferData(c2s, cConn, cmd, rdata, err); err != nil {
 						closed_by_client = false
 						log.DEBUG("receive data from server agent to client agent error, %s",
-							_err.Error())
+							err.Error())
 						break RUNNING
 					}
 				}
@@ -145,7 +144,7 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.WARNING("Unknown Package From Server Agent, IGNORED!")
+				log.WARNING("Unknown Package From Server Agent! This is a BUG!")
 			}
 		}
 	}
@@ -162,18 +161,18 @@ RUNNING:
  * 成功返回net.Conn和对应的channel
  * 失败返回nil,nil
  */
-func connectRemote(_host string, _port int, sAgent agent.ServerAgent,
+func connectRemote(h string, p int, sAgent agent.ServerAgent,
 	s2c chan *core.Command) (net.Conn, chan []byte) {
 	/* 获取服务器地址，并链接 */
-	host, port := sAgent.GetRemoteAddress(_host, _port)
+	host, port := sAgent.GetRemoteAddress(h, p)
 	conn, result := util.TCPConnect(host, port)
 
 	/* 连接结果 */
 	var resultCMD *core.Command
 	if result != core.CONNECT_RESULT_OK {
-		resultCMD = core.NewConnectResultCommand(result, _host, _port)
+		resultCMD = core.NewConnectResultCommand(result, h, p)
 	} else {
-		resultCMD = core.NewConnectResultCommand(result, _host, _port)
+		resultCMD = core.NewConnectResultCommand(result, h, p)
 	}
 	/* 给客户端代理发送连接结果反馈 */
 	s2c <- resultCMD
@@ -226,8 +225,8 @@ RUNNING:
 				closed_by_client = false
 				break RUNNING
 			}
-			plugin.CallPluginsMethod("FromServer", data)
-			cmd, rdata, err := sAgent.FromServer(data)
+			plugin.CallPluginsMethod("ReadFromServer", data)
+			cmd, rdata, err := sAgent.ReadFromServer(data)
 			if err := transferData(s2c, sConn, cmd, rdata, err); err != nil {
 				closed_by_client = false
 				log.DEBUG("transfer data from server agent to client agent error, %s",
@@ -241,7 +240,7 @@ RUNNING:
 			}
 			if cmd.Type() == core.CMD_TRANSFER {
 				for _, data := range cmd.GetTransferData() {
-					cmd, rdata, err := sAgent.FromClientAgent(data)
+					cmd, rdata, err := sAgent.ReadFromCA(data)
 					plugin.CallPluginsMethod("ToServer", rdata)
 					if _err := transferData(s2c, sConn, cmd, rdata, err); _err != nil {
 						log.DEBUG("receive data from client agent to server agent error, %s",
@@ -257,7 +256,7 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.WARNING("Unknown Package From Client Agent, IGNORED!")
+				log.WARNING("Unknown Package From Client Agent! This is a BUG!")
 			}
 		}
 	}

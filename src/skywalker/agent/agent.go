@@ -62,36 +62,21 @@ var (
 		"direct":      NewDirectAgent,
 		"shadowsocks": NewShadowSocksServerAgent,
 	}
+	gCAFunc newClientAgentFunc
+	gSAFunc newServerAgentFunc
 )
-
-func getClientAgent(name string) ClientAgent {
-	name = strings.ToLower(name)
-	newAgentFunc := gCAMap[name]
-	if newAgentFunc == nil {
-		return nil
-	}
-	return newAgentFunc()
-}
-
-func getServerAgent(name string) ServerAgent {
-	name = strings.ToLower(name)
-	newAgentFunc := gSAMap[name]
-	if newAgentFunc == nil {
-		return nil
-	}
-	return newAgentFunc()
-}
 
 /* 初始化CA和SA */
 func Init(cname string, ccfg map[string]interface{}, sname string, scfg map[string]interface{}) {
-	var ca ClientAgent
-	var sa ServerAgent
-	if ca = getClientAgent(cname); ca == nil {
+	if gCAFunc = gCAMap[strings.ToLower(cname)]; gCAFunc == nil {
 		util.FatalError("Client Agent [%s] Not Found!", cname)
 	}
-	if sa = getServerAgent(sname); sa == nil {
+	if gSAFunc = gSAMap[strings.ToLower(sname)]; gSAFunc == nil {
 		util.FatalError("Server Agent [%s] Not Found!", sname)
 	}
+
+	ca := gCAFunc()
+	sa := gSAFunc()
 	if err := ca.OnInit(ccfg); err != nil {
 		util.FatalError("Fail To Initialize [%s]:%s", ca.Name(), err.Error())
 	}
@@ -103,12 +88,8 @@ func Init(cname string, ccfg map[string]interface{}, sname string, scfg map[stri
 /*
  * 初始化客户端代理
  */
-func GetClientAgent(name string) ClientAgent {
-	agent := getClientAgent(name)
-	if agent == nil {
-		log.ERROR("Client Agent [%s] Not Found!", name)
-		return nil
-	}
+func GetClientAgent() ClientAgent {
+	agent := gCAFunc()
 	if err := agent.OnStart(); err != nil {
 		log.WARNING("Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
 		return nil
@@ -119,12 +100,8 @@ func GetClientAgent(name string) ClientAgent {
 /*
  * 初始化服务器代理
  */
-func GetServerAgent(name string) ServerAgent {
-	agent := getServerAgent(name)
-	if agent == nil {
-		log.ERROR("Server Agent [%s] Not Found!", name)
-		return nil
-	}
+func GetServerAgent() ServerAgent {
+	agent := gSAFunc()
 	if err := agent.OnStart(); err != nil {
 		log.WARNING("Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())
 		return nil

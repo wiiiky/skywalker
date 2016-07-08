@@ -104,7 +104,7 @@ func (p *ShadowSocksClientAgent) OnConnectResult(result int, host string, port i
 	return nil, nil, nil
 }
 
-func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface{}, error) {
+func (p *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
 	var tdata []*core.Command
 
 	if p.decrypter == nil {
@@ -136,7 +136,7 @@ func (p *ShadowSocksClientAgent) FromClient(data []byte) (interface{}, interface
 	return tdata, nil, nil
 }
 
-func (p *ShadowSocksClientAgent) FromServerAgent(data []byte) (interface{}, interface{}, error) {
+func (p *ShadowSocksClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
 	var rdata [][]byte
 	if p.ivSent == false {
 		rdata = append(rdata, p.iv)

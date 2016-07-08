@@ -43,11 +43,11 @@ func (a *DirectAgent) OnConnectResult(result int, host string, port int) (interf
 	return nil, nil, nil
 }
 
-func (a *DirectAgent) FromServer(data []byte) (interface{}, interface{}, error) {
+func (a *DirectAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
 	return data, nil, nil
 }
 
-func (a *DirectAgent) FromClientAgent(data []byte) (interface{}, interface{}, error) {
+func (a *DirectAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
 	return nil, data, nil
 }
 

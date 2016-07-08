@@ -222,7 +222,7 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result int, host string, p int)
 	return nil, nil, nil
 }
 
-func (a *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {
+func (a *ShadowSocksServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
 	if a.decrypter == nil {
 		if len(data) < a.cipherInfo.IvSize {
 			return nil, nil, util.NewError(ERROR_INVALID_PACKAGE, "invalid package")
@@ -235,7 +235,7 @@ func (a *ShadowSocksServerAgent) FromServer(data []byte) (interface{}, interface
 	return a.decrypter.Decrypt(data), nil, nil
 }
 
-func (a *ShadowSocksServerAgent) FromClientAgent(data []byte) (interface{}, interface{}, error) {
+func (a *ShadowSocksServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
 	return nil, a.encrypter.Encrypt(data), nil
 }
 

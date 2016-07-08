@@ -41,7 +41,7 @@ func (p *StatPlugin) Init(cfg map[string]interface{}) {
 	}
 }
 
-func (p *StatPlugin) FromClient(data []byte) {
+func (p *StatPlugin) ReadFromClient(data []byte) {
 	p.CSent += uint64(len(data))
 }
 
@@ -49,7 +49,7 @@ func (p *StatPlugin) ToClient(data []byte) {
 	p.CReceived += uint64(len(data))
 }
 
-func (p *StatPlugin) FromServer(data []byte) {
+func (p *StatPlugin) ReadFromServer(data []byte) {
 	p.SRecevied += uint64(len(data))
 }
 

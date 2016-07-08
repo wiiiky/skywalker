@@ -104,7 +104,7 @@ func (a *Socks5ServerAgent) OnConnected() (interface{}, interface{}, error) {
 	return nil, req, nil
 }
 
-func (a *Socks5ServerAgent) FromServer(data []byte) (interface{}, interface{}, error) {
+func (a *Socks5ServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
 	if a.state == state_init {
 		ver, _, err := parseVersionReply(data)
 		if err != nil {
@@ -136,7 +136,7 @@ func (a *Socks5ServerAgent) FromServer(data []byte) (interface{}, interface{}, e
 	return data, nil, nil
 }
 
-func (a *Socks5ServerAgent) FromClientAgent(data []byte) (interface{}, interface{}, error) {
+func (a *Socks5ServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
 	if a.state != state_transfer {
 		a.buf = append(a.buf, data)
 		return nil, nil, nil
