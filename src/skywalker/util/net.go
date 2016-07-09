@@ -26,23 +26,23 @@ import (
 
 /*  DNS缓存 */
 var (
-	hostCache Cache
+	gDNSCache Cache
 )
 
 func Init(timeout int64) {
-	hostCache = NewLRUCache(timeout)
+	gDNSCache = NewDNSCache(timeout)
 }
 
 /* 从缓存中获取DNS结果，如果没找到则发起解析 */
 func GetHostAddress(host string) string {
-	ip := hostCache.GetString(host)
+	ip := gDNSCache.GetString(host)
 	if len(ip) == 0 {
 		ips, err := net.LookupIP(host)
 		if err != nil || len(ips) == 0 {
 			return ""
 		}
 		ip = ips[0].String()
-		hostCache.Set(host, ip)
+		gDNSCache.Set(host, ip)
 	}
 	return ip
 }

@@ -36,28 +36,28 @@ type cacheValue struct {
 	timestamp int64
 }
 
-type lruCache struct {
+type dnsCache struct {
 	data    map[string]cacheValue
 	timeout int64
 	mutex   *sync.Mutex /* 多goroutine同时访问，需要加锁 */
 }
 
-func (c *lruCache) lock() {
+func (c *dnsCache) lock() {
 	c.mutex.Lock()
 }
 
-func (c *lruCache) unlock() {
+func (c *dnsCache) unlock() {
 	c.mutex.Unlock()
 }
 
-func NewLRUCache(timeout int64) Cache {
-	return &lruCache{make(map[string]cacheValue), timeout, &sync.Mutex{}}
+func NewDNSCache(timeout int64) Cache {
+	return &dnsCache{make(map[string]cacheValue), timeout, &sync.Mutex{}}
 }
 
-func (c *lruCache) Timeout() {
+func (c *dnsCache) Timeout() {
 }
 
-func (c *lruCache) Get(key string) interface{} {
+func (c *dnsCache) Get(key string) interface{} {
 	var value interface{}
 	c.lock()
 	if val, ok := c.data[key]; ok {
@@ -73,7 +73,7 @@ func (c *lruCache) Get(key string) interface{} {
 	return value
 }
 
-func (c *lruCache) Set(key string, value interface{}) {
+func (c *dnsCache) Set(key string, value interface{}) {
 	c.lock()
 	val, ok := c.data[key]
 	now := time.Now().Unix()
@@ -86,7 +86,7 @@ func (c *lruCache) Set(key string, value interface{}) {
 	c.unlock()
 }
 
-func (c *lruCache) GetString(key string) string {
+func (c *dnsCache) GetString(key string) string {
 	val := c.Get(key)
 	switch data := val.(type) {
 	case string:

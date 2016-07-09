@@ -26,6 +26,8 @@ import (
 	"strconv"
 )
 
+type SkyWalkerExtraConfig SkyWalkerConfig
+
 /* 服务配置 */
 type SkyWalkerConfig struct {
 	BindAddr string `json:"bindAddr"`
@@ -37,14 +39,18 @@ type SkyWalkerConfig struct {
 	ServerProtocol string                 `json:"serverProtocol"`
 	ServerConfig   map[string]interface{} `json:"serverConfig"`
 
-	Logger []log.LoggerConfig `json:"logger"`
+	Log log.LogConfig `json:"log"`
 
-	CacheTimeout int64 `json:"cacheTimeout"`
+	DNSTimeout int64 `json:"dnsTimeout"`
 
 	Plugins []plugin.PluginConfig `json:"plugins"`
 	Daemon  bool                  `json:"daemon"`
+	Extras  []SkyWalkerExtraConfig
 }
 
+/*
+ * 获取Host:Port格式的地址
+ */
 func GetAddressPort() string {
 	return gConfig.BindAddr + ":" + strconv.Itoa(int(gConfig.BindPort))
 }
@@ -76,15 +82,17 @@ func GetServerAgentConfig() map[string]interface{} {
 var (
 	/* 默认配置 */
 	gConfig = SkyWalkerConfig{
-		BindAddr:     "127.0.0.1",
-		BindPort:     12345,
-		CacheTimeout: 3600,
+		BindAddr:   "127.0.0.1",
+		BindPort:   12345,
+		DNSTimeout: 3600,
 		/* 默认的日志输出 */
-		Logger: []log.LoggerConfig{
-			log.LoggerConfig{"DEBUG", "STDOUT"},
-			log.LoggerConfig{"INFO", "STDOUT"},
-			log.LoggerConfig{"WARNING", "STDERR"},
-			log.LoggerConfig{"ERROR", "STDERR"},
+		Log: log.LogConfig{
+			Loggers: []log.LoggerConfig{
+				log.LoggerConfig{"DEBUG", "STDOUT"},
+				log.LoggerConfig{"INFO", "STDOUT"},
+				log.LoggerConfig{"WARNING", "STDERR"},
+				log.LoggerConfig{"ERROR", "STDERR"},
+			},
 		},
 		Daemon: false,
 	}
@@ -97,9 +105,10 @@ func init() {
 		util.FatalError("Fail To Load Config File %s", *configFile)
 	}
 	/* 初始化日志 */
-	log.Init(gConfig.Logger)
+	log.Init(&gConfig.Log)
+	log.SetDefault(gConfig.Log.Namespace)
 	/* 初始化缓存 */
-	util.Init(gConfig.CacheTimeout)
+	util.Init(gConfig.DNSTimeout)
 	/* 初始化代理 */
 	agent.Init(gConfig.ClientProtocol, gConfig.ClientConfig, gConfig.ServerProtocol, gConfig.ServerConfig)
 	/* 初始化插件 */

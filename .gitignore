@@ -3,3 +3,4 @@ pkg/
 config/*.json
 src/github.com/
 *~
+.buildconfig
