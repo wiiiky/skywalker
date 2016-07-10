@@ -54,7 +54,7 @@ func (a *Socks5ClientAgent) OnInit(map[string]interface{}) error {
 	return nil
 }
 
-func (a *Socks5ClientAgent) OnStart() error {
+func (a *Socks5ClientAgent) OnStart(logname string) error {
 	a.state = state_init
 	return nil
 }

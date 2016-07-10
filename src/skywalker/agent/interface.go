@@ -39,10 +39,11 @@ type ClientAgent interface {
 	 */
 	OnInit(map[string]interface{}) error
 	/*
+	 * 参数是日志的命名空间
 	 * 初始化成功，返回nil
 	 * 初始化失败，返回错误
 	 */
-	OnStart() error
+	OnStart(string) error
 
 	/* 连接服务器结果 */
 	OnConnectResult(int, string, int) (interface{}, interface{}, error)
@@ -74,7 +75,7 @@ type ServerAgent interface {
 	 * 初始化成功，返回nil
 	 * 初始化失败，返回错误
 	 */
-	OnStart() error
+	OnStart(string) error
 
 	/*
 	 * 获取远程地址，参数是入站协议传递过来的远程服务器地址

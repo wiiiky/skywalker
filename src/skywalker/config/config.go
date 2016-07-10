@@ -20,16 +20,15 @@ package config
 import (
 	"flag"
 	"github.com/hitoshii/golib/src/log"
-	"skywalker/agent"
 	"skywalker/plugin"
 	"skywalker/util"
-	"strconv"
 )
 
 type SkyWalkerExtraConfig SkyWalkerConfig
 
 /* 服务配置 */
 type SkyWalkerConfig struct {
+	Name     string `json:name`
 	BindAddr string `json:"bindAddr"`
 	BindPort uint16 `json:"bindPort"`
 
@@ -48,40 +47,10 @@ type SkyWalkerConfig struct {
 	Extras  []SkyWalkerExtraConfig
 }
 
-/*
- * 获取Host:Port格式的地址
- */
-func GetAddressPort() string {
-	return gConfig.BindAddr + ":" + strconv.Itoa(int(gConfig.BindPort))
-}
-
-func GetAddress() string {
-	return gConfig.BindAddr
-}
-
-func GetPort() uint16 {
-	return gConfig.BindPort
-}
-
-func GetClientAgentName() string {
-	return gConfig.ClientProtocol
-}
-
-func GetClientAgentConfig() map[string]interface{} {
-	return gConfig.ClientConfig
-}
-
-func GetServerAgentName() string {
-	return gConfig.ServerProtocol
-}
-
-func GetServerAgentConfig() map[string]interface{} {
-	return gConfig.ServerConfig
-}
-
 var (
 	/* 默认配置 */
-	gConfig = SkyWalkerConfig{
+	GConfig = SkyWalkerConfig{
+		Name:       "default",
 		BindAddr:   "127.0.0.1",
 		BindPort:   12345,
 		DNSTimeout: 3600,
@@ -101,16 +70,13 @@ var (
 func init() {
 	configFile := flag.String("c", "./config.json", "the config file")
 	flag.Parse()
-	if !util.LoadJsonFile(*configFile, &gConfig) { /* 读取配置文件 */
+	if !util.LoadJsonFile(*configFile, &GConfig) { /* 读取配置文件 */
 		util.FatalError("Fail To Load Config File %s", *configFile)
 	}
-	/* 初始化日志 */
-	log.Init(&gConfig.Log)
-	log.SetDefault(gConfig.Log.Namespace)
-	/* 初始化缓存 */
-	util.Init(gConfig.DNSTimeout)
-	/* 初始化代理 */
-	agent.Init(gConfig.ClientProtocol, gConfig.ClientConfig, gConfig.ServerProtocol, gConfig.ServerConfig)
-	/* 初始化插件 */
-	plugin.Init(gConfig.Plugins)
+	GConfig.Log.Namespace = GConfig.Name
+	for _, e := range GConfig.Extras {
+		e.Log.Namespace = e.Name
+	}
+	/* 初始化DNS超时时间 */
+	util.Init(GConfig.DNSTimeout)
 }

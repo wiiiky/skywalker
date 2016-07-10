@@ -42,15 +42,15 @@ var (
 )
 
 /* 初始化插件 */
-func Init(ps []PluginConfig) {
+func Init(ps []PluginConfig, logname string) {
 	for i := range ps {
 		pc := ps[i]
 		f := gPluginMap[pc.Name]
 		if f == nil {
-			log.WARNING("Plugin %s Not Found", ps[i])
+			log.WARN(logname, "Plugin %s Not Found", ps[i])
 		} else {
 			p := f()
-			p.Init(pc.Config)
+			p.Init(pc.Config, logname)
 			gPlugins = append(gPlugins, p)
 		}
 	}

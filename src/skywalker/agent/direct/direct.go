@@ -31,7 +31,7 @@ func (a *DirectAgent) OnInit(cfg map[string]interface{}) error {
 	return nil
 }
 
-func (a *DirectAgent) OnStart() error {
+func (a *DirectAgent) OnStart(logname string) error {
 	return nil
 }
 

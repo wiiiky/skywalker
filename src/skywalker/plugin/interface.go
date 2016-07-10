@@ -18,7 +18,7 @@
 package plugin
 
 type SkyWalkerPlugin interface {
-	Init(map[string]interface{})
+	Init(map[string]interface{}, string)
 
 	ReadFromClient([]byte)
 	ToClient([]byte)

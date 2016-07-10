@@ -29,15 +29,17 @@ type StatPlugin struct {
 	SSent     uint64 `json:"serverSent"`
 	SRecevied uint64 `json:"serverRecevied"`
 
-	sfile string /* 用户保存流量数据的文件 */
+	sfile   string /* 用户保存流量数据的文件 */
+	logname string
 }
 
-func (p *StatPlugin) Init(cfg map[string]interface{}) {
+func (p *StatPlugin) Init(cfg map[string]interface{}, logname string) {
 	p.sfile = util.GetMapString(cfg, "save")
+	p.logname = logname
 	if len(p.sfile) > 0 {
 		p.sfile = util.ResolveHomePath(p.sfile)
 		util.LoadJsonFile(p.sfile, &p)
-		log.DEBUG("read stat from %s", p.sfile)
+		log.DEBUG(logname, "read stat from %s", p.sfile)
 	}
 }
 
@@ -75,9 +77,9 @@ func (p *StatPlugin) AtExit() {
 	}
 	var tp StatPlugin
 	util.LoadJsonFile(p.sfile, &tp)
-	fmt.Printf("Scope\t\tSent\t\tReceived\n")
-	fmt.Printf("Session\t\t%s\t%s\n", formatData(p.SSent-tp.SSent), formatData(p.CReceived-tp.CReceived))
-	fmt.Printf("Total\t\t%s\t%s\n", formatData(p.SSent), formatData(p.CReceived))
+	log.INFO(p.logname, "Scope\t\tSent\t\tReceived\n")
+	log.INFO(p.logname, "Session\t\t%s\t%s\n", formatData(p.SSent-tp.SSent), formatData(p.CReceived-tp.CReceived))
+	log.INFO(p.logname, "Total\t\t%s\t%s\n", formatData(p.SSent), formatData(p.CReceived))
 	if len(p.sfile) > 0 {
 		util.DumpJsonFile(p.sfile, p)
 	}

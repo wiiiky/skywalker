@@ -24,6 +24,6 @@ import (
 
 func StartUDPTransfer(conn *net.UDPConn, data []byte, n int, addr *net.UDPAddr) {
 	if _, e := conn.WriteToUDP(data[:n], addr); e != nil {
-		log.ERROR("Write UDP Package Error: %s", e)
+		log.E("Write UDP Package Error: %s", e)
 	}
 }

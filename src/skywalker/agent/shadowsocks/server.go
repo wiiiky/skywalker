@@ -45,6 +45,8 @@ type ShadowSocksServerAgent struct {
 
 	/* SS连接是否成功 */
 	connected bool
+
+	logname string
 }
 
 type ssServerAddress struct {
@@ -74,7 +76,7 @@ var (
 )
 
 /* 更改当前服务器 */
-func (scfg *ssServerConfig) changeServer(server string) {
+func (scfg *ssServerConfig) changeServer(server string) *ssServerAddress {
 	if len(scfg.serverAddrs) > 0 && scfg.serverAddrs[scfg.sindex].serverAddr == server {
 		/* 出错次数过多就考虑更换服务器 */
 		if scfg.try += 1; scfg.try >= scfg.retry {
@@ -83,9 +85,10 @@ func (scfg *ssServerConfig) changeServer(server string) {
 				scfg.sindex = 0
 			}
 			addr := scfg.serverAddrs[scfg.sindex]
-			log.DEBUG("change server to %s:%v", addr.serverAddr, addr.serverPort)
+			return &addr
 		}
 	}
+	return nil
 }
 
 /* 返回当前服务的信息 */
@@ -180,12 +183,12 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 	serverConfig.sindex = 0
 	serverConfig.try = 0
 
-	log.DEBUG("shadowsocks Config: %v", serverConfig)
+	log.D("shadowsocks Config: %v", serverConfig)
 	return nil
 }
 
 /* 初始化读取配置 */
-func (a *ShadowSocksServerAgent) OnStart() error {
+func (a *ShadowSocksServerAgent) OnStart(logname string) error {
 	serverAddr, serverPort, password, method := serverConfig.serverInfo()
 	info := cipher.GetCipherInfo(strings.ToLower(method))
 	key := generateKey([]byte(password), info.KeySize)
@@ -199,6 +202,7 @@ func (a *ShadowSocksServerAgent) OnStart() error {
 	a.key = key
 	a.iv = iv
 	a.connected = false
+	a.logname = logname
 	return nil
 }
 
@@ -241,7 +245,7 @@ func (a *ShadowSocksServerAgent) ReadFromCA(data []byte) (interface{}, interface
 
 func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
 	if !closed_by_client && !a.connected { /* 没有建立链接就断开，且不是客户端断开的 */
-		log.DEBUG("Connection Closed Unexpectedly")
+		log.DEBUG(a.logname, "Connection Closed Unexpectedly")
 		serverConfig.changeServer(a.serverAddr)
 	}
 }

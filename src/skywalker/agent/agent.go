@@ -18,12 +18,13 @@
 package agent
 
 import (
+	"errors"
+	"fmt"
 	"github.com/hitoshii/golib/src/log"
 	"skywalker/agent/direct"
 	"skywalker/agent/http"
 	"skywalker/agent/shadowsocks"
 	"skywalker/agent/socks5"
-	"skywalker/util"
 	"strings"
 )
 
@@ -62,36 +63,32 @@ var (
 		"direct":      NewDirectAgent,
 		"shadowsocks": NewShadowSocksServerAgent,
 	}
-	gCAFunc newClientAgentFunc
-	gSAFunc newServerAgentFunc
 )
 
-/* 初始化CA和SA */
-func Init(cname string, ccfg map[string]interface{}, sname string, scfg map[string]interface{}) {
-	if gCAFunc = gCAMap[strings.ToLower(cname)]; gCAFunc == nil {
-		util.FatalError("Client Agent [%s] Not Found!", cname)
+func CAInit(ca string, cfg map[string]interface{}) error {
+	if f := gCAMap[strings.ToLower(ca)]; f == nil {
+		return errors.New(fmt.Sprintf("Client Agent %s not found", ca))
+	} else {
+		return f().OnInit(cfg)
 	}
-	if gSAFunc = gSAMap[strings.ToLower(sname)]; gSAFunc == nil {
-		util.FatalError("Server Agent [%s] Not Found!", sname)
-	}
+}
 
-	ca := gCAFunc()
-	sa := gSAFunc()
-	if err := ca.OnInit(ccfg); err != nil {
-		util.FatalError("Fail To Initialize [%s]:%s", ca.Name(), err.Error())
-	}
-	if err := sa.OnInit(scfg); err != nil {
-		util.FatalError("Fail To Initialize [%s]:%s", sa.Name(), err.Error())
+func SAInit(sa string, cfg map[string]interface{}) error {
+	if f := gSAMap[strings.ToLower(sa)]; f == nil {
+		return errors.New(fmt.Sprintf("Client Agent %s not found", sa))
+	} else {
+		return f().OnInit(cfg)
 	}
 }
 
 /*
  * 初始化客户端代理
  */
-func GetClientAgent() ClientAgent {
-	agent := gCAFunc()
-	if err := agent.OnStart(); err != nil {
-		log.WARNING("Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
+func GetClientAgent(ca, logname string) ClientAgent {
+	f := gCAMap[strings.ToLower(ca)]
+	agent := f()
+	if err := agent.OnStart(logname); err != nil {
+		log.WARN(logname, "Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
 		return nil
 	}
 	return agent
@@ -100,10 +97,11 @@ func GetClientAgent() ClientAgent {
 /*
  * 初始化服务器代理
  */
-func GetServerAgent() ServerAgent {
-	agent := gSAFunc()
-	if err := agent.OnStart(); err != nil {
-		log.WARNING("Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())
+func GetServerAgent(sa, logname string) ServerAgent {
+	f := gSAMap[strings.ToLower(sa)]
+	agent := f()
+	if err := agent.OnStart(logname); err != nil {
+		log.WARN(logname, "Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())
 		return nil
 	}
 	return agent

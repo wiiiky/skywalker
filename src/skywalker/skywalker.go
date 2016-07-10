@@ -28,55 +28,42 @@ import (
 	"skywalker/util"
 )
 
-func tcpTransfer(tcpListener net.Listener) {
-	defer tcpListener.Close()
-
-	log.INFO("Listen TCP On %s", tcpListener.Addr())
-
-	for {
-		if conn, err := tcpListener.Accept(); err == nil {
-			transfer.StartTCPTransfer(conn)
-		} else {
-			log.WARNING("Couldn't Accept: %s", err)
-		}
-	}
-}
-
 func udpTransfer(udpListener *net.UDPConn) {
 	defer udpListener.Close()
 
-	log.INFO("Listen UDP On %s", udpListener.LocalAddr())
+	log.I("Listen UDP On %s", udpListener.LocalAddr())
 
 	buf := make([]byte, 1<<16)
 	for {
 		if n, addr, err := udpListener.ReadFromUDP(buf); err == nil {
 			transfer.StartUDPTransfer(udpListener, buf, n, addr)
 		} else {
-			log.WARNING("Read From UDP Error: %s", err)
+			log.W("Read From UDP Error: %s", err)
 		}
 	}
 }
 
 func main() {
-	var tcpListener net.Listener
 	var udpListener *net.UDPConn
+	var tcpTransfer *transfer.TCPTransfer
 	var err error
 
-	if tcpListener, err = util.TCPListen(config.GetAddress(), config.GetPort()); err != nil {
-		log.ERROR("Couldn't Listen TCP: %s", err)
+	cfg := &config.GConfig
+
+	if tcpTransfer = transfer.NewTCPTransfer(cfg); tcpTransfer == nil {
 		return
 	}
-	if udpListener, err = util.UDPListen(config.GetAddress(), config.GetPort()); err != nil {
-		log.ERROR("Couldn't Listen UDP: %s", err)
+	if udpListener, err = util.UDPListen(cfg.BindAddr, cfg.BindPort); err != nil {
+		log.E("Couldn't Listen UDP: %s", err)
 		return
 	}
 
-	go tcpTransfer(tcpListener)
+	go tcpTransfer.Run()
 	go udpTransfer(udpListener)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	s := <-c
-	log.INFO("Signal: %s", s)
+	log.I("Signal: %s", s)
 	plugin.AtExit()
 }

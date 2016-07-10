@@ -27,8 +27,9 @@ import (
 
 /* 每次代理的请求数据 */
 type HTTPClientAgent struct {
-	req  *httpRequest
-	host string
+	req     *httpRequest
+	host    string
+	logname string
 }
 
 type HTTPProxyConfig struct {
@@ -52,8 +53,9 @@ func (a *HTTPClientAgent) OnInit(cfg map[string]interface{}) error {
 	return nil
 }
 
-func (a *HTTPClientAgent) OnStart() error {
+func (a *HTTPClientAgent) OnStart(logname string) error {
 	a.req = newHTTPRequest()
+	a.logname = logname
 	return nil
 }
 
@@ -75,7 +77,7 @@ func (a *HTTPClientAgent) OnConnectResult(result int, host string, port int) (in
 
 func (a *HTTPClientAgent) isAuthenticated() bool {
 	if len(gConfig.username) > 0 && len(gConfig.password) > 0 { /* 验证Proxy代理 */
-		log.DEBUG("HTTP Proxy Authorization: %v||%v", a.req.ProxyAuthorization, (gConfig.username + ":" + gConfig.password))
+		log.DEBUG(a.logname, "HTTP Proxy Authorization: %v||%v", a.req.ProxyAuthorization, (gConfig.username + ":" + gConfig.password))
 		if a.req.ProxyAuthorization != (gConfig.username + ":" + gConfig.password) {
 			return false
 		}
