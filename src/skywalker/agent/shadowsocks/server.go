@@ -161,6 +161,8 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 			serverAddrs = append(serverAddrs, saddr)
 			go util.GetHostAddress(addr)
 		}
+	} else if len(serverAddr) == 0 || serverPort <= 0 || len(password) == 0 || len(method) == 0 {
+		return util.NewError(ERROR_INVALID_CONFIG, "invalid server config")
 	}
 
 	gServerConfig.serverAddr = serverAddr
