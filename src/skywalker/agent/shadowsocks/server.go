@@ -65,54 +65,51 @@ type ssServerConfig struct {
 
 	/* 多服务器设置 */
 	serverAddrs []ssServerAddress
-	retry       int /* 每个服务器的重试次数，没人为3 */
+	retry       int /* 每个服务器的重试次数，默认为3 */
 	sindex      int /* 当前选中的服务器 */
 	try         int /* 当前尝试次数 */
 }
 
 /* 保存全局的配置，配置只读取一次 */
 var (
-	serverConfig ssServerConfig
+	gServerConfig ssServerConfig
 )
 
 /* 更改当前服务器 */
-func (scfg *ssServerConfig) changeServer(server string) *ssServerAddress {
-	if len(scfg.serverAddrs) > 0 && scfg.serverAddrs[scfg.sindex].serverAddr == server {
+func (a *ShadowSocksServerAgent) changeServer(server string) *ssServerAddress {
+	if len(gServerConfig.serverAddrs) > 0 && gServerConfig.serverAddrs[gServerConfig.sindex].serverAddr == server {
 		/* 出错次数过多就考虑更换服务器 */
-		if scfg.try += 1; scfg.try >= scfg.retry {
-			scfg.try = 0
-			if scfg.sindex += 1; scfg.sindex >= len(scfg.serverAddrs) {
-				scfg.sindex = 0
+		if gServerConfig.try += 1; gServerConfig.try >= gServerConfig.retry {
+			gServerConfig.try = 0
+			if gServerConfig.sindex += 1; gServerConfig.sindex >= len(gServerConfig.serverAddrs) {
+				gServerConfig.sindex = 0
 			}
-			addr := scfg.serverAddrs[scfg.sindex]
+			addr := gServerConfig.serverAddrs[gServerConfig.sindex]
+			log.INFO(a.logname, "change server to %s:%d", addr.serverAddr, addr.serverPort)
 			return &addr
 		}
 	}
 	return nil
 }
 
-/* 返回当前服务的信息 */
-func (scfg *ssServerConfig) serverInfo() (string, int, string, string) {
+/*
+ * 返回当前服务的信息
+ * 如果配置了多个会从多个中选择一个
+ */
+func (a *ShadowSocksServerAgent) getServerInfo() (string, int, string, string) {
 	var password, method, serverAddr string
 	var serverPort int
-	if len(scfg.serverAddrs) > 0 {
-		addrinfo := scfg.serverAddrs[serverConfig.sindex]
+	if len(gServerConfig.serverAddrs) > 0 {
+		addrinfo := gServerConfig.serverAddrs[gServerConfig.sindex]
 		password = addrinfo.password
 		method = addrinfo.method
 		serverAddr = addrinfo.serverAddr
 		serverPort = addrinfo.serverPort
-	}
-	if len(password) == 0 {
-		password = scfg.password
-	}
-	if len(method) == 0 {
-		method = scfg.method
-	}
-	if len(serverAddr) == 0 {
-		serverAddr = scfg.serverAddr
-	}
-	if serverPort <= 0 {
-		serverPort = scfg.serverPort
+	} else {
+		password = gServerConfig.password
+		method = gServerConfig.method
+		serverAddr = gServerConfig.serverAddr
+		serverPort = gServerConfig.serverPort
 	}
 	return serverAddr, serverPort, password, method
 }
@@ -121,6 +118,10 @@ func (p *ShadowSocksServerAgent) Name() string {
 	return "ShadowSocks"
 }
 
+/*
+ * 初始化读取配置，此方法全局调用一次，且
+ * a参数在调用后会被立即释放
+ */
 func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 	var serverAddr, password, method string
 	var serverPort int
@@ -129,67 +130,55 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 	var retry int = 3
 	var ok bool
 
+	serverAddr = util.GetMapString(cfg, "serverAddr")
+	serverPort = int(util.GetMapInt(cfg, "serverPort"))
+	password = util.GetMapString(cfg, "password")
+	method = util.GetMapStringDefault(cfg, "method", "aes-256-cfb")
+
 	val, ok = cfg["serverAddress[]"]
 	if ok == true {
 		array := val.([]interface{})
 
 		for _, ele := range array {
-			m, ok := ele.(map[string]interface{})
-			if !ok {
-				return util.NewError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
+			m := ele.(map[string]interface{})
+			if m == nil {
+				return util.NewError(ERROR_INVALID_CONFIG, "serverAddress must be an object array")
 			}
-			addr := util.GetMapString(m, "serverAddr")
-			port := util.GetMapInt(m, "serverPort")
-			password := util.GetMapString(m, "password")
-			method := util.GetMapString(m, "method")
-			if len(addr) == 0 || port == 0 {
+			addr := util.GetMapStringDefault(m, "serverAddr", serverAddr)
+			port := int(util.GetMapIntDefault(m, "serverPort", int64(serverPort)))
+			password := util.GetMapStringDefault(m, "password", password)
+			method := util.GetMapStringDefault(m, "method", method)
+
+			if len(addr) == 0 || port <= 0 || len(password) == 0 || len(method) == 0 {
 				return util.NewError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
 			}
 			saddr := ssServerAddress{
 				serverAddr: addr,
-				serverPort: int(port),
+				serverPort: port,
 				password:   password,
 				method:     method,
 			}
 			serverAddrs = append(serverAddrs, saddr)
+			go util.GetHostAddress(addr)
 		}
 	}
 
-	if len(serverAddrs) == 0 {
-		if serverAddr = util.GetMapString(cfg, "serverAddr"); len(serverAddr) == 0 {
-			return util.NewError(ERROR_INVALID_CONFIG, "no server address")
-		}
-		if port := util.GetMapInt(cfg, "serverPort"); port > 0 {
-			serverPort = int(port)
-		} else {
-			return util.NewError(ERROR_INVALID_CONFIG, "no server port")
-		}
-		go util.GetHostAddress(serverAddr)
-	} else {
-		for _, addr := range serverAddrs {
-			go util.GetHostAddress(addr.serverAddr)
-		}
-		retry = int(util.GetMapIntDefault(cfg, "retry", 3))
-	}
-	password = util.GetMapString(cfg, "password")
-	method = util.GetMapStringDefault(cfg, "method", "aes-256-cfb")
+	gServerConfig.serverAddr = serverAddr
+	gServerConfig.serverPort = serverPort
+	gServerConfig.password = password
+	gServerConfig.method = method
+	gServerConfig.serverAddrs = serverAddrs
+	gServerConfig.retry = retry
+	gServerConfig.sindex = 0
+	gServerConfig.try = 0
 
-	serverConfig.serverAddr = serverAddr
-	serverConfig.serverPort = serverPort
-	serverConfig.password = password
-	serverConfig.method = method
-	serverConfig.serverAddrs = serverAddrs
-	serverConfig.retry = retry
-	serverConfig.sindex = 0
-	serverConfig.try = 0
-
-	log.D("shadowsocks Config: %v", serverConfig)
 	return nil
 }
 
 /* 初始化读取配置 */
 func (a *ShadowSocksServerAgent) OnStart(logname string) error {
-	serverAddr, serverPort, password, method := serverConfig.serverInfo()
+	a.logname = logname
+	serverAddr, serverPort, password, method := a.getServerInfo()
 	info := cipher.GetCipherInfo(strings.ToLower(method))
 	key := generateKey([]byte(password), info.KeySize)
 	iv := generateIV(info.IvSize)
@@ -202,7 +191,6 @@ func (a *ShadowSocksServerAgent) OnStart(logname string) error {
 	a.key = key
 	a.iv = iv
 	a.connected = false
-	a.logname = logname
 	return nil
 }
 
@@ -222,7 +210,7 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result int, host string, p int)
 		return nil, buf.Bytes(), nil
 	}
 	/* 出错 */
-	serverConfig.changeServer(a.serverAddr)
+	a.changeServer(a.serverAddr)
 	return nil, nil, nil
 }
 
@@ -246,6 +234,6 @@ func (a *ShadowSocksServerAgent) ReadFromCA(data []byte) (interface{}, interface
 func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
 	if !closed_by_client && !a.connected { /* 没有建立链接就断开，且不是客户端断开的 */
 		log.DEBUG(a.logname, "Connection Closed Unexpectedly")
-		serverConfig.changeServer(a.serverAddr)
+		a.changeServer(a.serverAddr)
 	}
 }
