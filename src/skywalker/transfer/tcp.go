@@ -148,7 +148,7 @@ RUNNING:
 			if ok == false {
 				break RUNNING
 			}
-			plugin.CallPluginsMethod("ReadFromClient", data)
+			plugin.ReadFromClient(data)
 			cmd, rdata, err := cAgent.ReadFromClient(data)
 			if err := f.transferData(c2s, cConn, cmd, rdata, err); err != nil {
 				log.DEBUG(f.name, "transfer data from client agent to server agent error, %s",
@@ -163,7 +163,7 @@ RUNNING:
 			} else if cmd.Type() == core.CMD_TRANSFER {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := cAgent.ReadFromSA(data)
-					plugin.CallPluginsMethod("ToClient", rdata)
+					plugin.WriteToClient(rdata)
 					if err := f.transferData(c2s, cConn, cmd, rdata, err); err != nil {
 						closed_by_client = false
 						log.DEBUG(f.name, "receive data from server agent to client agent error, %s",
@@ -265,7 +265,7 @@ RUNNING:
 				closed_by_client = false
 				break RUNNING
 			}
-			plugin.CallPluginsMethod("ReadFromServer", data)
+			plugin.ReadFromServer(data)
 			cmd, rdata, err := sAgent.ReadFromServer(data)
 			if err := f.transferData(s2c, sConn, cmd, rdata, err); err != nil {
 				closed_by_client = false
@@ -281,7 +281,7 @@ RUNNING:
 			if cmd.Type() == core.CMD_TRANSFER {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := sAgent.ReadFromCA(data)
-					plugin.CallPluginsMethod("ToServer", rdata)
+					plugin.WriteToServer(rdata)
 					if _err := f.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
 						log.DEBUG(f.name, "receive data from client agent to server agent error, %s",
 							_err.Error())

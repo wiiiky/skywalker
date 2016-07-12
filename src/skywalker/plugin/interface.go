@@ -21,8 +21,8 @@ type SkyWalkerPlugin interface {
 	Init(map[string]interface{}, string)
 
 	ReadFromClient([]byte)
-	ToClient([]byte)
+	WriteToClient([]byte)
 	ReadFromServer([]byte)
-	ToServer([]byte)
+	WriteToServer([]byte)
 	AtExit()
 }

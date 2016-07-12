@@ -45,7 +45,7 @@ type SkyWalkerConfig struct {
 
 	DNSTimeout int64 `json:"dnsTimeout"`
 
-	Plugins []plugin.PluginConfig `json:"plugins"`
+	Plugins []plugin.PluginConfig `json:"plugin"`
 	Daemon  bool                  `json:"daemon"`
 	Extras  []SkyWalkerExtraConfig
 }

@@ -19,7 +19,6 @@ package plugin
 
 import (
 	"github.com/hitoshii/golib/src/log"
-	"reflect"
 	"skywalker/plugin/stat"
 )
 
@@ -42,15 +41,14 @@ var (
 )
 
 /* 初始化插件 */
-func Init(ps []PluginConfig, logname string) {
-	for i := range ps {
-		pc := ps[i]
+func Init(pcs []PluginConfig, name string) {
+	for i, pc := range pcs {
 		f := gPluginMap[pc.Name]
 		if f == nil {
-			log.WARN(logname, "Plugin %s Not Found", ps[i])
+			log.WARN(name, "Plugin %s Not Found", pcs[i])
 		} else {
 			p := f()
-			p.Init(pc.Config, logname)
+			p.Init(pc.Config, name)
 			gPlugins = append(gPlugins, p)
 		}
 	}
@@ -62,23 +60,48 @@ func AtExit() {
 	}
 }
 
-/* 调用插件方法 */
-func CallPluginsMethod(name string, data interface{}) {
-	callPluginsMethod := func(d []byte) {
-		for _, plugin := range gPlugins {
-			method := reflect.ValueOf(plugin).MethodByName(name)
-			args := []reflect.Value{reflect.ValueOf(d)}
-			method.Call(args)
+func ReadFromClient(data []byte) {
+	for _, p := range gPlugins {
+		p.ReadFromClient(data)
+	}
+}
+
+func writeToClient(data []byte) {
+	for _, p := range gPlugins {
+		p.WriteToClient(data)
+	}
+}
+
+func WriteToClient(data interface{}) {
+	switch d := data.(type) {
+	case []byte:
+		writeToClient(d)
+	case [][]byte:
+		for _, e := range d {
+			writeToClient(e)
 		}
 	}
+}
+
+func ReadFromServer(data []byte) {
+	for _, p := range gPlugins {
+		p.ReadFromClient(data)
+	}
+}
+
+func writeToServer(data []byte) {
+	for _, p := range gPlugins {
+		p.WriteToServer(data)
+	}
+}
+
+func WriteToServer(data interface{}) {
 	switch d := data.(type) {
-	case string:
-		callPluginsMethod([]byte(d))
 	case []byte:
-		callPluginsMethod(d)
+		writeToServer(d)
 	case [][]byte:
-		for _, _d := range d {
-			callPluginsMethod(_d)
+		for _, e := range d {
+			writeToServer(e)
 		}
 	}
 }

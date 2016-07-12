@@ -39,7 +39,7 @@ func (p *StatPlugin) Init(cfg map[string]interface{}, name string) {
 	if len(p.sfile) > 0 {
 		p.sfile = util.ResolveHomePath(p.sfile)
 		util.LoadJsonFile(p.sfile, &p)
-		log.DEBUG(p.name, "read stat from %s", p.sfile)
+		log.DEBUG(p.name, "Read Stat From %s", p.sfile)
 	}
 }
 
@@ -47,7 +47,7 @@ func (p *StatPlugin) ReadFromClient(data []byte) {
 	p.CSent += uint64(len(data))
 }
 
-func (p *StatPlugin) ToClient(data []byte) {
+func (p *StatPlugin) WriteToClient(data []byte) {
 	p.CReceived += uint64(len(data))
 }
 
@@ -55,13 +55,13 @@ func (p *StatPlugin) ReadFromServer(data []byte) {
 	p.SRecevied += uint64(len(data))
 }
 
-func (p *StatPlugin) ToServer(data []byte) {
+func (p *StatPlugin) WriteToServer(data []byte) {
 	p.SSent += uint64(len(data))
 }
 
 func (p *StatPlugin) AtExit() {
-	fmt.Println("---------------------------------------")
-	formatData := func(size uint64) string {
+	log.INFO(p.name, "---------------------------------------")
+	formatSize := func(size uint64) string {	/* 格式化流量大小 */
 		var f string
 		s := float64(size)
 		if size < 1024 {
@@ -77,9 +77,9 @@ func (p *StatPlugin) AtExit() {
 	}
 	var tp StatPlugin
 	util.LoadJsonFile(p.sfile, &tp)
-	log.INFO(p.name, "Scope\tSent\t\tReceived\n")
-	log.INFO(p.name, "Session\t%s\t%s\n", formatData(p.SSent-tp.SSent), formatData(p.CReceived-tp.CReceived))
-	log.INFO(p.name, "Total\t%s\t%s\n", formatData(p.SSent), formatData(p.CReceived))
+	log.INFO(p.name, "Scope\tSent\tReceived\n")
+	log.INFO(p.name, "Session\t%s\t%s\n", formatSize(p.SSent-tp.SSent), formatSize(p.CReceived-tp.CReceived))
+	log.INFO(p.name, "Total\t%s\t%s\n", formatSize(p.SSent), formatSize(p.CReceived))
 	if len(p.sfile) > 0 {
 		util.DumpJsonFile(p.sfile, p)
 	}
