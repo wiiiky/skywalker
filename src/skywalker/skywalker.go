@@ -19,47 +19,33 @@ package main
 
 import (
 	"github.com/hitoshii/golib/src/log"
-	"net"
 	"os"
 	"os/signal"
 	"skywalker/config"
 	"skywalker/plugin"
 	"skywalker/transfer"
-	"skywalker/util"
 )
 
-func udpTransfer(udpListener *net.UDPConn) {
-	defer udpListener.Close()
-
-	log.I("Listen UDP On %s", udpListener.LocalAddr())
-
-	buf := make([]byte, 1<<16)
-	for {
-		if n, addr, err := udpListener.ReadFromUDP(buf); err == nil {
-			transfer.StartUDPTransfer(udpListener, buf, n, addr)
-		} else {
-			log.W("Read From UDP Error: %s", err)
-		}
-	}
-}
-
 func main() {
-	var udpListener *net.UDPConn
+	var udpTransfer *transfer.UDPTransfer
 	var tcpTransfer *transfer.TCPTransfer
 	var err error
 
 	cfg := &config.GConfig
 
-	if tcpTransfer = transfer.NewTCPTransfer(cfg); tcpTransfer == nil {
+	if err = cfg.Init(); err != nil {
+		log.ERROR(cfg.Name, "%s", err)
 		return
-	}
-	if udpListener, err = util.UDPListen(cfg.BindAddr, cfg.BindPort); err != nil {
-		log.E("Couldn't Listen UDP: %s", err)
+	} else if tcpTransfer, err = transfer.NewTCPTransfer(cfg); tcpTransfer == nil {
+		log.ERROR(cfg.Name, "%s", err)
+		return
+	} else if udpTransfer, err = transfer.NewUDPTransfer(cfg); udpTransfer == nil {
+		log.ERROR(cfg.Name, "%s", err)
 		return
 	}
 
 	go tcpTransfer.Run()
-	go udpTransfer(udpListener)
+	go udpTransfer.Run()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

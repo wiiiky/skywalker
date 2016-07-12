@@ -36,32 +36,23 @@ type TCPTransfer struct {
 	listener net.Listener
 	ca       string
 	sa       string
-	logname  string
+	name     string
 }
 
-func NewTCPTransfer(cfg *config.SkyWalkerConfig) *TCPTransfer {
-	logname := cfg.Log.Namespace
-	log.Init(&cfg.Log)
+func NewTCPTransfer(cfg *config.SkyWalkerConfig) (*TCPTransfer, error) {
+	name := cfg.Name
 	ca := cfg.ClientProtocol
 	sa := cfg.ServerProtocol
-	plugin.Init(cfg.Plugins, logname)
-	if err := agent.CAInit(ca, cfg.ClientConfig); err != nil {
-		log.ERROR(logname, "Failed to initialize Client Agent: %s", err)
-		return nil
-	} else if err := agent.SAInit(sa, cfg.ServerConfig); err != nil {
-		log.ERROR(logname, "Failed to initialize Server Agent: %s", err)
-		return nil
-	} else if listener, err := util.TCPListen(cfg.BindAddr, cfg.BindPort); err != nil {
-		log.ERROR(logname, "Couldn't Listen TCP: %s", err)
-		return nil
+	if listener, err := util.TCPListen(cfg.BindAddr, cfg.BindPort); err != nil {
+		return nil, err
 	} else {
-		log.INFO(logname, "Listen TCP On %s", listener.Addr())
+		log.INFO(name, "Listen TCP On %s", listener.Addr())
 		return &TCPTransfer{
 			listener: listener,
-			logname:  logname,
+			name:     name,
 			ca:       ca,
 			sa:       sa,
-		}
+		}, nil
 	}
 }
 
@@ -75,15 +66,15 @@ func (f *TCPTransfer) Run() {
 		if conn, err := f.listener.Accept(); err == nil {
 			f.HandleTransfer(conn)
 		} else {
-			log.WARN(f.logname, "Couldn't Accept: %s", err)
+			log.WARN(f.name, "Couldn't Accept: %s", err)
 		}
 	}
 }
 
 /* 启动数据转发流程 */
 func (f *TCPTransfer) HandleTransfer(conn net.Conn) {
-	cAgent := agent.GetClientAgent(f.ca, f.logname)
-	sAgent := agent.GetServerAgent(f.sa, f.logname)
+	cAgent := agent.GetClientAgent(f.ca, f.name)
+	sAgent := agent.GetServerAgent(f.sa, f.name)
 	if cAgent == nil || sAgent == nil {
 		conn.Close()
 		return
@@ -160,7 +151,7 @@ RUNNING:
 			plugin.CallPluginsMethod("ReadFromClient", data)
 			cmd, rdata, err := cAgent.ReadFromClient(data)
 			if err := f.transferData(c2s, cConn, cmd, rdata, err); err != nil {
-				log.DEBUG(f.logname, "transfer data from client agent to server agent error, %s",
+				log.DEBUG(f.name, "transfer data from client agent to server agent error, %s",
 					err.Error())
 				break RUNNING
 			}
@@ -175,7 +166,7 @@ RUNNING:
 					plugin.CallPluginsMethod("ToClient", rdata)
 					if err := f.transferData(c2s, cConn, cmd, rdata, err); err != nil {
 						closed_by_client = false
-						log.DEBUG(f.logname, "receive data from server agent to client agent error, %s",
+						log.DEBUG(f.name, "receive data from server agent to client agent error, %s",
 							err.Error())
 						break RUNNING
 					}
@@ -184,7 +175,7 @@ RUNNING:
 				result, host, port := cmd.GetConnectResult()
 				if result == core.CONNECT_RESULT_OK {
 					chain = fmt.Sprintf("%s <==> %s:%v", cConn.RemoteAddr().String(), host, port)
-					log.INFO(f.logname, "%s Connected", chain)
+					log.INFO(f.name, "%s Connected", chain)
 				}
 				cmd, rdata, err := cAgent.OnConnectResult(result, host, port)
 				err = f.transferData(c2s, cConn, cmd, rdata, err)
@@ -193,15 +184,15 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.WARN(f.logname, "Unknown Package From Server Agent! This is a BUG!")
+				log.WARN(f.name, "Unknown Package From Server Agent! This is a BUG!")
 			}
 		}
 	}
 	cAgent.OnClose(closed_by_client)
 	if closed_by_client {
-		log.INFO(f.logname, "%s Closed By Client", chain)
+		log.INFO(f.name, "%s Closed By Client", chain)
 	} else {
-		log.INFO(f.logname, "%s Closed By Server", chain)
+		log.INFO(f.name, "%s Closed By Server", chain)
 	}
 }
 
@@ -236,7 +227,7 @@ func (f *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
 
 	/* 发送服务端代理的处理后数据 */
 	if err := f.transferData(s2c, conn, cmd, rdata, err); err != nil {
-		log.WARN(f.logname, "Server Agent OnConnectResult Error, %s", err.Error())
+		log.WARN(f.name, "Server Agent OnConnectResult Error, %s", err.Error())
 		conn.Close()
 		return nil, nil
 	}
@@ -278,7 +269,7 @@ RUNNING:
 			cmd, rdata, err := sAgent.ReadFromServer(data)
 			if err := f.transferData(s2c, sConn, cmd, rdata, err); err != nil {
 				closed_by_client = false
-				log.DEBUG(f.logname, "transfer data from server agent to client agent error, %s",
+				log.DEBUG(f.name, "transfer data from server agent to client agent error, %s",
 					err.Error())
 				break RUNNING
 			}
@@ -292,7 +283,7 @@ RUNNING:
 					cmd, rdata, err := sAgent.ReadFromCA(data)
 					plugin.CallPluginsMethod("ToServer", rdata)
 					if _err := f.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
-						log.DEBUG(f.logname, "receive data from client agent to server agent error, %s",
+						log.DEBUG(f.name, "receive data from client agent to server agent error, %s",
 							_err.Error())
 						break RUNNING
 					}
@@ -305,7 +296,7 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.WARN(f.logname, "Unknown Package From Client Agent! This is a BUG!")
+				log.WARN(f.name, "Unknown Package From Client Agent! This is a BUG!")
 			}
 		}
 	}

@@ -20,6 +20,7 @@ package config
 import (
 	"flag"
 	"github.com/hitoshii/golib/src/log"
+	"skywalker/agent"
 	"skywalker/plugin"
 	"skywalker/util"
 )
@@ -45,6 +46,23 @@ type SkyWalkerConfig struct {
 	Plugins []plugin.PluginConfig `json:"plugins"`
 	Daemon  bool                  `json:"daemon"`
 	Extras  []SkyWalkerExtraConfig
+}
+
+/*
+ * 初始化配置
+ * 设置日志、插件并检查CA和SA
+ */
+func (cfg *SkyWalkerConfig) Init() error {
+	log.Init(&cfg.Log)
+	ca := cfg.ClientProtocol
+	sa := cfg.ServerProtocol
+	plugin.Init(cfg.Plugins, cfg.Name)
+	if err := agent.CAInit(ca, cfg.ClientConfig); err != nil {
+		return err
+	} else if err := agent.SAInit(sa, cfg.ServerConfig); err != nil {
+		return err
+	}
+	return nil
 }
 
 var (
