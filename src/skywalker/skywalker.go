@@ -31,7 +31,7 @@ func main() {
 	var tcpTransfer *transfer.TCPTransfer
 	var err error
 
-	cfg := &config.GConfig
+	cfg := config.GetConfig()
 
 	if err = cfg.Init(); err != nil {
 		log.ERROR(cfg.Name, "%s", err)

@@ -20,6 +20,7 @@ package config
 import (
 	"flag"
 	"github.com/hitoshii/golib/src/log"
+	"os"
 	"skywalker/agent"
 	"skywalker/plugin"
 	"skywalker/util"
@@ -29,6 +30,7 @@ type SkyWalkerExtraConfig SkyWalkerConfig
 
 /* 服务配置 */
 type SkyWalkerConfig struct {
+	FilePath string
 	Name     string `json:name`
 	BindAddr string `json:"bindAddr"`
 	BindPort uint16 `json:"bindPort"`
@@ -54,6 +56,7 @@ type SkyWalkerConfig struct {
  */
 func (cfg *SkyWalkerConfig) Init() error {
 	log.Init(&cfg.Log)
+	log.INFO(cfg.Name, "Load Config From %s", cfg.FilePath)
 	ca := cfg.ClientProtocol
 	sa := cfg.ServerProtocol
 	plugin.Init(cfg.Plugins, cfg.Name)
@@ -67,7 +70,7 @@ func (cfg *SkyWalkerConfig) Init() error {
 
 var (
 	/* 默认配置 */
-	GConfig = SkyWalkerConfig{
+	gConfig = SkyWalkerConfig{
 		Name:       "default",
 		BindAddr:   "127.0.0.1",
 		BindPort:   12345,
@@ -85,16 +88,49 @@ var (
 	}
 )
 
-func init() {
-	configFile := flag.String("c", "./config.json", "the config file")
+func GetConfig() *SkyWalkerConfig {
+	return &gConfig
+}
+
+/*
+ * 查找配置文件，如果命令行参数-c指定了配置文件，则使用
+ * 否则使用~/.config/skywalker.json
+ * 否则使用/etc/skywalker.json
+ */
+func findConfigFile() string {
+	file := flag.String("c", "", "the config file")
 	flag.Parse()
-	if !util.LoadJsonFile(*configFile, &GConfig) { /* 读取配置文件 */
-		util.FatalError("Fail To Load Config File %s", *configFile)
+	if len(*file) > 0 {
+		return *file
 	}
-	GConfig.Log.Namespace = GConfig.Name
-	for _, e := range GConfig.Extras {
+	checkRegularFile := func(filepath string) string {
+		path := util.ResolveHomePath(filepath)
+		info, err := os.Stat(path)
+		if err == nil && info.Mode().IsRegular() {
+			return path
+		}
+		return ""
+	}
+	if path := checkRegularFile("~/.config/skywalker.json"); len(path) > 0 {
+		return path
+	} else if path := checkRegularFile("/etc/skywalker.json"); len(path) > 0 {
+		return path
+	}
+	return ""
+}
+
+func init() {
+	cfile := findConfigFile()
+	if len(cfile) == 0 {
+		util.FatalError("No Config Found!")
+	} else if !util.LoadJsonFile(cfile, &gConfig) { /* 读取配置文件 */
+		util.FatalError("Fail To Load Config From %s", cfile)
+	}
+	gConfig.FilePath = cfile
+	gConfig.Log.Namespace = gConfig.Name
+	for _, e := range gConfig.Extras {
 		e.Log.Namespace = e.Name
 	}
 	/* 初始化DNS超时时间 */
-	util.Init(GConfig.DNSTimeout)
+	util.Init(gConfig.DNSTimeout)
 }
