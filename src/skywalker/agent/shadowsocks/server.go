@@ -20,6 +20,7 @@ package shadowsocks
 import (
 	"bytes"
 	"github.com/hitoshii/golib/src/log"
+	"math/rand"
 	"skywalker/cipher"
 	"skywalker/core"
 	"skywalker/util"
@@ -58,17 +59,20 @@ type ssServerAddress struct {
 
 /* 配置参数 */
 type ssServerConfig struct {
-	serverAddr string
-	serverPort int
-	password   string
-	method     string
+	ssServerAddress
 
 	/* 多服务器设置 */
+	selection   string /* 服务器选择策略，配置了多服务器时有效 */
 	serverAddrs []ssServerAddress
 	retry       int /* 每个服务器的重试次数，默认为3 */
 	sindex      int /* 当前选中的服务器 */
 	try         int /* 当前尝试次数 */
 }
+
+const (
+	ss_SERVER_SELECT_POLL   = "poll"
+	ss_SERVER_SELECT_RANDOM = "random"
+)
 
 /* 保存全局的配置，配置只读取一次 */
 var (
@@ -77,16 +81,15 @@ var (
 
 /* 更改当前服务器 */
 func (a *ShadowSocksServerAgent) changeServer(server string) *ssServerAddress {
-	if len(gServerConfig.serverAddrs) > 0 && gServerConfig.serverAddrs[gServerConfig.sindex].serverAddr == server {
+	addrSize := len(gServerConfig.serverAddrs)
+	if addrSize > 0 && gServerConfig.serverAddrs[gServerConfig.sindex].serverAddr == server && gServerConfig.selection == ss_SERVER_SELECT_POLL {
 		/* 出错次数过多就考虑更换服务器 */
 		if gServerConfig.try += 1; gServerConfig.try >= gServerConfig.retry {
 			gServerConfig.try = 0
-			if gServerConfig.sindex += 1; gServerConfig.sindex >= len(gServerConfig.serverAddrs) {
+			if gServerConfig.sindex += 1; gServerConfig.sindex >= addrSize {
 				gServerConfig.sindex = 0
 			}
-			addr := gServerConfig.serverAddrs[gServerConfig.sindex]
-			log.INFO(a.logname, "change server to %s:%d", addr.serverAddr, addr.serverPort)
-			return &addr
+			return &gServerConfig.serverAddrs[gServerConfig.sindex]
 		}
 	}
 	return nil
@@ -99,17 +102,25 @@ func (a *ShadowSocksServerAgent) changeServer(server string) *ssServerAddress {
 func (a *ShadowSocksServerAgent) getServerInfo() (string, int, string, string) {
 	var password, method, serverAddr string
 	var serverPort int
-	if len(gServerConfig.serverAddrs) > 0 {
-		addrinfo := gServerConfig.serverAddrs[gServerConfig.sindex]
+
+	addrSize := len(gServerConfig.serverAddrs)
+	selection := gServerConfig.selection
+	if addrSize > 0 { /*  配置了多个服务器 */
+		var addrinfo *ssServerAddress
+		if selection == ss_SERVER_SELECT_POLL { /* 轮询 */
+			addrinfo = &gServerConfig.serverAddrs[gServerConfig.sindex]
+		} else { /* 随机选择服务器 */
+			addrinfo = &gServerConfig.serverAddrs[rand.Intn(addrSize)]
+		}
 		password = addrinfo.password
 		method = addrinfo.method
 		serverAddr = addrinfo.serverAddr
 		serverPort = addrinfo.serverPort
-	} else {
-		password = gServerConfig.password
-		method = gServerConfig.method
-		serverAddr = gServerConfig.serverAddr
-		serverPort = gServerConfig.serverPort
+	} else { /*  选择唯一的服务器 */
+		password = gServerConfig.ssServerAddress.password
+		method = gServerConfig.ssServerAddress.method
+		serverAddr = gServerConfig.ssServerAddress.serverAddr
+		serverPort = gServerConfig.ssServerAddress.serverPort
 	}
 	return serverAddr, serverPort, password, method
 }
@@ -122,8 +133,8 @@ func (p *ShadowSocksServerAgent) Name() string {
  * 初始化读取配置，此方法全局调用一次，且
  * a参数在调用后会被立即释放
  */
-func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
-	var serverAddr, password, method string
+func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{}) error {
+	var serverAddr, password, method, selection string
 	var serverPort int
 	var serverAddrs []ssServerAddress
 	var val interface{}
@@ -134,6 +145,7 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 	serverPort = int(util.GetMapInt(cfg, "serverPort"))
 	password = util.GetMapString(cfg, "password")
 	method = util.GetMapStringDefault(cfg, "method", "aes-256-cfb")
+	selection = util.GetMapStringDefault(cfg, "select", ss_SERVER_SELECT_POLL)
 
 	val, ok = cfg["serverAddress[]"]
 	if ok == true {
@@ -165,11 +177,12 @@ func (a *ShadowSocksServerAgent) OnInit(cfg map[string]interface{}) error {
 		return util.NewError(ERROR_INVALID_CONFIG, "invalid server config")
 	}
 
-	gServerConfig.serverAddr = serverAddr
-	gServerConfig.serverPort = serverPort
-	gServerConfig.password = password
-	gServerConfig.method = method
+	gServerConfig.ssServerAddress.serverAddr = serverAddr
+	gServerConfig.ssServerAddress.serverPort = serverPort
+	gServerConfig.ssServerAddress.password = password
+	gServerConfig.ssServerAddress.method = method
 	gServerConfig.serverAddrs = serverAddrs
+	gServerConfig.selection = selection
 	gServerConfig.retry = retry
 	gServerConfig.sindex = 0
 	gServerConfig.try = 0

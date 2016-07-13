@@ -65,30 +65,30 @@ var (
 	}
 )
 
-func CAInit(ca string, cfg map[string]interface{}) error {
+func CAInit(ca string, name string, cfg map[string]interface{}) error {
 	if f := gCAMap[strings.ToLower(ca)]; f == nil {
 		return errors.New(fmt.Sprintf("Client Agent %s not found", ca))
 	} else {
-		return f().OnInit(cfg)
+		return f().OnInit(name, cfg)
 	}
 }
 
-func SAInit(sa string, cfg map[string]interface{}) error {
+func SAInit(sa string, name string, cfg map[string]interface{}) error {
 	if f := gSAMap[strings.ToLower(sa)]; f == nil {
 		return errors.New(fmt.Sprintf("Client Agent %s not found", sa))
 	} else {
-		return f().OnInit(cfg)
+		return f().OnInit(name, cfg)
 	}
 }
 
 /*
  * 初始化客户端代理
  */
-func GetClientAgent(ca, logname string) ClientAgent {
+func GetClientAgent(ca, name string) ClientAgent {
 	f := gCAMap[strings.ToLower(ca)]
 	agent := f()
-	if err := agent.OnStart(logname); err != nil {
-		log.WARN(logname, "Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
+	if err := agent.OnStart(name); err != nil {
+		log.WARN(name, "Fail To Start [%s] As Client Agent: %s", agent.Name(), err.Error())
 		return nil
 	}
 	return agent
@@ -97,11 +97,11 @@ func GetClientAgent(ca, logname string) ClientAgent {
 /*
  * 初始化服务器代理
  */
-func GetServerAgent(sa, logname string) ServerAgent {
+func GetServerAgent(sa, name string) ServerAgent {
 	f := gSAMap[strings.ToLower(sa)]
 	agent := f()
-	if err := agent.OnStart(logname); err != nil {
-		log.WARN(logname, "Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())
+	if err := agent.OnStart(name); err != nil {
+		log.WARN(name, "Fail To Start [%s] As Server Agent: %s", agent.Name(), err.Error())
 		return nil
 	}
 	return agent

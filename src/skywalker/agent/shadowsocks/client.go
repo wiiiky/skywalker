@@ -52,7 +52,7 @@ func (p *ShadowSocksClientAgent) Name() string {
 	return "ShadowSocks"
 }
 
-func (a *ShadowSocksClientAgent) OnInit(cfg map[string]interface{}) error {
+func (a *ShadowSocksClientAgent) OnInit(name string, cfg map[string]interface{}) error {
 	var password, method string
 	var val interface{}
 	var ok bool

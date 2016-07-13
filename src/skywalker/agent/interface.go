@@ -36,8 +36,9 @@ type ClientAgent interface {
 	Name() string
 	/*
 	 * 程序初始化时调用，该方法全局只调用一次，读取配置
+	 * 第一个参数是配置名，第二个参数是代理配置
 	 */
-	OnInit(map[string]interface{}) error
+	OnInit(string, map[string]interface{}) error
 	/*
 	 * 参数是日志的命名空间
 	 * 初始化成功，返回nil
@@ -69,8 +70,9 @@ type ServerAgent interface {
 
 	/*
 	 * 程序初始化时调用，全局只调用一次，读取配置
+	 * 第一个参数是配置名，第二个参数是代理配置
 	 */
-	OnInit(map[string]interface{}) error
+	OnInit(string, map[string]interface{}) error
 	/*
 	 * 初始化成功，返回nil
 	 * 初始化失败，返回错误

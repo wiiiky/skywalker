@@ -47,7 +47,7 @@ func (a *HTTPClientAgent) Name() string {
 }
 
 /* 初始化，载入配置 */
-func (a *HTTPClientAgent) OnInit(cfg map[string]interface{}) error {
+func (a *HTTPClientAgent) OnInit(name string, cfg map[string]interface{}) error {
 	gConfig.username = util.GetMapString(cfg, "username")
 	gConfig.password = util.GetMapString(cfg, "password")
 	return nil

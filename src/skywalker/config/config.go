@@ -60,9 +60,9 @@ func (cfg *SkyWalkerConfig) Init() error {
 	ca := cfg.ClientProtocol
 	sa := cfg.ServerProtocol
 	plugin.Init(cfg.Plugins, cfg.Name)
-	if err := agent.CAInit(ca, cfg.ClientConfig); err != nil {
+	if err := agent.CAInit(ca, cfg.Name, cfg.ClientConfig); err != nil {
 		return err
-	} else if err := agent.SAInit(sa, cfg.ServerConfig); err != nil {
+	} else if err := agent.SAInit(sa, cfg.Name, cfg.ServerConfig); err != nil {
 		return err
 	}
 	return nil

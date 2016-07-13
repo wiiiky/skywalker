@@ -51,7 +51,7 @@ func (a *Socks5ServerAgent) Name() string {
 }
 
 /* 初始化，读取配置 */
-func (a *Socks5ServerAgent) OnInit(cfg map[string]interface{}) error {
+func (a *Socks5ServerAgent) OnInit(name string, cfg map[string]interface{}) error {
 	var serverAddr string
 	var serverPort int
 

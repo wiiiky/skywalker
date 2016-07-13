@@ -240,8 +240,8 @@ func (f *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
  * 从客户端代理收到的第一个数据包一定是服务器地址，无论该数据包被标志成什么类型
  */
 func (f *TCPTransfer) saGoroutine(sAgent agent.ServerAgent,
-		c2s chan *core.Command,
-		s2c chan *core.Command) {
+	c2s chan *core.Command,
+	s2c chan *core.Command) {
 	defer close(s2c)
 
 	/* 获取服务器地址 */

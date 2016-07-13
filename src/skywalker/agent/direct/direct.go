@@ -27,7 +27,7 @@ func (a *DirectAgent) Name() string {
 	return "Direct"
 }
 
-func (a *DirectAgent) OnInit(cfg map[string]interface{}) error {
+func (a *DirectAgent) OnInit(name string, cfg map[string]interface{}) error {
 	return nil
 }
 

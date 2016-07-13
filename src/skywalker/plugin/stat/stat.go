@@ -25,20 +25,20 @@ import (
 
 type statData struct {
 	Received uint64 `json:"received"`
-	Sent 	 uint64 `json:"sent"`
+	Sent     uint64 `json:"sent"`
 }
 
 type StatPlugin struct {
-	CSent     uint64 `json:"clientSent"`
-	CReceived uint64 `json:"clientReceived"`
-	Server 	  map[string]*statData	`json:"server"`		/* 从服务端发送和接收的数据 */
+	CSent     uint64               `json:"clientSent"`
+	CReceived uint64               `json:"clientReceived"`
+	Server    map[string]*statData `json:"server"` /* 从服务端发送和接收的数据 */
 
 	sfile string /* 用户保存流量数据的文件 */
 	name  string
 }
 
 func NewStatPlugin() *StatPlugin {
-	return &StatPlugin{Server:make(map[string]*statData)}
+	return &StatPlugin{Server: make(map[string]*statData)}
 }
 
 func (p *StatPlugin) Init(cfg map[string]interface{}, name string) {
@@ -68,7 +68,7 @@ func (p *StatPlugin) ReadFromServer(data []byte, host string, port int) {
 	if stat := p.Server[key]; stat != nil {
 		stat.Received += size
 	} else {
-		p.Server[key] = &statData{Received:size}
+		p.Server[key] = &statData{Received: size}
 	}
 }
 
@@ -78,13 +78,13 @@ func (p *StatPlugin) WriteToServer(data []byte, host string, port int) {
 	if stat := p.Server[key]; stat != nil {
 		stat.Sent += size
 	} else {
-		p.Server[key] = &statData{Sent:size}
+		p.Server[key] = &statData{Sent: size}
 	}
 }
 
 func (p *StatPlugin) AtExit() {
 	log.INFO(p.name, "---------------------------------------")
-	formatSize := func(size uint64) string {	/* 格式化流量大小 */
+	formatSize := func(size uint64) string { /* 格式化流量大小 */
 		var f string
 		s := float64(size)
 		if size < 1024 {
