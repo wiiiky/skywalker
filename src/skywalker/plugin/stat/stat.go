@@ -23,14 +23,22 @@ import (
 	"skywalker/util"
 )
 
+type statData struct {
+	Received uint64 `json:"received"`
+	Sent 	 uint64 `json:"sent"`
+}
+
 type StatPlugin struct {
 	CSent     uint64 `json:"clientSent"`
 	CReceived uint64 `json:"clientReceived"`
-	SSent     uint64 `json:"serverSent"`
-	SRecevied uint64 `json:"serverRecevied"`
+	Server 	  map[string]*statData	`json:"server"`		/* 从服务端发送和接收的数据 */
 
 	sfile string /* 用户保存流量数据的文件 */
 	name  string
+}
+
+func NewStatPlugin() *StatPlugin {
+	return &StatPlugin{Server:make(map[string]*statData)}
 }
 
 func (p *StatPlugin) Init(cfg map[string]interface{}, name string) {
@@ -40,6 +48,9 @@ func (p *StatPlugin) Init(cfg map[string]interface{}, name string) {
 		p.sfile = util.ResolveHomePath(p.sfile)
 		util.LoadJsonFile(p.sfile, &p)
 		log.DEBUG(p.name, "Read Stat From %s", p.sfile)
+	}
+	if p.Server == nil {
+		p.Server = make(map[string]*statData)
 	}
 }
 
@@ -51,12 +62,24 @@ func (p *StatPlugin) WriteToClient(data []byte) {
 	p.CReceived += uint64(len(data))
 }
 
-func (p *StatPlugin) ReadFromServer(data []byte) {
-	p.SRecevied += uint64(len(data))
+func (p *StatPlugin) ReadFromServer(data []byte, host string, port int) {
+	key := fmt.Sprintf("%s:%d", host, port)
+	size := uint64(len(data))
+	if stat := p.Server[key]; stat != nil {
+		stat.Received += size
+	} else {
+		p.Server[key] = &statData{Received:size}
+	}
 }
 
-func (p *StatPlugin) WriteToServer(data []byte) {
-	p.SSent += uint64(len(data))
+func (p *StatPlugin) WriteToServer(data []byte, host string, port int) {
+	key := fmt.Sprintf("%s:%d", host, port)
+	size := uint64(len(data))
+	if stat := p.Server[key]; stat != nil {
+		stat.Sent += size
+	} else {
+		p.Server[key] = &statData{Sent:size}
+	}
 }
 
 func (p *StatPlugin) AtExit() {
@@ -75,11 +98,13 @@ func (p *StatPlugin) AtExit() {
 		}
 		return f
 	}
-	var tp StatPlugin
-	util.LoadJsonFile(p.sfile, &tp)
-	log.INFO(p.name, "Scope\tSent\tReceived\n")
-	log.INFO(p.name, "Session\t%s\t%s\n", formatSize(p.SSent-tp.SSent), formatSize(p.CReceived-tp.CReceived))
-	log.INFO(p.name, "Total\t%s\t%s\n", formatSize(p.SSent), formatSize(p.CReceived))
+	var totalRecevied, totalSent uint64
+	for host, stat := range p.Server {
+		log.INFO(p.name, "[%s] received:%s\tsent:%s", host, formatSize(stat.Received), formatSize(stat.Sent))
+		totalRecevied += stat.Received
+		totalSent += stat.Sent
+	}
+	log.INFO(p.name, "[TOTAL] received:%s\tsent:%s", formatSize(totalRecevied), formatSize(totalSent))
 	if len(p.sfile) > 0 {
 		util.DumpJsonFile(p.sfile, p)
 	}

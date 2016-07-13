@@ -30,7 +30,7 @@ type PluginConfig struct {
 }
 
 func NewStatPlugin() SkyWalkerPlugin {
-	return &stat.StatPlugin{}
+	return stat.NewStatPlugin()
 }
 
 var (
@@ -83,25 +83,25 @@ func WriteToClient(data interface{}) {
 	}
 }
 
-func ReadFromServer(data []byte) {
+func ReadFromServer(data []byte, host string, port int) {
 	for _, p := range gPlugins {
-		p.ReadFromClient(data)
+		p.ReadFromServer(data, host, port)
 	}
 }
 
-func writeToServer(data []byte) {
+func writeToServer(data []byte, host string, port int) {
 	for _, p := range gPlugins {
-		p.WriteToServer(data)
+		p.WriteToServer(data, host, port)
 	}
 }
 
-func WriteToServer(data interface{}) {
+func WriteToServer(data interface{}, host string, port int) {
 	switch d := data.(type) {
 	case []byte:
-		writeToServer(d)
+		writeToServer(d, host, port)
 	case [][]byte:
 		for _, e := range d {
-			writeToServer(e)
+			writeToServer(e, host, port)
 		}
 	}
 }

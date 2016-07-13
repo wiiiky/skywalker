@@ -22,7 +22,7 @@ type SkyWalkerPlugin interface {
 
 	ReadFromClient([]byte)
 	WriteToClient([]byte)
-	ReadFromServer([]byte)
-	WriteToServer([]byte)
+	ReadFromServer([]byte, string, int)
+	WriteToServer([]byte, string, int)
 	AtExit()
 }

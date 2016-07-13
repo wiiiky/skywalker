@@ -198,11 +198,11 @@ RUNNING:
 
 /*
  * 连接到远程地址
- * 成功返回net.Conn和对应的channel
- * 失败返回nil,nil
+ * 成功返回net.Conn和对应的channel，以及真实链接的服务器地址和端口号
+ * 失败返回nil,nil,"",0
  */
 func (f *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
-	s2c chan *core.Command) (net.Conn, chan []byte) {
+	s2c chan *core.Command) (net.Conn, chan []byte, string, int) {
 	/* 获取服务器地址，并链接 */
 	host, port := sAgent.GetRemoteAddress(h, p)
 	conn, result := util.TCPConnect(host, port)
@@ -222,17 +222,17 @@ func (f *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
 		if conn != nil {
 			conn.Close()
 		}
-		return nil, nil
+		return nil, nil, "", 0
 	}
 
 	/* 发送服务端代理的处理后数据 */
 	if err := f.transferData(s2c, conn, cmd, rdata, err); err != nil {
 		log.WARN(f.name, "Server Agent OnConnectResult Error, %s", err.Error())
 		conn.Close()
-		return nil, nil
+		return nil, nil, "", 0
 	}
 
-	return conn, util.CreateConnChannel(conn)
+	return conn, util.CreateConnChannel(conn), host, port
 }
 
 /*
@@ -240,8 +240,8 @@ func (f *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
  * 从客户端代理收到的第一个数据包一定是服务器地址，无论该数据包被标志成什么类型
  */
 func (f *TCPTransfer) saGoroutine(sAgent agent.ServerAgent,
-	c2s chan *core.Command,
-	s2c chan *core.Command) {
+		c2s chan *core.Command,
+		s2c chan *core.Command) {
 	defer close(s2c)
 
 	/* 获取服务器地址 */
@@ -250,7 +250,7 @@ func (f *TCPTransfer) saGoroutine(sAgent agent.ServerAgent,
 		return
 	}
 	host, port := cmd.GetConnectData()
-	sConn, sChan := f.connectRemote(host, port, sAgent, s2c)
+	sConn, sChan, realHost, realPort := f.connectRemote(host, port, sAgent, s2c)
 	if sConn == nil {
 		return
 	}
@@ -265,7 +265,7 @@ RUNNING:
 				closed_by_client = false
 				break RUNNING
 			}
-			plugin.ReadFromServer(data)
+			plugin.ReadFromServer(data, realHost, realPort)
 			cmd, rdata, err := sAgent.ReadFromServer(data)
 			if err := f.transferData(s2c, sConn, cmd, rdata, err); err != nil {
 				closed_by_client = false
@@ -281,7 +281,7 @@ RUNNING:
 			if cmd.Type() == core.CMD_TRANSFER {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := sAgent.ReadFromCA(data)
-					plugin.WriteToServer(rdata)
+					plugin.WriteToServer(rdata, realHost, realPort)
 					if _err := f.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
 						log.DEBUG(f.name, "receive data from client agent to server agent error, %s",
 							_err.Error())
@@ -292,7 +292,7 @@ RUNNING:
 				/* 需要重新链接服务器 */
 				sConn.Close()
 				host, port := cmd.GetConnectData()
-				if sConn, sChan = f.connectRemote(host, port, sAgent, s2c); sConn == nil {
+				if sConn, sChan, realHost, realPort = f.connectRemote(host, port, sAgent, s2c); sConn == nil {
 					break RUNNING
 				}
 			} else {
