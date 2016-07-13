@@ -151,7 +151,7 @@ RUNNING:
 			plugin.ReadFromClient(data)
 			cmd, rdata, err := cAgent.ReadFromClient(data)
 			if err := f.transferData(c2s, cConn, cmd, rdata, err); err != nil {
-				log.DEBUG(f.name, "transfer data from client agent to server agent error, %s",
+				log.WARN(f.name, "Read From Client Error: %s %s", cConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
 			}
@@ -166,7 +166,7 @@ RUNNING:
 					plugin.WriteToClient(rdata)
 					if err := f.transferData(c2s, cConn, cmd, rdata, err); err != nil {
 						closed_by_client = false
-						log.DEBUG(f.name, "receive data from server agent to client agent error, %s",
+						log.WARN(f.name, "Read From SA Error: %s %s", cConn.RemoteAddr(),
 							err.Error())
 						break RUNNING
 					}
@@ -184,7 +184,7 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.WARN(f.name, "Unknown Package From Server Agent! This is a BUG!")
+				log.ERROR(f.name, "Unknown Package From Server Agent! This is a BUG!")
 			}
 		}
 	}
@@ -269,7 +269,7 @@ RUNNING:
 			cmd, rdata, err := sAgent.ReadFromServer(data)
 			if err := f.transferData(s2c, sConn, cmd, rdata, err); err != nil {
 				closed_by_client = false
-				log.DEBUG(f.name, "transfer data from server agent to client agent error, %s",
+				log.WARN(f.name, "Read From Server Error: %s %s", sConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
 			}
@@ -283,7 +283,7 @@ RUNNING:
 					cmd, rdata, err := sAgent.ReadFromCA(data)
 					plugin.WriteToServer(rdata, realHost, realPort)
 					if _err := f.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
-						log.DEBUG(f.name, "receive data from client agent to server agent error, %s",
+						log.WARN(f.name, "Read From CA Error: %s %s", sConn.RemoteAddr(),
 							_err.Error())
 						break RUNNING
 					}
@@ -296,7 +296,7 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.WARN(f.name, "Unknown Package From Client Agent! This is a BUG!")
+				log.ERROR(f.name, "Unknown Package From Client Agent! This is a BUG!")
 			}
 		}
 	}

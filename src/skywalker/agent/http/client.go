@@ -27,10 +27,10 @@ import (
 
 /* 每次代理的请求数据 */
 type HTTPClientAgent struct {
-	req     *httpRequest
-	host    string
-	name 	string
-	cfg 	*HTTPProxyConfig
+	req  *httpRequest
+	host string
+	name string
+	cfg  *HTTPProxyConfig
 }
 
 type HTTPProxyConfig struct {
