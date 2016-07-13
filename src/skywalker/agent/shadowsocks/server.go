@@ -47,7 +47,8 @@ type ShadowSocksServerAgent struct {
 	/* SS连接是否成功 */
 	connected bool
 
-	logname string
+	name string
+	cfg  *ssServerConfig
 }
 
 type ssServerAddress struct {
@@ -74,22 +75,23 @@ const (
 	ss_SERVER_SELECT_RANDOM = "random"
 )
 
-/* 保存全局的配置，配置只读取一次 */
+/* 保存全局的配置，根据服务名分 */
 var (
-	gServerConfig ssServerConfig
+	gServerConfigs = map[string]*ssServerConfig{}
 )
 
 /* 更改当前服务器 */
 func (a *ShadowSocksServerAgent) changeServer(server string) *ssServerAddress {
-	addrSize := len(gServerConfig.serverAddrs)
-	if addrSize > 0 && gServerConfig.serverAddrs[gServerConfig.sindex].serverAddr == server && gServerConfig.selection == ss_SERVER_SELECT_POLL {
+	cfg := a.cfg
+	addrSize := len(cfg.serverAddrs)
+	if addrSize > 0 && cfg.serverAddrs[cfg.sindex].serverAddr == server && cfg.selection == ss_SERVER_SELECT_POLL {
 		/* 出错次数过多就考虑更换服务器 */
-		if gServerConfig.try += 1; gServerConfig.try >= gServerConfig.retry {
-			gServerConfig.try = 0
-			if gServerConfig.sindex += 1; gServerConfig.sindex >= addrSize {
-				gServerConfig.sindex = 0
+		if cfg.try += 1; cfg.try >= cfg.retry {
+			cfg.try = 0
+			if cfg.sindex += 1; cfg.sindex >= addrSize {
+				cfg.sindex = 0
 			}
-			return &gServerConfig.serverAddrs[gServerConfig.sindex]
+			return &cfg.serverAddrs[cfg.sindex]
 		}
 	}
 	return nil
@@ -103,24 +105,26 @@ func (a *ShadowSocksServerAgent) getServerInfo() (string, int, string, string) {
 	var password, method, serverAddr string
 	var serverPort int
 
-	addrSize := len(gServerConfig.serverAddrs)
-	selection := gServerConfig.selection
+	cfg := a.cfg
+
+	addrSize := len(cfg.serverAddrs)
+	selection := cfg.selection
 	if addrSize > 0 { /*  配置了多个服务器 */
 		var addrinfo *ssServerAddress
 		if selection == ss_SERVER_SELECT_POLL { /* 轮询 */
-			addrinfo = &gServerConfig.serverAddrs[gServerConfig.sindex]
+			addrinfo = &cfg.serverAddrs[cfg.sindex]
 		} else { /* 随机选择服务器 */
-			addrinfo = &gServerConfig.serverAddrs[rand.Intn(addrSize)]
+			addrinfo = &cfg.serverAddrs[rand.Intn(addrSize)]
 		}
 		password = addrinfo.password
 		method = addrinfo.method
 		serverAddr = addrinfo.serverAddr
 		serverPort = addrinfo.serverPort
 	} else { /*  选择唯一的服务器 */
-		password = gServerConfig.ssServerAddress.password
-		method = gServerConfig.ssServerAddress.method
-		serverAddr = gServerConfig.ssServerAddress.serverAddr
-		serverPort = gServerConfig.ssServerAddress.serverPort
+		password = cfg.ssServerAddress.password
+		method = cfg.ssServerAddress.method
+		serverAddr = cfg.ssServerAddress.serverAddr
+		serverPort = cfg.ssServerAddress.serverPort
 	}
 	return serverAddr, serverPort, password, method
 }
@@ -177,22 +181,29 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 		return util.NewError(ERROR_INVALID_CONFIG, "invalid server config")
 	}
 
-	gServerConfig.ssServerAddress.serverAddr = serverAddr
-	gServerConfig.ssServerAddress.serverPort = serverPort
-	gServerConfig.ssServerAddress.password = password
-	gServerConfig.ssServerAddress.method = method
-	gServerConfig.serverAddrs = serverAddrs
-	gServerConfig.selection = selection
-	gServerConfig.retry = retry
-	gServerConfig.sindex = 0
-	gServerConfig.try = 0
+	ssConfig := &ssServerConfig{
+		ssServerAddress: ssServerAddress{
+			serverAddr: serverAddr,
+			serverPort: serverPort,
+			password:   password,
+			method:     method,
+		},
+		serverAddrs: serverAddrs,
+		selection:   selection,
+		retry:       retry,
+		sindex:      0,
+		try:         0,
+	}
+
+	gServerConfigs[name] = ssConfig
 
 	return nil
 }
 
 /* 初始化读取配置 */
-func (a *ShadowSocksServerAgent) OnStart(logname string) error {
-	a.logname = logname
+func (a *ShadowSocksServerAgent) OnStart(name string) error {
+	a.name = name
+	a.cfg = gServerConfigs[name]
 	serverAddr, serverPort, password, method := a.getServerInfo()
 	info := cipher.GetCipherInfo(strings.ToLower(method))
 	key := generateKey([]byte(password), info.KeySize)
@@ -248,7 +259,7 @@ func (a *ShadowSocksServerAgent) ReadFromCA(data []byte) (interface{}, interface
 
 func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
 	if !closed_by_client && !a.connected { /* 没有建立链接就断开，且不是客户端断开的 */
-		log.DEBUG(a.logname, "Connection Closed Unexpectedly")
+		log.DEBUG(a.name, "Connection Closed Unexpectedly")
 		a.changeServer(a.serverAddr)
 	}
 }

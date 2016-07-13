@@ -29,7 +29,8 @@ import (
 type HTTPClientAgent struct {
 	req     *httpRequest
 	host    string
-	logname string
+	name 	string
+	cfg 	*HTTPProxyConfig
 }
 
 type HTTPProxyConfig struct {
@@ -39,7 +40,7 @@ type HTTPProxyConfig struct {
 }
 
 var (
-	gConfig = &HTTPProxyConfig{}
+	gConfigs = map[string]*HTTPProxyConfig{}
 )
 
 func (a *HTTPClientAgent) Name() string {
@@ -48,14 +49,17 @@ func (a *HTTPClientAgent) Name() string {
 
 /* 初始化，载入配置 */
 func (a *HTTPClientAgent) OnInit(name string, cfg map[string]interface{}) error {
-	gConfig.username = util.GetMapString(cfg, "username")
-	gConfig.password = util.GetMapString(cfg, "password")
+	gConfigs[name] = &HTTPProxyConfig{
+		username: util.GetMapString(cfg, "username"),
+		password: util.GetMapString(cfg, "password"),
+	}
 	return nil
 }
 
-func (a *HTTPClientAgent) OnStart(logname string) error {
+func (a *HTTPClientAgent) OnStart(name string) error {
 	a.req = newHTTPRequest()
-	a.logname = logname
+	a.name = name
+	a.cfg = gConfigs[name]
 	return nil
 }
 
@@ -76,9 +80,9 @@ func (a *HTTPClientAgent) OnConnectResult(result int, host string, port int) (in
 }
 
 func (a *HTTPClientAgent) isAuthenticated() bool {
-	if len(gConfig.username) > 0 && len(gConfig.password) > 0 { /* 验证Proxy代理 */
-		log.DEBUG(a.logname, "HTTP Proxy Authorization: %v||%v", a.req.ProxyAuthorization, (gConfig.username + ":" + gConfig.password))
-		if a.req.ProxyAuthorization != (gConfig.username + ":" + gConfig.password) {
+	if len(a.cfg.username) > 0 && len(a.cfg.password) > 0 { /* 验证Proxy代理 */
+		log.DEBUG(a.name, "HTTP Proxy Authorization: %v||%v", a.req.ProxyAuthorization, (a.cfg.username + ":" + a.cfg.password))
+		if a.req.ProxyAuthorization != (a.cfg.username + ":" + a.cfg.password) {
 			return false
 		}
 	}

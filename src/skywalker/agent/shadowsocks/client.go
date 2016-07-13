@@ -25,6 +25,7 @@ import (
 )
 
 type ShadowSocksClientAgent struct {
+	name      string
 	encrypter cipher.Encrypter
 	decrypter cipher.Decrypter
 	key       []byte
@@ -35,6 +36,7 @@ type ShadowSocksClientAgent struct {
 	targetPort string
 
 	connected bool
+	cfg       *ssClientConfig
 }
 
 type ssClientConfig struct {
@@ -45,7 +47,7 @@ type ssClientConfig struct {
 }
 
 var (
-	clientConfig ssClientConfig
+	gClientConfigs = map[string]*ssClientConfig{}
 )
 
 func (p *ShadowSocksClientAgent) Name() string {
@@ -80,22 +82,26 @@ func (a *ShadowSocksClientAgent) OnInit(name string, cfg map[string]interface{})
 		return util.NewError(ERROR_INVALID_CONFIG, "unknown cipher method")
 	}
 
-	clientConfig.password = password
-	clientConfig.method = method
-	clientConfig.cipherInfo = info
+	gClientConfigs[name] = &ssClientConfig{
+		password:   password,
+		method:     method,
+		cipherInfo: info,
+	}
 	return nil
 }
 
-func (p *ShadowSocksClientAgent) OnStart(logname string) error {
-	key := generateKey([]byte(clientConfig.password), clientConfig.cipherInfo.KeySize)
-	iv := generateIV(clientConfig.cipherInfo.IvSize)
+func (a *ShadowSocksClientAgent) OnStart(name string) error {
+	a.name = name
+	a.cfg = gClientConfigs[name]
+	key := generateKey([]byte(a.cfg.password), a.cfg.cipherInfo.KeySize)
+	iv := generateIV(a.cfg.cipherInfo.IvSize)
 
-	p.encrypter = clientConfig.cipherInfo.EncrypterFunc(key, iv)
-	p.decrypter = nil
-	p.key = key
-	p.iv = iv
-	p.ivSent = false
-	p.connected = false
+	a.encrypter = a.cfg.cipherInfo.EncrypterFunc(key, iv)
+	a.decrypter = nil
+	a.key = key
+	a.iv = iv
+	a.ivSent = false
+	a.connected = false
 
 	return nil
 }
@@ -109,12 +115,12 @@ func (p *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, inter
 
 	if p.decrypter == nil {
 		/* 第一个数据包，应该包含IV和请求数据 */
-		ivSize := clientConfig.cipherInfo.IvSize
+		ivSize := p.cfg.cipherInfo.IvSize
 		if len(data) < ivSize {
 			return nil, nil, util.NewError(ERROR_INVALID_PACKAGE, "invalid package")
 		}
 		iv := data[:ivSize]
-		p.decrypter = clientConfig.cipherInfo.DecrypterFunc(p.key, iv)
+		p.decrypter = p.cfg.cipherInfo.DecrypterFunc(p.key, iv)
 		data = data[ivSize:]
 	}
 
@@ -136,15 +142,15 @@ func (p *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, inter
 	return tdata, nil, nil
 }
 
-func (p *ShadowSocksClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
+func (a *ShadowSocksClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
 	var rdata [][]byte
-	if p.ivSent == false {
-		rdata = append(rdata, p.iv)
-		p.ivSent = true
+	if a.ivSent == false {
+		rdata = append(rdata, a.iv)
+		a.ivSent = true
 	}
-	rdata = append(rdata, p.encrypter.Encrypt(data))
+	rdata = append(rdata, a.encrypter.Encrypt(data))
 	return nil, rdata, nil
 }
 
-func (p *ShadowSocksClientAgent) OnClose(bool) {
+func (a *ShadowSocksClientAgent) OnClose(bool) {
 }
