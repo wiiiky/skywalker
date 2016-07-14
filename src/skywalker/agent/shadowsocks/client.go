@@ -111,7 +111,7 @@ func (p *ShadowSocksClientAgent) OnConnectResult(result int, host string, port i
 }
 
 func (p *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
-	var tdata []*core.Command
+	var tdata []*core.Package
 
 	if p.decrypter == nil {
 		/* 第一个数据包，应该包含IV和请求数据 */
@@ -133,11 +133,11 @@ func (p *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, inter
 			return nil, nil, err
 		}
 		p.connected = true
-		tdata = append(tdata, core.NewConnectCommand(addr, int(port)))
+		tdata = append(tdata, core.NewConnectPackage(addr, int(port)))
 		data = left
 	}
 	if len(data) > 0 {
-		tdata = append(tdata, core.NewTransferCommand(data))
+		tdata = append(tdata, core.NewDataPackage(data))
 	}
 	return tdata, nil, nil
 }

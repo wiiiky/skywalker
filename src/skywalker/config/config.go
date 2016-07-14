@@ -45,9 +45,9 @@ type SkyWalkerConfig struct {
 
 	DNSTimeout int64 `json:"dnsTimeout"`
 
-	Plugins []plugin.PluginConfig `json:"plugin"`
-	Daemon  bool                  `json:"daemon"`
-	Extras  []SkyWalkerExtraConfig
+	Daemon  bool                    `json:"daemon"`
+	Plugins []*plugin.PluginConfig  `json:"plugin"`
+	Extras  []*SkyWalkerExtraConfig `json:"extra"`
 }
 
 /*
@@ -56,7 +56,6 @@ type SkyWalkerConfig struct {
  */
 func (cfg *SkyWalkerConfig) Init() error {
 	log.Init(&cfg.Log)
-	log.INFO(cfg.Name, "Load Config From %s", cfg.FilePath)
 	ca := cfg.ClientProtocol
 	sa := cfg.ServerProtocol
 	plugin.Init(cfg.Plugins, cfg.Name)
@@ -70,6 +69,12 @@ func (cfg *SkyWalkerConfig) Init() error {
 
 var (
 	/* 默认配置 */
+	defaultLoggers = []log.LoggerConfig{
+		log.LoggerConfig{"DEBUG", "STDOUT"},
+		log.LoggerConfig{"INFO", "STDOUT"},
+		log.LoggerConfig{"WARNING", "STDERR"},
+		log.LoggerConfig{"ERROR", "STDERR"},
+	}
 	gConfig = SkyWalkerConfig{
 		Name:       "default",
 		BindAddr:   "127.0.0.1",
@@ -77,19 +82,25 @@ var (
 		DNSTimeout: 3600,
 		/* 默认的日志输出 */
 		Log: log.LogConfig{
-			Loggers: []log.LoggerConfig{
-				log.LoggerConfig{"DEBUG", "STDOUT"},
-				log.LoggerConfig{"INFO", "STDOUT"},
-				log.LoggerConfig{"WARNING", "STDERR"},
-				log.LoggerConfig{"ERROR", "STDERR"},
-			},
+			Loggers: defaultLoggers,
 		},
 		Daemon: false,
 	}
 )
 
-func GetConfig() *SkyWalkerConfig {
-	return &gConfig
+/* 获取所有配置列表 */
+func GetConfigs() []*SkyWalkerConfig {
+	var configs []*SkyWalkerConfig
+	configs = append(configs, &gConfig)
+	for _, e := range gConfig.Extras {
+		cfg := (*SkyWalkerConfig)(e)
+		cfg.Log.Namespace = e.Name
+		if len(cfg.Log.Loggers) == 0 {
+			cfg.Log.Loggers = defaultLoggers
+		}
+		configs = append(configs, cfg)
+	}
+	return configs
 }
 
 /*
@@ -128,9 +139,7 @@ func init() {
 	}
 	gConfig.FilePath = cfile
 	gConfig.Log.Namespace = gConfig.Name
-	for _, e := range gConfig.Extras {
-		e.Log.Namespace = e.Name
-	}
+
 	/* 初始化DNS超时时间 */
 	util.Init(gConfig.DNSTimeout)
 }

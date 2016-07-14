@@ -17,7 +17,7 @@
 
 package core
 
-type Command struct {
+type Package struct {
 	cmd  int
 	data interface{}
 }
@@ -42,16 +42,16 @@ type connectResult struct {
 	code int
 }
 
-func (c *Command) Type() int {
+func (c *Package) Type() int {
 	return c.cmd
 }
 
-func (c *Command) GetConnectData() (string, int) {
+func (c *Package) GetConnectData() (string, int) {
 	data := c.data.(connectData)
 	return data.host, data.port
 }
 
-func (c *Command) GetTransferData() [][]byte {
+func (c *Package) GetTransferData() [][]byte {
 	switch d := c.data.(type) {
 	case string:
 		return [][]byte{[]byte(d)}
@@ -64,27 +64,27 @@ func (c *Command) GetTransferData() [][]byte {
 }
 
 /* 获取链接结果 */
-func (c *Command) GetConnectResult() (int, string, int) {
+func (c *Package) GetConnectResult() (int, string, int) {
 	result := c.data.(connectResult)
 	return result.code, result.connectData.host, result.connectData.port
 }
 
 const (
-	CMD_CONNECT        = 0
-	CMD_TRANSFER       = 1
-	CMD_CONNECT_RESULT = 2
+	PKG_CONNECT        = 0
+	PKG_DATA           = 1
+	PKG_CONNECT_RESULT = 2
 )
 
-func NewConnectCommand(host string, port int) *Command {
+func NewConnectPackage(host string, port int) *Package {
 	data := connectData{host: host, port: port}
-	return &Command{cmd: CMD_CONNECT, data: data}
+	return &Package{cmd: PKG_CONNECT, data: data}
 }
 
-func NewTransferCommand(data interface{}) *Command {
-	return &Command{cmd: CMD_TRANSFER, data: data}
+func NewDataPackage(data interface{}) *Package {
+	return &Package{cmd: PKG_DATA, data: data}
 }
 
-func NewConnectResultCommand(code int, host string, port int) *Command {
+func NewConnectResultPackage(code int, host string, port int) *Package {
 	data := connectResult{connectData: connectData{host: host, port: port}, code: code}
-	return &Command{cmd: CMD_CONNECT_RESULT, data: data}
+	return &Package{cmd: PKG_CONNECT_RESULT, data: data}
 }

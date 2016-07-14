@@ -62,7 +62,7 @@ const (
 )
 
 const (
-	CMD_CONNECT       = 1
+	PKG_CONNECT       = 1
 	CMD_BIND          = 2
 	CMD_UDP_ASSOCIATE = 3
 )

@@ -104,9 +104,9 @@ func (a *HTTPClientAgent) sendRequest(hostport string, request []byte) (interfac
 	if a.host != hostport { /* 如果请求的服务器与上一次不一样则重新连接 */
 		a.host = hostport
 		host, port := splitHostPort(hostport)
-		connectCMD := core.NewConnectCommand(host, port)
-		transferCMD := core.NewTransferCommand(request)
-		return []*core.Command{connectCMD, transferCMD}, nil, nil
+		connectCMD := core.NewConnectPackage(host, port)
+		transferCMD := core.NewDataPackage(request)
+		return []*core.Package{connectCMD, transferCMD}, nil, nil
 	}
 	return request, nil, nil
 }
@@ -126,7 +126,7 @@ func (a *HTTPClientAgent) ReadFromClient(data []byte) (interface{}, interface{},
 				host := req.getHost()
 				if req.Method == "CONNECT" {
 					h, p := splitHostPort(host)
-					return core.NewConnectCommand(h, p), nil, nil
+					return core.NewConnectPackage(h, p), nil, nil
 				} else {
 					request := req.buildRequest()
 					req.reset()

@@ -26,26 +26,31 @@ import (
 	"skywalker/transfer"
 )
 
-func main() {
+func handleConfig(cfg *config.SkyWalkerConfig) error {
 	var udpTransfer *transfer.UDPTransfer
 	var tcpTransfer *transfer.TCPTransfer
 	var err error
 
-	cfg := config.GetConfig()
-
 	if err = cfg.Init(); err != nil {
-		log.ERROR(cfg.Name, "%s", err)
-		return
+		return err
 	} else if tcpTransfer, err = transfer.NewTCPTransfer(cfg); tcpTransfer == nil {
-		log.ERROR(cfg.Name, "%s", err)
-		return
+		return err
 	} else if udpTransfer, err = transfer.NewUDPTransfer(cfg); udpTransfer == nil {
-		log.ERROR(cfg.Name, "%s", err)
-		return
+		return err
 	}
 
 	go tcpTransfer.Run()
 	go udpTransfer.Run()
+	return nil
+}
+
+func main() {
+	for _, cfg := range config.GetConfigs() {
+		if err := handleConfig(cfg); err != nil {
+			log.ERROR(cfg.Name, "%s", err)
+			return
+		}
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

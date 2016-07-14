@@ -41,7 +41,7 @@ var (
 )
 
 /* 初始化插件 */
-func Init(pcs []PluginConfig, name string) {
+func Init(pcs []*PluginConfig, name string) {
 	for i, pc := range pcs {
 		f := gPluginMap[pc.Name]
 		if f == nil {

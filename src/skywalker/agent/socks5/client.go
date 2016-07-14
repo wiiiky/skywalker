@@ -96,7 +96,7 @@ func (p *Socks5ClientAgent) ReadFromClient(data []byte) (interface{}, interface{
 		} else if ver != p.version {
 			p.state = state_error
 			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
-		} else if cmd != CMD_CONNECT {
+		} else if cmd != PKG_CONNECT {
 			p.state = state_error
 			return nil, nil, util.NewError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", cmd)
 		}
@@ -105,18 +105,18 @@ func (p *Socks5ClientAgent) ReadFromClient(data []byte) (interface{}, interface{
 		p.port = port
 		p.state = state_transfer
 		if left == nil {
-			return core.NewConnectCommand(address, int(port)), nil, nil
+			return core.NewConnectPackage(address, int(port)), nil, nil
 		}
-		return []*core.Command{core.NewConnectCommand(address, int(port)), core.NewTransferCommand(left)}, nil, nil
+		return []*core.Package{core.NewConnectPackage(address, int(port)), core.NewDataPackage(left)}, nil, nil
 	case state_transfer: /* 直接转发数据 */
 		return data, nil, nil
 	}
 	return nil, nil, nil
 }
 
-func (p *Socks5ClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
+func (a *Socks5ClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
 	return nil, data, nil
 }
 
-func (p *Socks5ClientAgent) OnClose(bool) {
+func (a *Socks5ClientAgent) OnClose(bool) {
 }

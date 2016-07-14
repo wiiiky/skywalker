@@ -79,8 +79,8 @@ func (f *TCPTransfer) HandleTransfer(conn net.Conn) {
 		conn.Close()
 		return
 	}
-	c2s := make(chan *core.Command, 100)
-	s2c := make(chan *core.Command, 100)
+	c2s := make(chan *core.Package, 100)
+	s2c := make(chan *core.Package, 100)
 	go f.caGoroutine(cAgent, c2s, s2c, conn)
 	go f.saGoroutine(sAgent, c2s, s2c)
 }
@@ -92,18 +92,18 @@ func (f *TCPTransfer) HandleTransfer(conn net.Conn) {
  * @tdata 需要转发的数据(Transfer Data)，将发送给ic
  * @rdata 需要返回给数据(Response Data)，将发送给conn
  */
-func (f *TCPTransfer) transferData(ic chan *core.Command,
+func (f *TCPTransfer) transferData(ic chan *core.Package,
 	conn net.Conn, tdata interface{},
 	rdata interface{}, err error) error {
 	/* 转发数据 */
 	switch data := tdata.(type) {
-	case *core.Command:
+	case *core.Package:
 		ic <- data
 	case []byte:
-		ic <- core.NewTransferCommand(data)
+		ic <- core.NewDataPackage(data)
 	case string:
-		ic <- core.NewTransferCommand(data)
-	case []*core.Command:
+		ic <- core.NewDataPackage(data)
+	case []*core.Package:
 		for _, cmd := range data {
 			ic <- cmd
 		}
@@ -130,8 +130,8 @@ func (f *TCPTransfer) transferData(ic chan *core.Command,
 
 /* 处理客户端连接的goroutine */
 func (f *TCPTransfer) caGoroutine(cAgent agent.ClientAgent,
-	c2s chan *core.Command,
-	s2c chan *core.Command,
+	c2s chan *core.Package,
+	s2c chan *core.Package,
 	cConn net.Conn) {
 	defer cConn.Close()
 	defer close(c2s)
@@ -160,7 +160,7 @@ RUNNING:
 			if ok == false {
 				closed_by_client = false
 				break RUNNING
-			} else if cmd.Type() == core.CMD_TRANSFER {
+			} else if cmd.Type() == core.PKG_DATA {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := cAgent.ReadFromSA(data)
 					plugin.WriteToClient(rdata)
@@ -171,7 +171,7 @@ RUNNING:
 						break RUNNING
 					}
 				}
-			} else if cmd.Type() == core.CMD_CONNECT_RESULT {
+			} else if cmd.Type() == core.PKG_CONNECT_RESULT {
 				result, host, port := cmd.GetConnectResult()
 				if result == core.CONNECT_RESULT_OK {
 					chain = fmt.Sprintf("%s <==> %s:%v", cConn.RemoteAddr().String(), host, port)
@@ -202,17 +202,17 @@ RUNNING:
  * 失败返回nil,nil,"",0
  */
 func (f *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
-	s2c chan *core.Command) (net.Conn, chan []byte, string, int) {
+	s2c chan *core.Package) (net.Conn, chan []byte, string, int) {
 	/* 获取服务器地址，并链接 */
 	host, port := sAgent.GetRemoteAddress(h, p)
 	conn, result := util.TCPConnect(host, port)
 
 	/* 连接结果 */
-	var resultCMD *core.Command
+	var resultCMD *core.Package
 	if result != core.CONNECT_RESULT_OK {
-		resultCMD = core.NewConnectResultCommand(result, h, p)
+		resultCMD = core.NewConnectResultPackage(result, h, p)
 	} else {
-		resultCMD = core.NewConnectResultCommand(result, h, p)
+		resultCMD = core.NewConnectResultPackage(result, h, p)
 	}
 	/* 给客户端代理发送连接结果反馈 */
 	s2c <- resultCMD
@@ -240,13 +240,13 @@ func (f *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
  * 从客户端代理收到的第一个数据包一定是服务器地址，无论该数据包被标志成什么类型
  */
 func (f *TCPTransfer) saGoroutine(sAgent agent.ServerAgent,
-	c2s chan *core.Command,
-	s2c chan *core.Command) {
+	c2s chan *core.Package,
+	s2c chan *core.Package) {
 	defer close(s2c)
 
 	/* 获取服务器地址 */
 	cmd, ok := <-c2s
-	if ok == false || cmd.Type() != core.CMD_CONNECT {
+	if ok == false || cmd.Type() != core.PKG_CONNECT {
 		return
 	}
 	host, port := cmd.GetConnectData()
@@ -278,7 +278,7 @@ RUNNING:
 			if ok == false {
 				break RUNNING
 			}
-			if cmd.Type() == core.CMD_TRANSFER {
+			if cmd.Type() == core.PKG_DATA {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := sAgent.ReadFromCA(data)
 					plugin.WriteToServer(rdata, realHost, realPort)
@@ -288,7 +288,7 @@ RUNNING:
 						break RUNNING
 					}
 				}
-			} else if cmd.Type() == core.CMD_CONNECT {
+			} else if cmd.Type() == core.PKG_CONNECT {
 				/* 需要重新链接服务器 */
 				sConn.Close()
 				host, port := cmd.GetConnectData()

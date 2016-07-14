@@ -113,7 +113,7 @@ func (a *Socks5ServerAgent) ReadFromServer(data []byte) (interface{}, interface{
 			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
 		}
 		a.state = state_addr
-		req := buildAddressRequest(a.version, CMD_CONNECT, a.atype, a.address, a.port)
+		req := buildAddressRequest(a.version, PKG_CONNECT, a.atype, a.address, a.port)
 		return nil, req, nil
 	} else if a.state == state_addr {
 		ver, rep, _, _, _, err := parseAddressReply(data)
