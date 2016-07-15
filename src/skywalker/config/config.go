@@ -95,7 +95,7 @@ func GetConfigs() []*SkyWalkerConfig {
 	for _, e := range gConfig.Extras {
 		cfg := (*SkyWalkerConfig)(e)
 		cfg.Log.Namespace = e.Name
-		if len(cfg.Log.Loggers) == 0 {
+		if cfg.Log.Loggers == nil {
 			cfg.Log.Loggers = defaultLoggers
 		}
 		configs = append(configs, cfg)
