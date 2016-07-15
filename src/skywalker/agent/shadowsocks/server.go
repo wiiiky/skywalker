@@ -71,8 +71,9 @@ type ssServerConfig struct {
 }
 
 const (
-	ss_SERVER_SELECT_POLL   = "poll"
-	ss_SERVER_SELECT_RANDOM = "random"
+	ss_SERVER_SELECT_BETTER   = "better"   /* *智能*选择 */
+	ss_SERVER_SELECT_RANDOM   = "random"   /* 随机 */
+	ss_SERVER_SELECT_ROTATION = "rotation" /* 轮流 */
 )
 
 /* 保存全局的配置，根据服务名分 */
@@ -81,20 +82,21 @@ var (
 )
 
 /* 更改当前服务器 */
-func (a *ShadowSocksServerAgent) changeServer(server string) *ssServerAddress {
+func (a *ShadowSocksServerAgent) onServerError(server string) {
 	cfg := a.cfg
+	if cfg.selection != ss_SERVER_SELECT_BETTER {
+		return
+	}
 	addrSize := len(cfg.serverAddrs)
-	if addrSize > 0 && cfg.serverAddrs[cfg.sindex].serverAddr == server && cfg.selection == ss_SERVER_SELECT_POLL {
+	if addrSize > 0 && cfg.serverAddrs[cfg.sindex].serverAddr == server {
 		/* 出错次数过多就考虑更换服务器 */
 		if cfg.try += 1; cfg.try >= cfg.retry {
 			cfg.try = 0
 			if cfg.sindex += 1; cfg.sindex >= addrSize {
 				cfg.sindex = 0
 			}
-			return &cfg.serverAddrs[cfg.sindex]
 		}
 	}
-	return nil
 }
 
 /*
@@ -111,10 +113,15 @@ func (a *ShadowSocksServerAgent) getServerInfo() (string, int, string, string) {
 	selection := cfg.selection
 	if addrSize > 0 { /*  配置了多个服务器 */
 		var addrinfo *ssServerAddress
-		if selection == ss_SERVER_SELECT_POLL { /* 轮询 */
+		if selection == ss_SERVER_SELECT_BETTER {
 			addrinfo = &cfg.serverAddrs[cfg.sindex]
-		} else { /* 随机选择服务器 */
+		} else if selection == ss_SERVER_SELECT_RANDOM { /* 随机选择服务器 */
 			addrinfo = &cfg.serverAddrs[rand.Intn(addrSize)]
+		} else { /* 轮流 */
+			if cfg.sindex += 1; cfg.sindex >= addrSize {
+				cfg.sindex = 0
+			}
+			addrinfo = &cfg.serverAddrs[cfg.sindex]
 		}
 		password = addrinfo.password
 		method = addrinfo.method
@@ -149,7 +156,7 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 	serverPort = int(util.GetMapInt(cfg, "serverPort"))
 	password = util.GetMapString(cfg, "password")
 	method = util.GetMapStringDefault(cfg, "method", "aes-256-cfb")
-	selection = util.GetMapStringDefault(cfg, "select", ss_SERVER_SELECT_POLL)
+	selection = util.GetMapStringDefault(cfg, "select", ss_SERVER_SELECT_ROTATION)
 
 	val, ok = cfg["serverAddress[]"]
 	if ok == true {
@@ -192,7 +199,7 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 		selection:   selection,
 		retry:       retry,
 		sindex:      0,
-		try:         0,
+		try:         3,
 	}
 
 	gServerConfigs[name] = ssConfig
@@ -236,7 +243,7 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result int, host string, p int)
 		return nil, buf.Bytes(), nil
 	}
 	/* 出错 */
-	a.changeServer(a.serverAddr)
+	a.onServerError(a.serverAddr)
 	return nil, nil, nil
 }
 
@@ -260,6 +267,6 @@ func (a *ShadowSocksServerAgent) ReadFromCA(data []byte) (interface{}, interface
 func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
 	if !closed_by_client && !a.connected { /* 没有建立链接就断开，且不是客户端断开的 */
 		log.DEBUG(a.name, "Connection Closed Unexpectedly")
-		a.changeServer(a.serverAddr)
+		a.onServerError(a.serverAddr)
 	}
 }

@@ -43,7 +43,7 @@ func NewTCPTransfer(cfg *config.SkyWalkerConfig) (*TCPTransfer, error) {
 	name := cfg.Name
 	ca := cfg.ClientProtocol
 	sa := cfg.ServerProtocol
-	if listener, err := util.TCPListen(cfg.BindAddr, cfg.BindPort); err != nil {
+	if listener, err := util.TCPListen(cfg.BindAddr, int(cfg.BindPort)); err != nil {
 		return nil, err
 	} else {
 		log.INFO(name, "Listen TCP On %s", listener.Addr())

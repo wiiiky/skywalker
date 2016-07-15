@@ -55,7 +55,7 @@ func TCPConnect(host string, port int) (net.Conn, int) {
 	if len(ip) == 0 {
 		return nil, core.CONNECT_RESULT_UNKNOWN_HOST
 	}
-	addr := ip + ":" + strconv.Itoa(port)
+	addr := net.JoinHostPort(ip, strconv.Itoa(port))
 	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err == nil {
 		return conn, core.CONNECT_RESULT_OK
 	}
@@ -63,8 +63,8 @@ func TCPConnect(host string, port int) (net.Conn, int) {
 }
 
 /* 监听TCP端口 */
-func TCPListen(addr string, port uint16) (net.Listener, error) {
-	laddr := addr + ":" + strconv.Itoa(int(port))
+func TCPListen(addr string, port int) (net.Listener, error) {
+	laddr := net.JoinHostPort(addr, strconv.Itoa(port))
 	return net.Listen("tcp", laddr)
 }
 

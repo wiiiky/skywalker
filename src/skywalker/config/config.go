@@ -30,7 +30,6 @@ type SkyWalkerExtraConfig SkyWalkerConfig
 
 /* 服务配置 */
 type SkyWalkerConfig struct {
-	FilePath string
 	Name     string `json:name`
 	BindAddr string `json:"bindAddr"`
 	BindPort uint16 `json:"bindPort"`
@@ -41,7 +40,7 @@ type SkyWalkerConfig struct {
 	ServerProtocol string                 `json:"serverProtocol"`
 	ServerConfig   map[string]interface{} `json:"serverConfig"`
 
-	Log log.LogConfig `json:"log"`
+	Log *log.LogConfig `json:"log"`
 
 	DNSTimeout int64 `json:"dnsTimeout"`
 
@@ -50,12 +49,43 @@ type SkyWalkerConfig struct {
 	Extras  []*SkyWalkerExtraConfig `json:"extra"`
 }
 
+/* 将c的内容合并到cfg中 */
+func (cfg *SkyWalkerConfig) Merge(c *SkyWalkerConfig) {
+	if len(cfg.Name) == 0 {
+		cfg.Name = c.Name
+	}
+	if len(cfg.BindAddr) == 0 {
+		cfg.BindAddr = c.BindAddr
+	}
+	if len(cfg.ClientProtocol) == 0 {
+		cfg.ClientProtocol = c.ClientProtocol
+	}
+	if cfg.ClientConfig == nil {
+		cfg.ClientConfig = c.ClientConfig
+	}
+	if len(cfg.ServerProtocol) == 0 {
+		cfg.ServerProtocol = c.ServerProtocol
+	}
+	if cfg.ServerConfig == nil {
+		cfg.ServerConfig = c.ServerConfig
+	}
+	if cfg.Log == nil {
+		cfg.Log = &log.LogConfig{
+			ShowNamespace: c.Log.ShowNamespace,
+			Loggers:       c.Log.Loggers,
+		}
+	} else if cfg.Log.Loggers == nil {
+		cfg.Log.Loggers = defaultLoggers
+	}
+	cfg.Log.Namespace = cfg.Name
+}
+
 /*
  * 初始化配置
  * 设置日志、插件并检查CA和SA
  */
 func (cfg *SkyWalkerConfig) Init() error {
-	log.Init(&cfg.Log)
+	log.Init(cfg.Log)
 	ca := cfg.ClientProtocol
 	sa := cfg.ServerProtocol
 	plugin.Init(cfg.Plugins, cfg.Name)
@@ -75,15 +105,16 @@ var (
 		log.LoggerConfig{"WARNING", "STDERR"},
 		log.LoggerConfig{"ERROR", "STDERR"},
 	}
+	defaultLogConfig = &log.LogConfig{
+		Loggers: defaultLoggers,
+	}
 	gConfig = SkyWalkerConfig{
 		Name:       "default",
 		BindAddr:   "127.0.0.1",
 		BindPort:   12345,
 		DNSTimeout: 3600,
 		/* 默认的日志输出 */
-		Log: log.LogConfig{
-			Loggers: defaultLoggers,
-		},
+		Log:    defaultLogConfig,
 		Daemon: false,
 	}
 )
@@ -91,13 +122,12 @@ var (
 /* 获取所有配置列表 */
 func GetConfigs() []*SkyWalkerConfig {
 	var configs []*SkyWalkerConfig
+
+	gConfig.Log.Namespace = gConfig.Name
 	configs = append(configs, &gConfig)
 	for _, e := range gConfig.Extras {
 		cfg := (*SkyWalkerConfig)(e)
-		cfg.Log.Namespace = e.Name
-		if cfg.Log.Loggers == nil {
-			cfg.Log.Loggers = defaultLoggers
-		}
+		cfg.Merge(&gConfig)
 		configs = append(configs, cfg)
 	}
 	return configs
@@ -137,8 +167,9 @@ func init() {
 	} else if !util.LoadJsonFile(cfile, &gConfig) { /* 读取配置文件 */
 		util.FatalError("Fail To Load Config From %s", cfile)
 	}
-	gConfig.FilePath = cfile
-	gConfig.Log.Namespace = gConfig.Name
+	if gConfig.Log == nil {
+		gConfig.Log = defaultLogConfig
+	}
 
 	/* 初始化DNS超时时间 */
 	util.Init(gConfig.DNSTimeout)
