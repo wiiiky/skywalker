@@ -119,6 +119,11 @@ var (
 	}
 )
 
+const (
+	DEFAULT_USER_CONFIG = "~/.config/skywalker.json"
+	DEFAULT_GLOBAL_CONFIG = "/etc/skywalker.json"
+)
+
 /* 获取所有配置列表 */
 func GetConfigs() []*SkyWalkerConfig {
 	var configs []*SkyWalkerConfig
@@ -152,9 +157,9 @@ func findConfigFile() string {
 		}
 		return ""
 	}
-	if path := checkRegularFile("~/.config/skywalker.json"); len(path) > 0 {
+	if path := checkRegularFile(DEFAULT_USER_CONFIG); len(path) > 0 {
 		return path
-	} else if path := checkRegularFile("/etc/skywalker.json"); len(path) > 0 {
+	} else if path := checkRegularFile(DEFAULT_GLOBAL_CONFIG); len(path) > 0 {
 		return path
 	}
 	return ""

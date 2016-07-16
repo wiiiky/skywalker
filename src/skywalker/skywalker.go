@@ -26,7 +26,7 @@ import (
 	"skywalker/transfer"
 )
 
-func handleConfig(cfg *config.SkyWalkerConfig) error {
+func execConfig(cfg *config.SkyWalkerConfig) error {
 	var udpTransfer *transfer.UDPTransfer
 	var tcpTransfer *transfer.TCPTransfer
 	var err error
@@ -40,13 +40,13 @@ func handleConfig(cfg *config.SkyWalkerConfig) error {
 	}
 
 	go tcpTransfer.Run()
-	go udpTransfer.Run()
+	//go udpTransfer.Run()
 	return nil
 }
 
 func main() {
 	for _, cfg := range config.GetConfigs() {
-		if err := handleConfig(cfg); err != nil {
+		if err := execConfig(cfg); err != nil {
 			log.ERROR(cfg.Name, "%s", err)
 			return
 		}

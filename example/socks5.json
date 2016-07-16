@@ -1,0 +1,8 @@
+{
+    "name": "ss1",
+    "bindAddr": "127.0.0.1",
+    "bindPort": 8081,
+    "clientProtocol": "socks5",
+    "serverProtocol": "direct"
+}
+

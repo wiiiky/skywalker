@@ -1,0 +1,19 @@
+{
+    "name": "ss1",
+    "bindAddr": "127.0.0.1",
+    "bindPort": 8081,
+    "clientProtocol": "http",
+    "clientConfig": {
+        "username": "",
+        "password": ""
+    },
+    "serverProtocol": "shadowsocks",
+    "serverConfig": {
+        "serverPort": 12345,
+        "password": "abcdefg",
+        "method": "aes-256-cfb",
+        "select": "random",
+        "serverAddr":"ss.example.com"
+    }
+}
+
