@@ -300,6 +300,8 @@ RUNNING:
 			}
 		}
 	}
-	sConn.Close()
+	if sConn != nil {
+		sConn.Close()
+	}
 	sAgent.OnClose(closed_by_client)
 }
