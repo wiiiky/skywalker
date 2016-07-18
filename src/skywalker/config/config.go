@@ -129,6 +129,7 @@ func GetConfigs() []*SkyWalkerConfig {
 	var configs []*SkyWalkerConfig
 
 	gConfig.Log.Namespace = gConfig.Name
+
 	configs = append(configs, &gConfig)
 	for _, e := range gConfig.Extras {
 		cfg := (*SkyWalkerConfig)(e)
@@ -163,6 +164,10 @@ func findConfigFile() string {
 		return path
 	}
 	return ""
+}
+
+func Init() {
+	log.SetDefault(gConfig.Name)
 }
 
 func init() {

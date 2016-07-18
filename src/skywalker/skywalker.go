@@ -45,6 +45,7 @@ func execConfig(cfg *config.SkyWalkerConfig) error {
 }
 
 func main() {
+	config.Init()
 	for _, cfg := range config.GetConfigs() {
 		if err := execConfig(cfg); err != nil {
 			log.ERROR(cfg.Name, "%s", err)
