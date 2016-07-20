@@ -120,7 +120,7 @@ var (
 )
 
 const (
-	DEFAULT_USER_CONFIG = "~/.config/skywalker.json"
+	DEFAULT_USER_CONFIG   = "~/.config/skywalker.json"
 	DEFAULT_GLOBAL_CONFIG = "/etc/skywalker.json"
 )
 

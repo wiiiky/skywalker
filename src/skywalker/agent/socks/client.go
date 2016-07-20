@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package socks5
+package socks
 
 import (
 	"skywalker/core"
@@ -27,14 +27,8 @@ import (
  * https://tools.ietf.org/html/rfc1928
  */
 
-const (
-	state_init     = 0 /* 初始化状态，等待客户端发送握手请求 */
-	state_addr     = 1 /* 等待客户端发送链接请求 */
-	state_transfer = 2 /* 转发数据 */
-	state_error    = 3 /* 已经出错 */
-)
-
-type Socks5ClientAgent struct {
+type SocksClientAgent struct {
+	name     string
 	version  uint8
 	nmethods uint8
 	methods  []uint8 /* 每个字节表示一个方法 */
@@ -44,23 +38,42 @@ type Socks5ClientAgent struct {
 	port    uint16
 
 	state uint8
+
+	config *socksCAConfig
 }
 
-func (p *Socks5ClientAgent) Name() string {
-	return "Socks5"
+type socksCAConfig struct {
+	username string
+	password string
 }
 
-func (a *Socks5ClientAgent) OnInit(name string, cfg map[string]interface{}) error {
+var (
+	gCAConfigs = map[string]*socksCAConfig{}
+)
+
+func (p *SocksClientAgent) Name() string {
+	return "Socks"
+}
+
+func (a *SocksClientAgent) OnInit(name string, cfg map[string]interface{}) error {
+	username := util.GetMapStringDefault(cfg, "username", "")
+	password := util.GetMapStringDefault(cfg, "password", "")
+	gCAConfigs[name] = &socksCAConfig{
+		username: username,
+		password: password,
+	}
 	return nil
 }
 
-func (a *Socks5ClientAgent) OnStart(logname string) error {
-	a.state = state_init
+func (a *SocksClientAgent) OnStart(name string) error {
+	a.name = name
+	a.state = STATE_INIT
+	a.config = gCAConfigs[name]
 	return nil
 }
 
 /* 给客户端返回连接结果 */
-func (p *Socks5ClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
+func (p *SocksClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
 	var rep uint8 = REPLY_GENERAL_FAILURE
 	if result == core.CONNECT_RESULT_OK {
 		rep = REPLY_SUCCEED
@@ -72,12 +85,11 @@ func (p *Socks5ClientAgent) OnConnectResult(result int, host string, port int) (
 	return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil
 }
 
-func (p *Socks5ClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
+func (p *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
 	switch p.state {
-	case state_init: /* 接收客户端的握手请求并返回响应 */
+	case STATE_INIT: /* 接收客户端的握手请求并返回响应 */
 		ver, nmethods, methods, err := parseVersionRequest(data)
 		if err != nil {
-			p.state = state_error
 			if ver != 0 {
 				return nil, buildVersionReply(5, 0), err
 			}
@@ -86,37 +98,34 @@ func (p *Socks5ClientAgent) ReadFromClient(data []byte) (interface{}, interface{
 		p.version = ver
 		p.nmethods = nmethods
 		p.methods = methods
-		p.state = state_addr
+		p.state = STATE_CONNECT
 		return nil, buildVersionReply(ver, 0), nil
-	case state_addr: /* 接收客户端的地址请求，等待连接结果 */
+	case STATE_CONNECT: /* 接收客户端的地址请求，等待连接结果 */
 		ver, cmd, atype, address, port, left, err := parseAddressRequest(data)
 		if err != nil {
-			p.state = state_error
 			return nil, nil, err
 		} else if ver != p.version {
-			p.state = state_error
 			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
-		} else if cmd != PKG_CONNECT {
-			p.state = state_error
+		} else if cmd != CMD_CONNECT {
 			return nil, nil, util.NewError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", cmd)
 		}
 		p.atype = atype
 		p.address = address
 		p.port = port
-		p.state = state_transfer
+		p.state = STATE_TUNNEL
 		if left == nil {
 			return core.NewConnectPackage(address, int(port)), nil, nil
 		}
 		return []*core.Package{core.NewConnectPackage(address, int(port)), core.NewDataPackage(left)}, nil, nil
-	case state_transfer: /* 直接转发数据 */
+	case STATE_TUNNEL: /* 直接转发数据 */
 		return data, nil, nil
 	}
 	return nil, nil, nil
 }
 
-func (a *Socks5ClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
+func (a *SocksClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
 	return nil, data, nil
 }
 
-func (a *Socks5ClientAgent) OnClose(bool) {
+func (a *SocksClientAgent) OnClose(bool) {
 }

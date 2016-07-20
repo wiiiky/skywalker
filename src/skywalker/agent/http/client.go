@@ -30,17 +30,17 @@ type HTTPClientAgent struct {
 	req  *httpRequest
 	host string
 	name string
-	cfg  *HTTPProxyConfig
+	cfg  *httpCAConfig
 }
 
-type HTTPProxyConfig struct {
+type httpCAConfig struct {
 	/* 用户名密码 */
 	username string
 	password string
 }
 
 var (
-	gConfigs = map[string]*HTTPProxyConfig{}
+	gCAConfigs = map[string]*httpCAConfig{}
 )
 
 func (a *HTTPClientAgent) Name() string {
@@ -49,7 +49,7 @@ func (a *HTTPClientAgent) Name() string {
 
 /* 初始化，载入配置 */
 func (a *HTTPClientAgent) OnInit(name string, cfg map[string]interface{}) error {
-	gConfigs[name] = &HTTPProxyConfig{
+	gCAConfigs[name] = &httpCAConfig{
 		username: util.GetMapString(cfg, "username"),
 		password: util.GetMapString(cfg, "password"),
 	}
@@ -57,9 +57,9 @@ func (a *HTTPClientAgent) OnInit(name string, cfg map[string]interface{}) error 
 }
 
 func (a *HTTPClientAgent) OnStart(name string) error {
-	a.req = newHTTPRequest()
 	a.name = name
-	a.cfg = gConfigs[name]
+	a.req = newHTTPRequest()
+	a.cfg = gCAConfigs[name]
 	return nil
 }
 

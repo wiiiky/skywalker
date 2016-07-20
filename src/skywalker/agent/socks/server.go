@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package socks5
+package socks
 
 import (
 	"net"
@@ -23,7 +23,8 @@ import (
 	"skywalker/util"
 )
 
-type Socks5ServerAgent struct {
+type SocksServerAgent struct {
+	name     string
 	version  uint8
 	nmethods uint8
 	methods  []uint8 /* 每个字节表示一个方法 */
@@ -35,23 +36,25 @@ type Socks5ServerAgent struct {
 	state uint8
 
 	buf [][]byte
+
+	config *socksSAConfig
 }
 
-type socks5Config struct {
+type socksSAConfig struct {
 	serverAddr string
 	serverPort int
 }
 
 var (
-	s5Config socks5Config
+	gSAConfig = map[string]*socksSAConfig{}
 )
 
-func (a *Socks5ServerAgent) Name() string {
-	return "Socks5"
+func (a *SocksServerAgent) Name() string {
+	return "Socks"
 }
 
 /* 初始化，读取配置 */
-func (a *Socks5ServerAgent) OnInit(name string, cfg map[string]interface{}) error {
+func (a *SocksServerAgent) OnInit(name string, cfg map[string]interface{}) error {
 	var serverAddr string
 	var serverPort int
 
@@ -62,22 +65,25 @@ func (a *Socks5ServerAgent) OnInit(name string, cfg map[string]interface{}) erro
 	if serverPort = int(util.GetMapInt(cfg, "serverPort")); serverPort < 0 {
 		return util.NewError(ERROR_INVALID_CONFIG, "serverPort is illegal")
 	}
-
-	s5Config.serverAddr = serverAddr
-	s5Config.serverPort = serverPort
+	gSAConfig[name] = &socksSAConfig{
+		serverAddr: serverAddr,
+		serverPort: serverPort,
+	}
 	return nil
 }
 
-func (a *Socks5ServerAgent) OnStart(logname string) error {
+func (a *SocksServerAgent) OnStart(name string) error {
+	a.name = name
 	a.version = 5
 	a.nmethods = 1
 	a.methods = []byte{0x00}
-	a.state = state_init
+	a.state = STATE_INIT
 	a.buf = nil
+	a.config = gSAConfig[name]
 	return nil
 }
 
-func (a *Socks5ServerAgent) GetRemoteAddress(addr string, port int) (string, int) {
+func (a *SocksServerAgent) GetRemoteAddress(addr string, port int) (string, int) {
 	a.address = addr
 	a.port = uint16(port)
 	ip := net.ParseIP(addr)
@@ -88,10 +94,10 @@ func (a *Socks5ServerAgent) GetRemoteAddress(addr string, port int) (string, int
 	} else {
 		a.atype = ATYPE_IPV6
 	}
-	return s5Config.serverAddr, s5Config.serverPort
+	return a.config.serverAddr, a.config.serverPort
 }
 
-func (a *Socks5ServerAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
+func (a *SocksServerAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
 	if result == core.CONNECT_RESULT_OK {
 		req := buildVersionRequest(a.version, a.nmethods, a.methods)
 		return nil, req, nil
@@ -99,23 +105,23 @@ func (a *Socks5ServerAgent) OnConnectResult(result int, host string, port int) (
 		return nil, nil, nil
 	}
 }
-func (a *Socks5ServerAgent) OnConnected() (interface{}, interface{}, error) {
+func (a *SocksServerAgent) OnConnected() (interface{}, interface{}, error) {
 	req := buildVersionRequest(a.version, a.nmethods, a.methods)
 	return nil, req, nil
 }
 
-func (a *Socks5ServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
-	if a.state == state_init {
+func (a *SocksServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
+	if a.state == STATE_INIT {
 		ver, _, err := parseVersionReply(data)
 		if err != nil {
 			return nil, nil, err
 		} else if ver != a.version {
 			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
 		}
-		a.state = state_addr
-		req := buildAddressRequest(a.version, PKG_CONNECT, a.atype, a.address, a.port)
+		a.state = STATE_CONNECT
+		req := buildAddressRequest(a.version, CMD_CONNECT, a.atype, a.address, a.port)
 		return nil, req, nil
-	} else if a.state == state_addr {
+	} else if a.state == STATE_CONNECT {
 		ver, rep, _, _, _, err := parseAddressReply(data)
 		if err != nil {
 			return nil, nil, err
@@ -124,7 +130,7 @@ func (a *Socks5ServerAgent) ReadFromServer(data []byte) (interface{}, interface{
 		} else if ver != a.version {
 			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
 		}
-		a.state = state_transfer
+		a.state = STATE_TUNNEL
 		if a.buf == nil {
 			return nil, nil, nil
 		}
@@ -136,13 +142,13 @@ func (a *Socks5ServerAgent) ReadFromServer(data []byte) (interface{}, interface{
 	return data, nil, nil
 }
 
-func (a *Socks5ServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
-	if a.state != state_transfer {
+func (a *SocksServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
+	if a.state != STATE_TUNNEL {
 		a.buf = append(a.buf, data)
 		return nil, nil, nil
 	}
 	return nil, data, nil
 }
 
-func (a *Socks5ServerAgent) OnClose(bool) {
+func (a *SocksServerAgent) OnClose(bool) {
 }

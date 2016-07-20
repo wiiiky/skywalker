@@ -169,7 +169,7 @@ func getContentLength(headers map[string]string) uint64 {
 
 func getProxyAuthorization(headers map[string]string) string {
 	auth, ok := headers["Proxy-Authorization"]
-	if !ok || !strings.HasPrefix(auth, "Basic ") { /* 不存在或者认证方法无效 */
+	if !ok || !strings.HasPrefix(auth, "Basic ") { /* 不存在或者认证方法无效，目前只支持Basic认证 */
 		return ""
 	}
 	if decoded, err := base64.StdEncoding.DecodeString(auth[6:]); err == nil {

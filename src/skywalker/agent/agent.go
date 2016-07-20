@@ -24,16 +24,16 @@ import (
 	"skywalker/agent/direct"
 	"skywalker/agent/http"
 	"skywalker/agent/shadowsocks"
-	"skywalker/agent/socks5"
+	"skywalker/agent/socks"
 	"strings"
 )
 
-func NewSocks5ClientAgent() ClientAgent {
-	return &socks5.Socks5ClientAgent{}
+func NewSocksClientAgent() ClientAgent {
+	return &socks.SocksClientAgent{}
 }
 
-func NewSocks5ServerAgent() ServerAgent {
-	return &socks5.Socks5ServerAgent{}
+func NewSocksServerAgent() ServerAgent {
+	return &socks.SocksServerAgent{}
 }
 
 func NewShadowSocksClientAgent() ClientAgent {
@@ -55,11 +55,11 @@ func NewDirectAgent() ServerAgent {
 var (
 	gCAMap = map[string]newClientAgentFunc{
 		"http":        NewHTTPClientAgent,
-		"socks5":      NewSocks5ClientAgent,
+		"socks":       NewSocksClientAgent,
 		"shadowsocks": NewShadowSocksClientAgent,
 	}
 	gSAMap = map[string]newServerAgentFunc{
-		"socks5":      NewSocks5ServerAgent,
+		"socks":       NewSocksServerAgent,
 		"direct":      NewDirectAgent,
 		"shadowsocks": NewShadowSocksServerAgent,
 	}

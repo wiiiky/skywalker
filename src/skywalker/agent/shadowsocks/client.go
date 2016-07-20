@@ -36,10 +36,10 @@ type ShadowSocksClientAgent struct {
 	targetPort string
 
 	connected bool
-	cfg       *ssClientConfig
+	cfg       *ssCAConfig
 }
 
-type ssClientConfig struct {
+type ssCAConfig struct {
 	password string
 	method   string
 
@@ -47,7 +47,7 @@ type ssClientConfig struct {
 }
 
 var (
-	gClientConfigs = map[string]*ssClientConfig{}
+	gCAConfigs = map[string]*ssCAConfig{}
 )
 
 func (p *ShadowSocksClientAgent) Name() string {
@@ -82,7 +82,7 @@ func (a *ShadowSocksClientAgent) OnInit(name string, cfg map[string]interface{})
 		return util.NewError(ERROR_INVALID_CONFIG, "unknown cipher method")
 	}
 
-	gClientConfigs[name] = &ssClientConfig{
+	gCAConfigs[name] = &ssCAConfig{
 		password:   password,
 		method:     method,
 		cipherInfo: info,
@@ -92,7 +92,7 @@ func (a *ShadowSocksClientAgent) OnInit(name string, cfg map[string]interface{})
 
 func (a *ShadowSocksClientAgent) OnStart(name string) error {
 	a.name = name
-	a.cfg = gClientConfigs[name]
+	a.cfg = gCAConfigs[name]
 	key := generateKey([]byte(a.cfg.password), a.cfg.cipherInfo.KeySize)
 	iv := generateIV(a.cfg.cipherInfo.IvSize)
 

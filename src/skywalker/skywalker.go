@@ -26,6 +26,7 @@ import (
 	"skywalker/transfer"
 )
 
+/* 执行配置指定的服务 */
 func execConfig(cfg *config.SkyWalkerConfig) error {
 	var udpTransfer *transfer.UDPTransfer
 	var tcpTransfer *transfer.TCPTransfer

@@ -48,7 +48,7 @@ type ShadowSocksServerAgent struct {
 	connected bool
 
 	name string
-	cfg  *ssServerConfig
+	cfg  *ssSAConfig
 }
 
 type ssServerAddress struct {
@@ -59,7 +59,7 @@ type ssServerAddress struct {
 }
 
 /* 配置参数 */
-type ssServerConfig struct {
+type ssSAConfig struct {
 	ssServerAddress
 
 	/* 多服务器设置 */
@@ -78,7 +78,7 @@ const (
 
 /* 保存全局的配置，根据服务名分 */
 var (
-	gServerConfigs = map[string]*ssServerConfig{}
+	gSAConfigs = map[string]*ssSAConfig{}
 )
 
 /* 更改当前服务器 */
@@ -188,7 +188,7 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 		return util.NewError(ERROR_INVALID_CONFIG, "invalid server config")
 	}
 
-	ssConfig := &ssServerConfig{
+	gSAConfigs[name] = &ssSAConfig{
 		ssServerAddress: ssServerAddress{
 			serverAddr: serverAddr,
 			serverPort: serverPort,
@@ -202,15 +202,13 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 		try:         3,
 	}
 
-	gServerConfigs[name] = ssConfig
-
 	return nil
 }
 
 /* 初始化读取配置 */
 func (a *ShadowSocksServerAgent) OnStart(name string) error {
 	a.name = name
-	a.cfg = gServerConfigs[name]
+	a.cfg = gSAConfigs[name]
 	serverAddr, serverPort, password, method := a.getServerInfo()
 	info := cipher.GetCipherInfo(strings.ToLower(method))
 	key := generateKey([]byte(password), info.KeySize)
@@ -266,7 +264,7 @@ func (a *ShadowSocksServerAgent) ReadFromCA(data []byte) (interface{}, interface
 
 func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
 	if !closed_by_client && !a.connected { /* 没有建立链接就断开，且不是客户端断开的 */
-		log.DEBUG(a.name, "Connection Closed Unexpectedly")
+		log.WARN(a.name, "Connection Closed Unexpectedly")
 		a.onServerError(a.serverAddr)
 	}
 }

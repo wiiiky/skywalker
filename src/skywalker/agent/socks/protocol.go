@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
-package socks5
+package socks
 
 import (
 	"bytes"
@@ -62,9 +62,16 @@ const (
 )
 
 const (
-	PKG_CONNECT       = 1
+	CMD_CONNECT       = 1
 	CMD_BIND          = 2
 	CMD_UDP_ASSOCIATE = 3
+)
+
+const (
+	STATE_INIT     	  = 0 /* 初始化状态，等待客户端发送握手请求 */
+	STATE_CONNECT     = 1 /* 等待客户端发送链接请求 */
+	STATE_TUNNEL 	  = 2 /* 转发数据 */
+	STATE_ERROR    = 3 /* 已经出错 */
 )
 
 /* 生成握手请求 */
