@@ -73,50 +73,61 @@ func (a *SocksClientAgent) OnStart(name string) error {
 }
 
 /* 给客户端返回连接结果 */
-func (p *SocksClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
-	var rep uint8 = REPLY_GENERAL_FAILURE
+func (a *SocksClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
+	var reply uint8 = REPLY_GENERAL_FAILURE
 	if result == core.CONNECT_RESULT_OK {
-		rep = REPLY_SUCCEED
+		reply = REPLY_SUCCEED
 	} else if result == core.CONNECT_RESULT_UNKNOWN_HOST {
-		rep = REPLY_HOST_UNREACHABLE
+		reply = REPLY_HOST_UNREACHABLE
 	} else if result == core.CONNECT_RESULT_UNREACHABLE {
-		rep = REPLY_NETWORK_UNREACHABLE
+		reply = REPLY_NETWORK_UNREACHABLE
 	}
-	return nil, buildAddressReply(p.version, rep, p.atype, p.address, p.port), nil
+	rep := socks5Response{
+		version: a.version,
+		reply:   reply,
+		atype:   a.atype,
+		addr:    a.address,
+		port:    a.port,
+	}
+	return nil, rep.build(), nil
 }
 
-func (p *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
-	switch p.state {
+func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
+	switch a.state {
 	case STATE_INIT: /* 接收客户端的握手请求并返回响应 */
-		ver, nmethods, methods, err := parseVersionRequest(data)
+		req := socks5VersionRequest{}
+		err := req.parse(data)
 		if err != nil {
-			if ver != 0 {
-				return nil, buildVersionReply(5, 0), err
-			}
 			return nil, nil, err
 		}
-		p.version = ver
-		p.nmethods = nmethods
-		p.methods = methods
-		p.state = STATE_CONNECT
-		return nil, buildVersionReply(ver, 0), nil
+		a.version = req.version
+		a.nmethods = req.nmethods
+		a.methods = req.methods
+		a.state = STATE_CONNECT
+
+		rep := socks5VersionResponse{
+			version: req.version,
+			method:  0,
+		}
+		return nil, rep.build(), nil
 	case STATE_CONNECT: /* 接收客户端的地址请求，等待连接结果 */
-		ver, cmd, atype, address, port, left, err := parseAddressRequest(data)
+		req := &socks5Request{}
+		left, err := req.parse(data)
 		if err != nil {
 			return nil, nil, err
-		} else if ver != p.version {
-			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
-		} else if cmd != CMD_CONNECT {
-			return nil, nil, util.NewError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", cmd)
+		} else if req.version != a.version {
+			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", req.version)
+		} else if req.cmd != CMD_CONNECT {
+			return nil, nil, util.NewError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", req.cmd)
 		}
-		p.atype = atype
-		p.address = address
-		p.port = port
-		p.state = STATE_TUNNEL
+		a.atype = req.atype
+		a.address = req.addr
+		a.port = req.port
+		a.state = STATE_TUNNEL
 		if left == nil {
-			return core.NewConnectPackage(address, int(port)), nil, nil
+			return core.NewConnectPackage(req.addr, int(req.port)), nil, nil
 		}
-		return []*core.Package{core.NewConnectPackage(address, int(port)), core.NewDataPackage(left)}, nil, nil
+		return []*core.Package{core.NewConnectPackage(req.addr, int(req.port)), core.NewDataPackage(left)}, nil, nil
 	case STATE_TUNNEL: /* 直接转发数据 */
 		return data, nil, nil
 	}

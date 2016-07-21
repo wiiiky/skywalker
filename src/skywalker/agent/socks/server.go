@@ -99,36 +99,42 @@ func (a *SocksServerAgent) GetRemoteAddress(addr string, port int) (string, int)
 
 func (a *SocksServerAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
 	if result == core.CONNECT_RESULT_OK {
-		req := buildVersionRequest(a.version, a.nmethods, a.methods)
-		return nil, req, nil
+		req := &socks5VersionRequest{
+			version:  a.version,
+			nmethods: a.nmethods,
+			methods:  a.methods,
+		}
+		return nil, req.build(), nil
 	} else {
 		return nil, nil, nil
 	}
 }
-func (a *SocksServerAgent) OnConnected() (interface{}, interface{}, error) {
-	req := buildVersionRequest(a.version, a.nmethods, a.methods)
-	return nil, req, nil
-}
 
 func (a *SocksServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
 	if a.state == STATE_INIT {
-		ver, _, err := parseVersionReply(data)
-		if err != nil {
+		rep := &socks5VersionResponse{}
+		if err := rep.parse(data); err != nil {
 			return nil, nil, err
-		} else if ver != a.version {
-			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
+		} else if rep.version != a.version {
+			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", rep.version)
 		}
 		a.state = STATE_CONNECT
-		req := buildAddressRequest(a.version, CMD_CONNECT, a.atype, a.address, a.port)
-		return nil, req, nil
+		req := &socks5Request{
+			version: a.version,
+			cmd:     CMD_CONNECT,
+			atype:   a.atype,
+			addr:    a.address,
+			port:    a.port,
+		}
+		return nil, req.build(), nil
 	} else if a.state == STATE_CONNECT {
-		ver, rep, _, _, _, err := parseAddressReply(data)
-		if err != nil {
+		rep := &socks5Response{}
+		if err := rep.parse(data); err != nil {
 			return nil, nil, err
-		} else if rep != REPLY_SUCCEED {
+		} else if rep.reply != REPLY_SUCCEED {
 			return nil, nil, util.NewError(ERROR_INVALID_REPLY, "unsuccessful address reply message")
-		} else if ver != a.version {
-			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", ver)
+		} else if rep.version != a.version {
+			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", rep.version)
 		}
 		a.state = STATE_TUNNEL
 		if a.buf == nil {
