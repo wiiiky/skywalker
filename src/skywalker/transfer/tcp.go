@@ -92,8 +92,7 @@ func (f *TCPTransfer) HandleTransfer(conn net.Conn) {
  * @tdata 需要转发的数据(Transfer Data)，将发送给ic
  * @rdata 需要返回给数据(Response Data)，将发送给conn
  */
-func (f *TCPTransfer) transferData(ic chan *core.Package,
-	conn net.Conn, tdata interface{},
+func (f *TCPTransfer) transferData(ic chan *core.Package, conn net.Conn, tdata interface{},
 	rdata interface{}, err error) error {
 	/* 转发数据 */
 	switch data := tdata.(type) {

@@ -102,7 +102,7 @@ var (
 	defaultLoggers = []log.LoggerConfig{
 		log.LoggerConfig{"DEBUG", "STDOUT"},
 		log.LoggerConfig{"INFO", "STDOUT"},
-		log.LoggerConfig{"WARNING", "STDERR"},
+		log.LoggerConfig{"WARN", "STDERR"},
 		log.LoggerConfig{"ERROR", "STDERR"},
 	}
 	defaultLogConfig = &log.LogConfig{

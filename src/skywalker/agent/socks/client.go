@@ -18,8 +18,15 @@
 package socks
 
 import (
+	"github.com/hitoshii/golib/src/log"
 	"skywalker/core"
 	"skywalker/util"
+)
+
+const (
+	SOCKS_VERSION_4          = 4
+	SOCKS_VERSION_5          = 5
+	SOCKS_VERSION_COMPATIBLE = 0 /* 同时支持版本4和版本5 */
 )
 
 /*
@@ -28,14 +35,12 @@ import (
  */
 
 type SocksClientAgent struct {
-	name     string
-	version  uint8
-	nmethods uint8
-	methods  []uint8 /* 每个字节表示一个方法 */
+	name    string
+	version uint8
 
-	atype   uint8
-	address string
-	port    uint16
+	atype uint8
+	addr  string
+	port  uint16
 
 	state uint8
 
@@ -45,6 +50,8 @@ type SocksClientAgent struct {
 type socksCAConfig struct {
 	username string
 	password string
+	version  uint8
+	method   uint8
 }
 
 var (
@@ -58,9 +65,16 @@ func (p *SocksClientAgent) Name() string {
 func (a *SocksClientAgent) OnInit(name string, cfg map[string]interface{}) error {
 	username := util.GetMapStringDefault(cfg, "username", "")
 	password := util.GetMapStringDefault(cfg, "password", "")
+	version := uint8(util.GetMapIntDefault(cfg, "version", SOCKS_VERSION_COMPATIBLE))
+	method := METHOD_NO_AUTH_REQUIRED
+	if len(username) > 0 && len(password) > 0 {
+		method = METHOD_USERNAME_PASSWORD
+	}
 	gCAConfigs[name] = &socksCAConfig{
 		username: username,
 		password: password,
+		method:   method,
+		version:  version,
 	}
 	return nil
 }
@@ -86,7 +100,7 @@ func (a *SocksClientAgent) OnConnectResult(result int, host string, port int) (i
 		version: a.version,
 		reply:   reply,
 		atype:   a.atype,
-		addr:    a.address,
+		addr:    a.addr,
 		port:    a.port,
 	}
 	return nil, rep.build(), nil
@@ -95,24 +109,51 @@ func (a *SocksClientAgent) OnConnectResult(result int, host string, port int) (i
 func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
 	switch a.state {
 	case STATE_INIT: /* 接收客户端的握手请求并返回响应 */
-		req := socks5VersionRequest{}
+		req := &socks5VersionRequest{}
 		err := req.parse(data)
 		if err != nil {
 			return nil, nil, err
 		}
 		a.version = req.version
-		a.nmethods = req.nmethods
-		a.methods = req.methods
-		a.state = STATE_CONNECT
 
-		rep := socks5VersionResponse{
-			version: req.version,
-			method:  0,
+		method := METHOD_NO_ACCEPTABLE
+		for i := uint8(0); i < req.nmethods; i++ {
+			if req.methods[i] == a.config.method {
+				method = a.config.method
+				break
+			}
 		}
+		if method == METHOD_NO_ACCEPTABLE {
+			err = util.NewError(ERROR_UNSUPPORTED_METHOD, "unsupported method %v", req.methods)
+		} else if method == METHOD_NO_AUTH_REQUIRED {
+			a.state = STATE_CONNECT
+		} else if method == METHOD_USERNAME_PASSWORD { /* 等待客户端认证 */
+			a.state = STATE_AUTH
+		} else {
+			log.E("THIS IS A *BUG*! PLEASE REPORT TO THE DEVELOPER!")
+		}
+
+		rep := &socks5VersionResponse{
+			version: req.version,
+			method:  method,
+		}
+		return nil, rep.build(), err
+	case STATE_AUTH: /* 客户端认证 */
+		req := &socks5AuthRequest{}
+		if err := req.parse(data); err != nil {
+			return nil, nil, err
+		}
+		rep := socks5AuthResponse{version: req.version}
+		if req.username != a.config.username && req.password != a.config.password {
+			rep.status = 1
+			return nil, rep.build(), util.NewError(ERROR_INVALID_USERNAME_PASSWORD, "invalid username & password")
+		}
+		rep.status = 0
+		a.state = STATE_CONNECT
 		return nil, rep.build(), nil
 	case STATE_CONNECT: /* 接收客户端的地址请求，等待连接结果 */
 		req := &socks5Request{}
-		left, err := req.parse(data)
+		err := req.parse(data)
 		if err != nil {
 			return nil, nil, err
 		} else if req.version != a.version {
@@ -121,13 +162,10 @@ func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}
 			return nil, nil, util.NewError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", req.cmd)
 		}
 		a.atype = req.atype
-		a.address = req.addr
+		a.addr = req.addr
 		a.port = req.port
 		a.state = STATE_TUNNEL
-		if left == nil {
-			return core.NewConnectPackage(req.addr, int(req.port)), nil, nil
-		}
-		return []*core.Package{core.NewConnectPackage(req.addr, int(req.port)), core.NewDataPackage(left)}, nil, nil
+		return core.NewConnectPackage(req.addr, int(req.port)), nil, nil
 	case STATE_TUNNEL: /* 直接转发数据 */
 		return data, nil, nil
 	}

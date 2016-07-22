@@ -24,19 +24,20 @@ import (
 )
 
 const (
-	ERROR_INVALID_NMETHODS             = 1
-	ERROR_INVALID_INVALID_MESSAGE_SIZE = 2
-	ERROR_UNSUPPORTED_CMD              = 3
-	ERROR_UNSUPPORTED_VERSION          = 4
-	ERROR_UNSUPPORTED_METHOD           = 5
-	ERROR_INVALID_REPLY                = 6
-	ERROR_INVALID_CONFIG               = 7
+	ERROR_INVALID_NMETHODS          = 1
+	ERROR_INVALID_MESSAGE_SIZE      = 2
+	ERROR_UNSUPPORTED_CMD           = 3
+	ERROR_UNSUPPORTED_VERSION       = 4
+	ERROR_UNSUPPORTED_METHOD        = 5
+	ERROR_INVALID_REPLY             = 6
+	ERROR_INVALID_CONFIG            = 7
+	ERROR_INVALID_FIELD             = 8
+	ERROR_INVALID_USERNAME_PASSWORD = 9
 )
 
 /* 方法常量 */
 const (
 	METHOD_NO_AUTH_REQUIRED  = byte('\x00')
-	METHOD_GSSAPI            = byte('\x01')
 	METHOD_USERNAME_PASSWORD = byte('\x02')
 	METHOD_NO_ACCEPTABLE     = byte('\xFF')
 )
@@ -69,9 +70,10 @@ const (
 
 const (
 	STATE_INIT    = 0 /* 初始化状态，等待客户端发送握手请求 */
-	STATE_CONNECT = 1 /* 等待客户端发送链接请求 */
-	STATE_TUNNEL  = 2 /* 转发数据 */
-	STATE_ERROR   = 3 /* 已经出错 */
+	STATE_AUTH    = 1 /* 认证 */
+	STATE_CONNECT = 2 /* 等待客户端发送链接请求 */
+	STATE_TUNNEL  = 3 /* 转发数据 */
+	STATE_ERROR   = 4 /* 已经出错 */
 )
 
 /*
@@ -97,7 +99,7 @@ func (req *socks5VersionRequest) build() []byte {
 
 func (req *socks5VersionRequest) parse(data []byte) error {
 	if len(data) < 3 {
-		return util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "version request message is too short")
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "version request message is too short")
 	}
 	version := uint8(data[0])
 	nmethods := uint8(data[1])
@@ -106,7 +108,7 @@ func (req *socks5VersionRequest) parse(data []byte) error {
 	} else if nmethods < 1 {
 		return util.NewError(ERROR_INVALID_NMETHODS, "nmethods cannot be zero")
 	} else if len(data) != 2+int(nmethods) {
-		return util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected version request message size")
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "unexpected version request message size")
 	}
 	req.version = version
 	req.nmethods = nmethods
@@ -136,11 +138,84 @@ func (rep *socks5VersionResponse) build() []byte {
 /* 解析SOCKS版本请求 */
 func (rep *socks5VersionResponse) parse(data []byte) error {
 	if len(data) != 2 {
-		return util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected version reply message size")
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "unexpected version reply message size")
 	}
 	rep.version = data[0]
 	rep.method = data[1]
 	return nil
+}
+
+/*
+ * +----+------+----------+------+----------+
+ * |VER | ULEN |  UNAME   | PLEN |  PASSWD  |
+ * +----+------+----------+------+----------+
+ * | 1  |  1   | 1 to 255 |  1   | 1 to 255 |
+ * +----+------+----------+------+----------+
+ * 这里的version字段和socks5的version字段不一样，这里是0x01
+ */
+type socks5AuthRequest struct {
+	version  uint8
+	ulen     uint8
+	username string
+	plen     uint8
+	password string
+}
+
+func (req *socks5AuthRequest) parse(data []byte) error {
+	length := len(data)
+
+	var version, ulen, plen uint8
+	var username, password string
+	if length < 5 {
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "auth request message size is invalid")
+	}
+	version = uint8(data[0])
+	if version != 0x01 {
+		return util.NewError(ERROR_UNSUPPORTED_VERSION, "auth request version is invalid")
+	}
+	data = data[1:]
+	ulen = uint8(data[0])
+	if ulen == 0 {
+		return util.NewError(ERROR_INVALID_FIELD, "auth username cannot be empty")
+	} else if length < int(4+ulen) {
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "auth request message size is invalid")
+	}
+	username = string(data[1:(1 + ulen)])
+	data = data[1+ulen:]
+	plen = uint8(data[0])
+	if plen == 0 {
+		return util.NewError(ERROR_INVALID_FIELD, "auth password cannot be empty")
+	} else if length != int(3+ulen+plen) {
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "auth request message size is invalid")
+	}
+	password = string(data[1:(1 + plen)])
+
+	req.version = version
+	req.ulen = ulen
+	req.username = username
+	req.plen = plen
+	req.password = password
+
+	return nil
+}
+
+/*
+ * +----+--------+
+ * |VER | STATUS |
+ * +----+--------+
+ * | 1  |   1    |
+ * +----+--------+
+ */
+type socks5AuthResponse struct {
+	version uint8
+	status  uint8
+}
+
+func (rep *socks5AuthResponse) build() []byte {
+	buf := bytes.Buffer{}
+	binary.Write(&buf, binary.BigEndian, rep.version)
+	binary.Write(&buf, binary.BigEndian, rep.status)
+	return buf.Bytes()
 }
 
 /*
@@ -183,38 +258,31 @@ func (req *socks5Request) build() []byte {
  * 解析SOCKS5请求
  * 返回解析剩余数据，错误
  */
-func (req *socks5Request) parse(data []byte) ([]byte, error) {
+func (req *socks5Request) parse(data []byte) error {
 	if len(data) < 6 {
-		return nil, util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address request message size is too short")
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "connect request message size is too short")
 	}
 	version := uint8(data[0])
 	cmd := uint8(data[1])
 	atype := uint8(data[3])
 	var addr string
 	var port uint16
-	var left []byte = nil
 	if atype == ATYPE_IPV4 {
-		if len(data) < 10 {
-			return nil, util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address request message size is too short")
-		} else if len(data) > 10 {
-			left = data[10:]
+		if len(data) != 10 {
+			return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "connect request message size is invalid")
 		}
 		addr = net.IP(data[4:8]).String()
 		data = data[8:]
 	} else if atype == ATYPE_IPV6 {
-		if len(data) < 22 {
-			return nil, util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address request message size is too short")
-		} else if len(data) > 22 {
-			left = data[22:]
+		if len(data) != 22 {
+			return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "connect request message size is invalid")
 		}
 		addr = net.IP(data[4:20]).String()
 		data = data[20:]
 	} else {
 		length := uint8(data[4])
-		if len(data) < 7+int(length) {
-			return nil, util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address request message size is too short")
-		} else if len(data) > 7+int(length) {
-			left = data[7+int(length):]
+		if len(data) != 7+int(length) {
+			return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "connect request message size is invalid")
 		}
 		addr = string(data[5:(5 + length)])
 		data = data[(5 + length):]
@@ -227,7 +295,7 @@ func (req *socks5Request) parse(data []byte) ([]byte, error) {
 	req.atype = atype
 	req.addr = addr
 	req.port = port
-	return left, nil
+	return nil
 }
 
 /*
@@ -263,7 +331,7 @@ func (rep *socks5Response) build() []byte {
 
 func (rep *socks5Response) parse(data []byte) error {
 	if len(data) < 10 {
-		return util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address reply message size is too short")
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "address reply message size is too short")
 	}
 	version := data[0]
 	reply := data[1]
@@ -273,20 +341,20 @@ func (rep *socks5Response) parse(data []byte) error {
 	var left []byte
 	if atype == ATYPE_IPV4 {
 		if len(data) != 10 {
-			return util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected address request message size")
+			return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "unexpected address request message size")
 		}
 		addr = net.IP(data[4:8]).String()
 		left = data[8:]
 	} else if atype == ATYPE_IPV6 {
 		if len(data) != 22 {
-			return util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected address request message size")
+			return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "unexpected address request message size")
 		}
 		addr = net.IP(data[4:20]).String()
 		left = data[20:]
 	} else {
 		length := data[4]
 		if len(data) != int(length+7) {
-			return util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected address request message size")
+			return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "unexpected address request message size")
 		}
 		addr = string(data[5:(5 + length)])
 		left = data[(5 + length):]
@@ -299,39 +367,4 @@ func (rep *socks5Response) parse(data []byte) error {
 	rep.addr = addr
 	rep.port = port
 	return nil
-}
-
-func parseAddressReply(data []byte) (uint8, uint8, uint8, string, uint16, error) {
-	if len(data) < 10 {
-		return 0, 0, 0, "", 0, util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "address reply message size is too short")
-	}
-	ver := data[0]
-	rep := data[1]
-	atype := data[3]
-	var address string
-	var port uint16
-	var left []byte
-	if atype == ATYPE_IPV4 {
-		if len(data) != 10 {
-			return 0, 0, 0, "", 0, util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected address request message size")
-		}
-		address = net.IP(data[4:8]).String()
-		left = data[8:]
-	} else if atype == ATYPE_IPV6 {
-		if len(data) != 22 {
-			return 0, 0, 0, "", 0, util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected address request message size")
-		}
-		address = net.IP(data[4:20]).String()
-		left = data[20:]
-	} else {
-		length := data[4]
-		if len(data) != int(length+7) {
-			return 0, 0, 0, "", 0, util.NewError(ERROR_INVALID_INVALID_MESSAGE_SIZE, "unexpected address request message size")
-		}
-		address = string(data[5:(5 + length)])
-		left = data[(5 + length):]
-	}
-	buf := bytes.NewReader(left)
-	binary.Read(buf, binary.BigEndian, &port)
-	return ver, rep, atype, address, port, nil
 }
