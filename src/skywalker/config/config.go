@@ -30,7 +30,7 @@ type SkyWalkerExtraConfig SkyWalkerConfig
 
 /* 服务配置 */
 type SkyWalkerConfig struct {
-	Name     string `json:name`
+	Name     string `json:"name"`
 	BindAddr string `json:"bindAddr"`
 	BindPort uint16 `json:"bindPort"`
 

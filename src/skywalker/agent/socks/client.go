@@ -23,12 +23,6 @@ import (
 	"skywalker/util"
 )
 
-const (
-	SOCKS_VERSION_4          = 4
-	SOCKS_VERSION_5          = 5
-	SOCKS_VERSION_COMPATIBLE = 0 /* 同时支持版本4和版本5 */
-)
-
 /*
  * Socks 5 协议
  * https://tools.ietf.org/html/rfc1928
@@ -86,8 +80,8 @@ func (a *SocksClientAgent) OnStart(name string) error {
 	return nil
 }
 
-/* 给客户端返回连接结果 */
-func (a *SocksClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
+/* socks5连接结果的处理 */
+func (a *SocksClientAgent) onConnectResult5(result int, host string, port int) (interface{}, interface{}, error) {
 	var reply uint8 = REPLY_GENERAL_FAILURE
 	if result == core.CONNECT_RESULT_OK {
 		reply = REPLY_SUCCEED
@@ -106,38 +100,88 @@ func (a *SocksClientAgent) OnConnectResult(result int, host string, port int) (i
 	return nil, rep.build(), nil
 }
 
+/* socks4连接结果的处理 */
+func (a *SocksClientAgent) onConnectResult4(result int, host string, port int) (interface{}, interface{}, error) {
+	var cd uint8 = CD_REQUEST_REJECTED
+	if result == core.CONNECT_RESULT_OK {
+		cd = CD_REQUEST_GRANTED
+	}
+	rep := socks4Response{
+		vn:   a.version,
+		cd:   cd,
+		ip:   a.addr,
+		port: a.port,
+	}
+	return nil, rep.build(), nil
+}
+
+/* 给客户端返回连接结果 */
+func (a *SocksClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
+	if a.version == SOCKS_VERSION_5 {
+		return a.onConnectResult5(result, host, port)
+	} else if a.version == SOCKS_VERSION_4 {
+		return a.onConnectResult4(result, host, port)
+	}
+	return nil, nil, nil
+}
+
+/* socks4没有握手过程，因此它的第一个数据包就是连接命令 */
+func (a *SocksClientAgent) init4(data []byte) (interface{}, interface{}, error) {
+	req := &socks4Request{}
+	if err := req.parse(data); err != nil {
+		return nil, nil, err
+	} else if req.cd != CMD_CONNECT {
+		return nil, nil, util.NewError(ERROR_UNSUPPORTED_CMD, "unsupported socks4 command %d", req.cd)
+	}
+	a.version = req.vn
+	a.atype = ATYPE_IPV4 /* socks4 只支持IPv4 */
+	a.addr = req.ip
+	a.port = req.port
+	a.state = STATE_TUNNEL
+	return core.NewConnectPackage(req.ip, int(req.port)), nil, nil
+}
+
+/* 处理socks5协议的第一个请求 */
+func (a *SocksClientAgent) init5(data []byte) (interface{}, interface{}, error) {
+	req := &socks5VersionRequest{}
+	err := req.parse(data)
+	if err != nil {
+		return nil, nil, err
+	}
+	a.version = req.version
+
+	method := METHOD_NO_ACCEPTABLE
+	for i := uint8(0); i < req.nmethods; i++ {
+		if req.methods[i] == a.config.method {
+			method = a.config.method
+			break
+		}
+	}
+	if method == METHOD_NO_ACCEPTABLE {
+		err = util.NewError(ERROR_UNSUPPORTED_METHOD, "unsupported method %v", req.methods)
+	} else if method == METHOD_NO_AUTH_REQUIRED {
+		a.state = STATE_CONNECT
+	} else if method == METHOD_USERNAME_PASSWORD { /* 等待客户端认证 */
+		a.state = STATE_AUTH
+	} else {
+		log.E("THIS IS A *BUG*! PLEASE REPORT TO THE DEVELOPER!")
+	}
+
+	rep := &socks5VersionResponse{
+		version: req.version,
+		method:  method,
+	}
+	return nil, rep.build(), err
+}
+
 func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
 	switch a.state {
 	case STATE_INIT: /* 接收客户端的握手请求并返回响应 */
-		req := &socks5VersionRequest{}
-		err := req.parse(data)
-		if err != nil {
-			return nil, nil, err
+		if data[0] == SOCKS_VERSION_5 {
+			return a.init5(data)
+		} else if data[0] == SOCKS_VERSION_4 {
+			return a.init4(data)
 		}
-		a.version = req.version
-
-		method := METHOD_NO_ACCEPTABLE
-		for i := uint8(0); i < req.nmethods; i++ {
-			if req.methods[i] == a.config.method {
-				method = a.config.method
-				break
-			}
-		}
-		if method == METHOD_NO_ACCEPTABLE {
-			err = util.NewError(ERROR_UNSUPPORTED_METHOD, "unsupported method %v", req.methods)
-		} else if method == METHOD_NO_AUTH_REQUIRED {
-			a.state = STATE_CONNECT
-		} else if method == METHOD_USERNAME_PASSWORD { /* 等待客户端认证 */
-			a.state = STATE_AUTH
-		} else {
-			log.E("THIS IS A *BUG*! PLEASE REPORT TO THE DEVELOPER!")
-		}
-
-		rep := &socks5VersionResponse{
-			version: req.version,
-			method:  method,
-		}
-		return nil, rep.build(), err
 	case STATE_AUTH: /* 客户端认证 */
 		req := &socks5AuthRequest{}
 		if err := req.parse(data); err != nil {

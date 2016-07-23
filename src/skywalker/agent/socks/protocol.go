@@ -24,6 +24,13 @@ import (
 )
 
 const (
+	SOCKS_VERSION_4          = 4
+	SOCKS_VERSION_5          = 5
+	SOCKS_VERSION_COMPATIBLE = 0 /* 同时支持版本4和版本5 */
+)
+
+/* 错误码 */
+const (
 	ERROR_INVALID_NMETHODS          = 1
 	ERROR_INVALID_MESSAGE_SIZE      = 2
 	ERROR_UNSUPPORTED_CMD           = 3
@@ -49,7 +56,7 @@ const (
 	ATYPE_IPV6       = 4
 )
 
-/* 返回结果 */
+/* socks5返回结果 */
 const (
 	REPLY_SUCCEED                    = 0
 	REPLY_GENERAL_FAILURE            = 1
@@ -60,6 +67,13 @@ const (
 	REPLY_TTL_EXPIRED                = 6
 	REPLY_COMMAND_NOT_SUPPORTED      = 7
 	REPLY_ADDRESS_TYPE_NOT_SUPPORTED = 8
+)
+
+/* socks4返回结果 */
+const (
+	CD_CONNECT          = 1
+	CD_REQUEST_GRANTED  = 90
+	CD_REQUEST_REJECTED = 91
 )
 
 const (
@@ -75,6 +89,90 @@ const (
 	STATE_TUNNEL  = 3 /* 转发数据 */
 	STATE_ERROR   = 4 /* 已经出错 */
 )
+
+/*
+ * +----+----+----+----+----+----+----+----+----+----+....+----+
+ * | VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
+ * +----+----+----+----+----+----+----+----+----+----+....+----+
+ */
+type socks4Request struct {
+	vn     uint8
+	cd     uint8
+	port   uint16
+	ip     string
+	userid string
+}
+
+func (req *socks4Request) parse(data []byte) error {
+	var vn, cd uint8
+	var port uint16
+	var ip, userid string
+	length := len(data)
+	if length < 9 {
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "socks request message size is invalid")
+	}
+	vn = uint8(data[0])
+	cd = uint8(data[1])
+	binary.Read(bytes.NewReader(data[2:]), binary.BigEndian, &port)
+	ip = net.IP(data[4:8]).String()
+	userid = string(data[9:])
+
+	req.vn = vn
+	req.cd = cd
+	req.port = port
+	req.ip = ip
+	req.userid = userid
+	return nil
+}
+
+func (req *socks4Request) build() []byte {
+	buf := bytes.Buffer{}
+	binary.Write(&buf, binary.BigEndian, req.vn)
+	binary.Write(&buf, binary.BigEndian, req.cd)
+	binary.Write(&buf, binary.BigEndian, req.port)
+	if ip := net.ParseIP(req.ip); ip != nil {
+		binary.Write(&buf, binary.BigEndian, ip)
+	}
+	binary.Write(&buf, binary.BigEndian, []byte(req.userid))
+	binary.Write(&buf, binary.BigEndian, 0x00)
+
+	return buf.Bytes()
+}
+
+/*
+ * +----+----+----+----+----+----+----+----+
+ * | VN | CD | DSTPORT |      DSTIP        |
+ * +----+----+----+----+----+----+----+----+
+ */
+type socks4Response struct {
+	vn   uint8
+	cd   uint8
+	port uint16
+	ip   string
+}
+
+func (rep *socks4Response) parse(data []byte) error {
+	if len(data) != 8 {
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "socks response message size is invalid")
+	}
+	rep.vn = uint8(data[0])
+	rep.cd = uint8(data[1])
+	binary.Read(bytes.NewReader(data[2:]), binary.BigEndian, &(rep.port))
+	rep.ip = net.IP(data[4:8]).String()
+	return nil
+}
+
+func (rep *socks4Response) build() []byte {
+	buf := bytes.Buffer{}
+	binary.Write(&buf, binary.BigEndian, rep.vn)
+	binary.Write(&buf, binary.BigEndian, rep.cd)
+	binary.Write(&buf, binary.BigEndian, rep.port)
+	if ip := net.ParseIP(rep.ip); ip != nil {
+		binary.Write(&buf, binary.BigEndian, ip)
+	}
+
+	return buf.Bytes()
+}
 
 /*
  * +----+----------+----------+
