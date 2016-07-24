@@ -132,10 +132,12 @@ func (req *socks4Request) build() []byte {
 	binary.Write(&buf, binary.BigEndian, req.cd)
 	binary.Write(&buf, binary.BigEndian, req.port)
 	if ip := net.ParseIP(req.ip); ip != nil {
-		binary.Write(&buf, binary.BigEndian, []byte(ip.To4()))
+		if ip = ip.To4(); ip != nil {
+			binary.Write(&buf, binary.BigEndian, []byte(ip.To4()))
+		}
 	}
 	binary.Write(&buf, binary.BigEndian, []byte(req.userid))
-	binary.Write(&buf, binary.BigEndian, 0x00)
+	binary.Write(&buf, binary.BigEndian, []byte{0x00})
 
 	return buf.Bytes()
 }

@@ -19,18 +19,18 @@ package config
 
 import (
 	"flag"
-	"os"
 	"fmt"
+	"os"
 )
 
 const (
-	SKYWALKER_VERSION = "1.2.1"
+	SKYWALKER_VERSION = "1.2.2"
 )
 
 /* 命令行参数 */
 type clFlag struct {
 	cfile string
-	help bool
+	help  bool
 }
 
 func printVersion() {
@@ -48,7 +48,7 @@ func parseCommandLine() *clFlag {
 	} else if *version {
 		printVersion()
 	} else {
-		return &clFlag{cfile: *cfile, help:*help}
+		return &clFlag{cfile: *cfile, help: *help}
 	}
 
 	os.Exit(0)

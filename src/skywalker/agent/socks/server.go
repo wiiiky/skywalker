@@ -24,14 +24,11 @@ import (
 )
 
 type SocksServerAgent struct {
-	name     string
-	version  uint8
-	nmethods uint8
-	methods  []uint8 /* 每个字节表示一个方法 */
+	name string
 
-	atype   uint8
-	address string
-	port    uint16
+	atype uint8
+	addr  string
+	port  uint16
 
 	state uint8
 
@@ -43,6 +40,9 @@ type SocksServerAgent struct {
 type socksSAConfig struct {
 	serverAddr string
 	serverPort int
+	username   string
+	password   string
+	version    uint8
 }
 
 var (
@@ -65,26 +65,33 @@ func (a *SocksServerAgent) OnInit(name string, cfg map[string]interface{}) error
 	if serverPort = int(util.GetMapInt(cfg, "serverPort")); serverPort < 0 {
 		return util.NewError(ERROR_INVALID_CONFIG, "serverPort is illegal")
 	}
+	username := util.GetMapString(cfg, "username")
+	password := util.GetMapString(cfg, "password")
+	version := uint8(util.GetMapIntDefault(cfg, "version", SOCKS_VERSION_5))
+
+	if version != SOCKS_VERSION_4 && version != SOCKS_VERSION_5 {
+		return util.NewError(ERROR_UNSUPPORTED_VERSION, "supported socks version %d", version)
+	}
 	gSAConfig[name] = &socksSAConfig{
 		serverAddr: serverAddr,
 		serverPort: serverPort,
+		username:   username,
+		password:   password,
+		version:    version,
 	}
 	return nil
 }
 
 func (a *SocksServerAgent) OnStart(name string) error {
 	a.name = name
-	a.version = 5
-	a.nmethods = 1
-	a.methods = []byte{0x00}
+	a.config = gSAConfig[name]
 	a.state = STATE_INIT
 	a.buf = nil
-	a.config = gSAConfig[name]
 	return nil
 }
 
 func (a *SocksServerAgent) GetRemoteAddress(addr string, port int) (string, int) {
-	a.address = addr
+	a.addr = addr
 	a.port = uint16(port)
 	ip := net.ParseIP(addr)
 	if ip == nil {
@@ -97,12 +104,12 @@ func (a *SocksServerAgent) GetRemoteAddress(addr string, port int) (string, int)
 	return a.config.serverAddr, a.config.serverPort
 }
 
-func (a *SocksServerAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
+func (a *SocksServerAgent) onConnectResult5(result int, host string, port int) (interface{}, interface{}, error) {
 	if result == core.CONNECT_RESULT_OK {
 		req := &socks5VersionRequest{
-			version:  a.version,
-			nmethods: a.nmethods,
-			methods:  a.methods,
+			version:  a.config.version,
+			nmethods: 1,
+			methods:  []byte{METHOD_NO_AUTH_REQUIRED},
 		}
 		return nil, req.build(), nil
 	} else {
@@ -110,30 +117,77 @@ func (a *SocksServerAgent) OnConnectResult(result int, host string, port int) (i
 	}
 }
 
-func (a *SocksServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
-	if a.state == STATE_INIT {
-		rep := &socks5VersionResponse{}
-		if err := rep.parse(data); err != nil {
-			return nil, nil, err
-		} else if rep.version != a.version {
-			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", rep.version)
-		}
-		a.state = STATE_CONNECT
-		req := &socks5Request{
-			version: a.version,
-			cmd:     CMD_CONNECT,
-			atype:   a.atype,
-			addr:    a.address,
-			port:    a.port,
+func (a *SocksServerAgent) onConnectResult4(result int, host string, port int) (interface{}, interface{}, error) {
+	if result == core.CONNECT_RESULT_OK {
+		req := &socks4Request{
+			vn:   a.config.version,
+			cd:   CD_CONNECT,
+			port: a.port,
+			ip:   a.addr,
 		}
 		return nil, req.build(), nil
+	} else {
+		return nil, nil, nil
+	}
+}
+
+func (a *SocksServerAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
+	if a.config.version == SOCKS_VERSION_5 {
+		return a.onConnectResult5(result, host, port)
+	}
+	return a.onConnectResult4(result, host, port)
+}
+
+func (a *SocksServerAgent) init5(data []byte) (interface{}, interface{}, error) {
+	rep := &socks5VersionResponse{}
+	if err := rep.parse(data); err != nil {
+		return nil, nil, err
+	} else if rep.version != a.config.version {
+		return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", rep.version)
+	}
+	a.state = STATE_CONNECT
+	req := &socks5Request{
+		version: a.config.version,
+		cmd:     CMD_CONNECT,
+		atype:   a.atype,
+		addr:    a.addr,
+		port:    a.port,
+	}
+	return nil, req.build(), nil
+}
+
+func (a *SocksServerAgent) init4(data []byte) (interface{}, interface{}, error) {
+	rep := socks4Response{}
+	if err := rep.parse(data); err != nil {
+		return nil, nil, err
+	} else if rep.vn != 0 {
+		return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", rep.vn)
+	} else if rep.cd != CD_REQUEST_GRANTED {
+		return nil, nil, util.NewError(ERROR_INVALID_REPLY, "sock reply code %d", rep.cd)
+	}
+	a.state = STATE_TUNNEL
+	if a.buf == nil {
+		return nil, nil, nil
+	}
+	buf := a.buf
+	a.buf = nil
+	return nil, buf, nil
+}
+
+func (a *SocksServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
+	if a.state == STATE_INIT {
+		if a.config.version == SOCKS_VERSION_5 {
+			return a.init5(data)
+		} else if a.config.version == SOCKS_VERSION_4 {
+			return a.init4(data)
+		}
 	} else if a.state == STATE_CONNECT {
 		rep := &socks5Response{}
 		if err := rep.parse(data); err != nil {
 			return nil, nil, err
 		} else if rep.reply != REPLY_SUCCEED {
 			return nil, nil, util.NewError(ERROR_INVALID_REPLY, "unsuccessful address reply message")
-		} else if rep.version != a.version {
+		} else if rep.version != a.config.version {
 			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", rep.version)
 		}
 		a.state = STATE_TUNNEL
@@ -143,9 +197,11 @@ func (a *SocksServerAgent) ReadFromServer(data []byte) (interface{}, interface{}
 		buf := a.buf
 		a.buf = nil
 		return nil, buf, nil
+	} else if a.state == STATE_TUNNEL {
+		return data, nil, nil
 	}
 
-	return data, nil, nil
+	return nil, nil, nil
 }
 
 func (a *SocksServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
