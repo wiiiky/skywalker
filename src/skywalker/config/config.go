@@ -18,7 +18,6 @@
 package config
 
 import (
-	"flag"
 	"github.com/hitoshii/golib/src/log"
 	"os"
 	"skywalker/agent"
@@ -145,11 +144,11 @@ func GetConfigs() []*SkyWalkerConfig {
  * 否则使用/etc/skywalker.json
  */
 func findConfigFile() string {
-	file := flag.String("c", "", "the config file")
-	flag.Parse()
-	if len(*file) > 0 {
-		return *file
+	flags := parseCommandLine()
+	if len(flags.cfile) > 0 {
+		return flags.cfile
 	}
+	/* 检查普通文件是否存在 */
 	checkRegularFile := func(filepath string) string {
 		path := util.ResolveHomePath(filepath)
 		info, err := os.Stat(path)
