@@ -107,7 +107,7 @@ func (a *SocksClientAgent) onConnectResult4(result int, host string, port int) (
 		cd = CD_REQUEST_GRANTED
 	}
 	rep := socks4Response{
-		vn:   a.version,
+		vn:   0,
 		cd:   cd,
 		ip:   a.addr,
 		port: a.port,
@@ -174,14 +174,16 @@ func (a *SocksClientAgent) init5(data []byte) (interface{}, interface{}, error) 
 	return nil, rep.build(), err
 }
 
+/* 读取到客户端发送的数据 */
 func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
 	switch a.state {
 	case STATE_INIT: /* 接收客户端的握手请求并返回响应 */
-		if data[0] == SOCKS_VERSION_5 {
+		if data[0] == SOCKS_VERSION_5 && (a.config.version == SOCKS_VERSION_5 || a.config.version == SOCKS_VERSION_COMPATIBLE) {
 			return a.init5(data)
-		} else if data[0] == SOCKS_VERSION_4 {
+		} else if data[0] == SOCKS_VERSION_4 && (a.config.version == SOCKS_VERSION_4 || a.config.version == SOCKS_VERSION_COMPATIBLE) {
 			return a.init4(data)
 		}
+		return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported socks version %d", data[0])
 	case STATE_AUTH: /* 客户端认证 */
 		req := &socks5AuthRequest{}
 		if err := req.parse(data); err != nil {

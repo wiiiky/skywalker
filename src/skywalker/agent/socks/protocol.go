@@ -91,6 +91,7 @@ const (
 )
 
 /*
+ * http://ftp.icm.edu.pl/packages/socks/socks4/SOCKS4.protocol
  * +----+----+----+----+----+----+----+----+----+----+....+----+
  * | VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
  * +----+----+----+----+----+----+----+----+----+----+....+----+
@@ -131,7 +132,7 @@ func (req *socks4Request) build() []byte {
 	binary.Write(&buf, binary.BigEndian, req.cd)
 	binary.Write(&buf, binary.BigEndian, req.port)
 	if ip := net.ParseIP(req.ip); ip != nil {
-		binary.Write(&buf, binary.BigEndian, ip)
+		binary.Write(&buf, binary.BigEndian, []byte(ip.To4()))
 	}
 	binary.Write(&buf, binary.BigEndian, []byte(req.userid))
 	binary.Write(&buf, binary.BigEndian, 0x00)
@@ -168,7 +169,7 @@ func (rep *socks4Response) build() []byte {
 	binary.Write(&buf, binary.BigEndian, rep.cd)
 	binary.Write(&buf, binary.BigEndian, rep.port)
 	if ip := net.ParseIP(rep.ip); ip != nil {
-		binary.Write(&buf, binary.BigEndian, ip)
+		binary.Write(&buf, binary.BigEndian, []byte(ip.To4()))
 	}
 
 	return buf.Bytes()
