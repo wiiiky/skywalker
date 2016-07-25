@@ -43,6 +43,8 @@ type socksSAConfig struct {
 	username   string
 	password   string
 	version    uint8
+
+	methods    []byte
 }
 
 var (
@@ -72,12 +74,17 @@ func (a *SocksServerAgent) OnInit(name string, cfg map[string]interface{}) error
 	if version != SOCKS_VERSION_4 && version != SOCKS_VERSION_5 {
 		return util.NewError(ERROR_UNSUPPORTED_VERSION, "supported socks version %d", version)
 	}
+	methods := []byte{METHOD_NO_AUTH_REQUIRED}
+	if len(username) > 0 && len(password) > 0 {
+		methods = append(methods, METHOD_USERNAME_PASSWORD)
+	}
 	gSAConfig[name] = &socksSAConfig{
 		serverAddr: serverAddr,
 		serverPort: serverPort,
 		username:   username,
 		password:   password,
 		version:    version,
+		methods: methods,
 	}
 	return nil
 }
@@ -88,6 +95,13 @@ func (a *SocksServerAgent) OnStart(name string) error {
 	a.state = STATE_INIT
 	a.buf = nil
 	return nil
+}
+
+/* 获取并清空缓存数据 */
+func (a *SocksServerAgent) buffer() [][]byte {
+	buf := a.buf
+	a.buf = nil
+	return buf
 }
 
 func (a *SocksServerAgent) GetRemoteAddress(addr string, port int) (string, int) {
@@ -108,8 +122,8 @@ func (a *SocksServerAgent) onConnectResult5(result int, host string, port int) (
 	if result == core.CONNECT_RESULT_OK {
 		req := &socks5VersionRequest{
 			version:  a.config.version,
-			nmethods: 1,
-			methods:  []byte{METHOD_NO_AUTH_REQUIRED},
+			nmethods: uint8(len(a.config.methods)),
+			methods:  a.config.methods,
 		}
 		return nil, req.build(), nil
 	} else {
@@ -143,17 +157,35 @@ func (a *SocksServerAgent) init5(data []byte) (interface{}, interface{}, error) 
 	if err := rep.parse(data); err != nil {
 		return nil, nil, err
 	} else if rep.version != a.config.version {
-		return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", rep.version)
+		return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported socks version %d", rep.version)
 	}
-	a.state = STATE_CONNECT
-	req := &socks5Request{
-		version: a.config.version,
-		cmd:     CMD_CONNECT,
-		atype:   a.atype,
-		addr:    a.addr,
-		port:    a.port,
+	if rep.method == METHOD_NO_AUTH_REQUIRED {
+		a.state = STATE_CONNECT
+		req := &socks5Request{
+			version: a.config.version,
+			cmd:     CMD_CONNECT,
+			atype:   a.atype,
+			addr:    a.addr,
+			port:    a.port,
+		}
+		return nil, req.build(), nil
+	} else if rep.method == METHOD_USERNAME_PASSWORD {
+		username := a.config.username
+		password := a.config.password
+		if len(username) == 0 || len(password) == 0 {
+			return nil, nil, util.NewError(ERROR_UNSUPPORTED_METHOD, "username password required!")
+		}
+		a.state = STATE_AUTH
+		req := &socks5AuthRequest{
+			version: 0x01,
+			ulen: uint8(len(username)),
+			username: username,
+			plen: uint8(len(password)),
+			password: password,
+		}
+		return nil, req.build(), nil
 	}
-	return nil, req.build(), nil
+	return nil, nil, util.NewError(ERROR_UNSUPPORTED_METHOD, "socks5 auth method not allowed")
 }
 
 func (a *SocksServerAgent) init4(data []byte) (interface{}, interface{}, error) {
@@ -169,36 +201,49 @@ func (a *SocksServerAgent) init4(data []byte) (interface{}, interface{}, error) 
 	if a.buf == nil {
 		return nil, nil, nil
 	}
-	buf := a.buf
-	a.buf = nil
-	return nil, buf, nil
+	return nil, a.buffer(), nil
 }
 
 func (a *SocksServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
-	if a.state == STATE_INIT {
-		if a.config.version == SOCKS_VERSION_5 {
-			return a.init5(data)
-		} else if a.config.version == SOCKS_VERSION_4 {
-			return a.init4(data)
-		}
-	} else if a.state == STATE_CONNECT {
-		rep := &socks5Response{}
-		if err := rep.parse(data); err != nil {
-			return nil, nil, err
-		} else if rep.reply != REPLY_SUCCEED {
-			return nil, nil, util.NewError(ERROR_INVALID_REPLY, "unsuccessful address reply message")
-		} else if rep.version != a.config.version {
-			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", rep.version)
-		}
-		a.state = STATE_TUNNEL
-		if a.buf == nil {
-			return nil, nil, nil
-		}
-		buf := a.buf
-		a.buf = nil
-		return nil, buf, nil
-	} else if a.state == STATE_TUNNEL {
-		return data, nil, nil
+	switch a.state {
+		case STATE_INIT:
+			if a.config.version == SOCKS_VERSION_5 {
+				return a.init5(data)
+			} else if a.config.version == SOCKS_VERSION_4 {
+				return a.init4(data)
+			}
+		case STATE_CONNECT:
+			rep := &socks5Response{}
+			if err := rep.parse(data); err != nil {
+				return nil, nil, err
+			} else if rep.reply != REPLY_SUCCEED {
+				return nil, nil, util.NewError(ERROR_INVALID_REPLY, "socks5 connect reply %d", rep.reply)
+			} else if rep.version != a.config.version {
+				return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", rep.version)
+			}
+			a.state = STATE_TUNNEL
+			if a.buf == nil {
+				return nil, nil, nil
+			}
+			return nil, a.buffer(), nil
+		case STATE_AUTH:
+			rep := &socks5AuthResponse{}
+			if err := rep.parse(data); err != nil {
+				return nil, nil, err
+			} else if rep.version != 0x01 || rep.status != 0x00 {
+				return nil, nil, util.NewError(ERROR_INVALID_USERNAME_PASSWORD, "sock5 username/password failure")
+			}
+			a.state = STATE_CONNECT
+			req := &socks5Request{
+				version: a.config.version,
+				cmd:     CMD_CONNECT,
+				atype:   a.atype,
+				addr:    a.addr,
+				port:    a.port,
+			}
+			return nil, req.build(), nil
+		case STATE_TUNNEL:
+			return data, nil, nil
 	}
 
 	return nil, nil, nil

@@ -17,7 +17,7 @@ SkyWalker(以下简称SW)是一个代理转发程序，可以配置传入和传�
 
 目前支持的协议有
 
-*   sock5
+*   sock4/5
 *   shadowsocks
 *   http
 
@@ -30,8 +30,9 @@ SW可以通过配置达到不同的代理效果，不过目前支持的协议还
     {
         "bindAddr": "0.0.0.0",
         "bindPort": 23455,
-        "clientProtocol": "socks5",
+        "clientProtocol": "socks",
         "clientConfig": {
+            "version": 5
         },
         "serverProtocol": "direct",
         "serverConfig": {
@@ -44,8 +45,9 @@ SW可以通过配置达到不同的代理效果，不过目前支持的协议还
     {
         "bindAddr": "0.0.0.0",
         "bindPort": 12345,
-        "clientProtocol": "socks5",
+        "clientProtocol": "socks",
         "clientConfig": {
+            "version": 5
         },
         "serverProtocol": "shadowsocks",
         "serverConfig": {
@@ -95,7 +97,7 @@ SW可以通过配置达到不同的代理效果，不过目前支持的协议还
         "name": "main",
         "bindAddr": "0.0.0.0",
         "bindPort": 12345,
-        "clientProtocol": "socks5",
+        "clientProtocol": "socks",
         "serverProtocol": "shadowsocks",
         "serverConfig": {
             "serverAddr": "example.com",

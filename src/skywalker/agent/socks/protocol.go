@@ -247,6 +247,7 @@ func (rep *socks5VersionResponse) parse(data []byte) error {
 }
 
 /*
+ * https://tools.ietf.org/html/rfc1929
  * +----+------+----------+------+----------+
  * |VER | ULEN |  UNAME   | PLEN |  PASSWD  |
  * +----+------+----------+------+----------+
@@ -260,6 +261,16 @@ type socks5AuthRequest struct {
 	username string
 	plen     uint8
 	password string
+}
+
+func (req *socks5AuthRequest) build() []byte {
+	buf := bytes.Buffer{}
+	binary.Write(&buf, binary.BigEndian, req.version)
+	binary.Write(&buf, binary.BigEndian, req.ulen)
+	binary.Write(&buf, binary.BigEndian, []byte(req.username))
+	binary.Write(&buf, binary.BigEndian, req.plen)
+	binary.Write(&buf, binary.BigEndian, []byte(req.password))
+	return buf.Bytes()
 }
 
 func (req *socks5AuthRequest) parse(data []byte) error {
@@ -317,6 +328,15 @@ func (rep *socks5AuthResponse) build() []byte {
 	binary.Write(&buf, binary.BigEndian, rep.version)
 	binary.Write(&buf, binary.BigEndian, rep.status)
 	return buf.Bytes()
+}
+
+func (rep *socks5AuthResponse) parse(data []byte) error {
+	if len(data) != 2 {
+		return util.NewError(ERROR_INVALID_MESSAGE_SIZE, "auth reponse message size is invalid")
+	}
+	rep.version = uint8(data[0])
+	rep.status = uint8(data[1])
+	return nil
 }
 
 /*
