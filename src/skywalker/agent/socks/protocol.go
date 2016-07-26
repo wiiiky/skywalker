@@ -95,6 +95,7 @@ const (
  * +----+----+----+----+----+----+----+----+----+----+....+----+
  * | VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
  * +----+----+----+----+----+----+----+----+----+----+....+----+
+ * socks4 没有握手过程，第一个数据包就是代理指令。
  */
 type socks4Request struct {
 	vn     uint8
@@ -178,11 +179,14 @@ func (rep *socks4Response) build() []byte {
 }
 
 /*
+ * https://tools.ietf.org/html/rfc1929
  * +----+----------+----------+
  * |VER | NMETHODS | METHODS  |
  * +----+----------+----------+
  * | 1  |    1     | 1 to 255 |
  * +----+----------+----------+
+ * socks5的握手请求，主要协商用户认证方式，客户端发送给服务端它支持的认证方式（多种），
+ * 服务端从中选出一种返回给客户端
  */
 type socks5VersionRequest struct {
 	version  uint8
@@ -247,7 +251,6 @@ func (rep *socks5VersionResponse) parse(data []byte) error {
 }
 
 /*
- * https://tools.ietf.org/html/rfc1929
  * +----+------+----------+------+----------+
  * |VER | ULEN |  UNAME   | PLEN |  PASSWD  |
  * +----+------+----------+------+----------+
