@@ -56,33 +56,33 @@ func NewTCPTransfer(cfg *config.SkyWalkerConfig) (*TCPTransfer, error) {
 	}
 }
 
-func (f *TCPTransfer) Close() {
-	f.listener.Close()
+func (tcp *TCPTransfer) Close() {
+	tcp.listener.Close()
 }
 
-func (f *TCPTransfer) Run() {
-	defer f.Close()
+func (tcp *TCPTransfer) Run() {
+	defer tcp.Close()
 	for {
-		if conn, err := f.listener.Accept(); err == nil {
-			f.HandleTransfer(conn)
+		if conn, err := tcp.listener.Accept(); err == nil {
+			tcp.HandleTransfer(conn)
 		} else {
-			log.WARN(f.name, "Couldn't Accept: %s", err)
+			log.WARN(tcp.name, "Couldn't Accept: %s", err)
 		}
 	}
 }
 
 /* 启动数据转发流程 */
-func (f *TCPTransfer) HandleTransfer(conn net.Conn) {
-	cAgent := agent.GetClientAgent(f.ca, f.name)
-	sAgent := agent.GetServerAgent(f.sa, f.name)
+func (tcp *TCPTransfer) HandleTransfer(conn net.Conn) {
+	cAgent := agent.GetClientAgent(tcp.ca, tcp.name)
+	sAgent := agent.GetServerAgent(tcp.sa, tcp.name)
 	if cAgent == nil || sAgent == nil {
 		conn.Close()
 		return
 	}
 	c2s := make(chan *core.Package, 100)
 	s2c := make(chan *core.Package, 100)
-	go f.caGoroutine(cAgent, c2s, s2c, conn)
-	go f.saGoroutine(sAgent, c2s, s2c)
+	go tcp.caGoroutine(cAgent, c2s, s2c, conn)
+	go tcp.saGoroutine(sAgent, c2s, s2c)
 }
 
 /*
@@ -92,7 +92,7 @@ func (f *TCPTransfer) HandleTransfer(conn net.Conn) {
  * @tdata 需要转发的数据(Transfer Data)，将发送给ic
  * @rdata 需要返回给数据(Response Data)，将发送给conn
  */
-func (f *TCPTransfer) transferData(ic chan *core.Package, conn net.Conn, tdata interface{},
+func (tcp *TCPTransfer) transferData(ic chan *core.Package, conn net.Conn, tdata interface{},
 	rdata interface{}, err error) error {
 	/* 转发数据 */
 	switch data := tdata.(type) {
@@ -128,7 +128,7 @@ func (f *TCPTransfer) transferData(ic chan *core.Package, conn net.Conn, tdata i
 }
 
 /* 处理客户端连接的goroutine */
-func (f *TCPTransfer) caGoroutine(cAgent agent.ClientAgent,
+func (tcp *TCPTransfer) caGoroutine(cAgent agent.ClientAgent,
 	c2s chan *core.Package,
 	s2c chan *core.Package,
 	cConn net.Conn) {
@@ -149,8 +149,8 @@ RUNNING:
 			}
 			plugin.ReadFromClient(data)
 			cmd, rdata, err := cAgent.ReadFromClient(data)
-			if err := f.transferData(c2s, cConn, cmd, rdata, err); err != nil {
-				log.WARN(f.name, "Read From Client Error: %s %s", cConn.RemoteAddr(),
+			if err := tcp.transferData(c2s, cConn, cmd, rdata, err); err != nil {
+				log.WARN(tcp.name, "Read From Client Error: %s %s", cConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
 			}
@@ -163,9 +163,9 @@ RUNNING:
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := cAgent.ReadFromSA(data)
 					plugin.WriteToClient(rdata)
-					if err := f.transferData(c2s, cConn, cmd, rdata, err); err != nil {
+					if err := tcp.transferData(c2s, cConn, cmd, rdata, err); err != nil {
 						closed_by_client = false
-						log.WARN(f.name, "Read From SA Error: %s %s", cConn.RemoteAddr(),
+						log.WARN(tcp.name, "Read From SA Error: %s %s", cConn.RemoteAddr(),
 							err.Error())
 						break RUNNING
 					}
@@ -174,24 +174,24 @@ RUNNING:
 				result, host, port := cmd.GetConnectResult()
 				if result == core.CONNECT_RESULT_OK {
 					chain = fmt.Sprintf("%s <==> %s:%v", cConn.RemoteAddr().String(), host, port)
-					log.INFO(f.name, "%s Connected", chain)
+					log.INFO(tcp.name, "%s Connected", chain)
 				}
 				cmd, rdata, err := cAgent.OnConnectResult(result, host, port)
-				err = f.transferData(c2s, cConn, cmd, rdata, err)
+				err = tcp.transferData(c2s, cConn, cmd, rdata, err)
 				if result != core.CONNECT_RESULT_OK || err != nil {
 					closed_by_client = false
 					break RUNNING
 				}
 			} else {
-				log.ERROR(f.name, "Unknown Package From Server Agent! This is a BUG!")
+				log.ERROR(tcp.name, "Unknown Package From Server Agent! This is a BUG!")
 			}
 		}
 	}
 	cAgent.OnClose(closed_by_client)
 	if closed_by_client {
-		log.INFO(f.name, "%s Closed By Client", chain)
+		log.INFO(tcp.name, "%s Closed By Client", chain)
 	} else {
-		log.INFO(f.name, "%s Closed By Server", chain)
+		log.INFO(tcp.name, "%s Closed By Server", chain)
 	}
 }
 
@@ -200,7 +200,7 @@ RUNNING:
  * 成功返回net.Conn和对应的channel，以及真实链接的服务器地址和端口号
  * 失败返回nil,nil,"",0
  */
-func (f *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
+func (tcp *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
 	s2c chan *core.Package) (net.Conn, chan []byte, string, int) {
 	/* 获取服务器地址，并链接 */
 	host, port := sAgent.GetRemoteAddress(h, p)
@@ -225,8 +225,8 @@ func (f *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
 	}
 
 	/* 发送服务端代理的处理后数据 */
-	if err := f.transferData(s2c, conn, cmd, rdata, err); err != nil {
-		log.WARN(f.name, "Server Agent OnConnectResult Error, %s", err.Error())
+	if err := tcp.transferData(s2c, conn, cmd, rdata, err); err != nil {
+		log.WARN(tcp.name, "Server Agent OnConnectResult Error, %s", err.Error())
 		conn.Close()
 		return nil, nil, "", 0
 	}
@@ -238,7 +238,7 @@ func (f *TCPTransfer) connectRemote(h string, p int, sAgent agent.ServerAgent,
  * 处理服务器连接的goroutine
  * 从客户端代理收到的第一个数据包一定是服务器地址，无论该数据包被标志成什么类型
  */
-func (f *TCPTransfer) saGoroutine(sAgent agent.ServerAgent,
+func (tcp *TCPTransfer) saGoroutine(sAgent agent.ServerAgent,
 	c2s chan *core.Package,
 	s2c chan *core.Package) {
 	defer close(s2c)
@@ -249,7 +249,7 @@ func (f *TCPTransfer) saGoroutine(sAgent agent.ServerAgent,
 		return
 	}
 	host, port := cmd.GetConnectData()
-	sConn, sChan, realHost, realPort := f.connectRemote(host, port, sAgent, s2c)
+	sConn, sChan, realHost, realPort := tcp.connectRemote(host, port, sAgent, s2c)
 	if sConn == nil {
 		return
 	}
@@ -266,9 +266,9 @@ RUNNING:
 			}
 			plugin.ReadFromServer(data, realHost, realPort)
 			cmd, rdata, err := sAgent.ReadFromServer(data)
-			if err := f.transferData(s2c, sConn, cmd, rdata, err); err != nil {
+			if err := tcp.transferData(s2c, sConn, cmd, rdata, err); err != nil {
 				closed_by_client = false
-				log.WARN(f.name, "Read From Server Error: %s %s", sConn.RemoteAddr(),
+				log.WARN(tcp.name, "Read From Server Error: %s %s", sConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
 			}
@@ -281,8 +281,8 @@ RUNNING:
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := sAgent.ReadFromCA(data)
 					plugin.WriteToServer(rdata, realHost, realPort)
-					if _err := f.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
-						log.WARN(f.name, "Read From CA Error: %s %s", sConn.RemoteAddr(),
+					if _err := tcp.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
+						log.WARN(tcp.name, "Read From CA Error: %s %s", sConn.RemoteAddr(),
 							_err.Error())
 						break RUNNING
 					}
@@ -291,11 +291,11 @@ RUNNING:
 				/* 需要重新链接服务器 */
 				sConn.Close()
 				host, port := cmd.GetConnectData()
-				if sConn, sChan, realHost, realPort = f.connectRemote(host, port, sAgent, s2c); sConn == nil {
+				if sConn, sChan, realHost, realPort = tcp.connectRemote(host, port, sAgent, s2c); sConn == nil {
 					break RUNNING
 				}
 			} else {
-				log.ERROR(f.name, "Unknown Package From Client Agent! This is a BUG!")
+				log.ERROR(tcp.name, "Unknown Package From Client Agent! This is a BUG!")
 			}
 		}
 	}

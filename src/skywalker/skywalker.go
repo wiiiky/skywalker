@@ -28,7 +28,6 @@ import (
 
 /* 执行配置指定的服务 */
 func execConfig(cfg *config.SkyWalkerConfig) error {
-	var udpTransfer *transfer.UDPTransfer
 	var tcpTransfer *transfer.TCPTransfer
 	var err error
 
@@ -36,12 +35,9 @@ func execConfig(cfg *config.SkyWalkerConfig) error {
 		return err
 	} else if tcpTransfer, err = transfer.NewTCPTransfer(cfg); tcpTransfer == nil {
 		return err
-	} else if udpTransfer, err = transfer.NewUDPTransfer(cfg); udpTransfer == nil {
-		return err
 	}
 
 	go tcpTransfer.Run()
-	//go udpTransfer.Run()
 	return nil
 }
 

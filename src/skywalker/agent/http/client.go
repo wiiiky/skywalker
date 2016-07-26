@@ -128,15 +128,13 @@ func (a *HTTPClientAgent) ReadFromClient(data []byte) (interface{}, interface{},
 					h, p := splitHostPort(host)
 					return core.NewConnectPackage(h, p), nil, nil
 				} else {
-					request := req.buildRequest()
+					data := req.build()
 					req.reset()
-					return a.sendRequest(host, request)
+					return a.sendRequest(host, data)
 				}
 			} else if req.Status == REQUEST_STATUS_FULL_HEADER {
 				/* 解析到完整HTTP首部，但还没有完整数据 */
-				host := req.getHost()
-				request := req.buildRequest()
-				return a.sendRequest(host, request)
+				return a.sendRequest(req.getHost(), req.build())
 			}
 		}
 		/* 没有错误，但也不是完整的HTTP请求 */

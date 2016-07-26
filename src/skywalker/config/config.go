@@ -43,7 +43,6 @@ type SkyWalkerConfig struct {
 
 	DNSTimeout int64 `json:"dnsTimeout"`
 
-	Daemon  bool                    `json:"daemon"`
 	Plugins []*plugin.PluginConfig  `json:"plugin"`
 	Extras  []*SkyWalkerExtraConfig `json:"extra"`
 }
@@ -113,8 +112,7 @@ var (
 		BindPort:   12345,
 		DNSTimeout: 3600,
 		/* 默认的日志输出 */
-		Log:    defaultLogConfig,
-		Daemon: false,
+		Log: defaultLogConfig,
 	}
 )
 

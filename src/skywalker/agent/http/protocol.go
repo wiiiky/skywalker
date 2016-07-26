@@ -87,7 +87,7 @@ func (req *httpRequest) reset() {
 }
 
 /* 生成HTTP请求数据 */
-func (req *httpRequest) buildRequest() []byte {
+func (req *httpRequest) build() []byte {
 	var request string
 	path := req.URI.Path
 	if len(path) == 0 {

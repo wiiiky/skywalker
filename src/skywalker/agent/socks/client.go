@@ -38,7 +38,7 @@ type SocksClientAgent struct {
 
 	state uint8
 
-	config *socksCAConfig
+	cfg *socksCAConfig
 }
 
 type socksCAConfig struct {
@@ -52,8 +52,13 @@ var (
 	gCAConfigs = map[string]*socksCAConfig{}
 )
 
-func (p *SocksClientAgent) Name() string {
-	return "Socks"
+func (a *SocksClientAgent) Name() string {
+	if a.version == SOCKS_VERSION_4 {
+		return "socks4"
+	} else if a.version == SOCKS_VERSION_5 {
+		return "socks5"
+	}
+	return "socks"
 }
 
 func (a *SocksClientAgent) OnInit(name string, cfg map[string]interface{}) error {
@@ -76,7 +81,7 @@ func (a *SocksClientAgent) OnInit(name string, cfg map[string]interface{}) error
 func (a *SocksClientAgent) OnStart(name string) error {
 	a.name = name
 	a.state = STATE_INIT
-	a.config = gCAConfigs[name]
+	a.cfg = gCAConfigs[name]
 	return nil
 }
 
@@ -152,8 +157,8 @@ func (a *SocksClientAgent) init5(data []byte) (interface{}, interface{}, error) 
 
 	method := METHOD_NO_ACCEPTABLE
 	for i := uint8(0); i < req.nmethods; i++ {
-		if req.methods[i] == a.config.method {
-			method = a.config.method
+		if req.methods[i] == a.cfg.method {
+			method = a.cfg.method
 			break
 		}
 	}
@@ -178,9 +183,9 @@ func (a *SocksClientAgent) init5(data []byte) (interface{}, interface{}, error) 
 func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
 	switch a.state {
 	case STATE_INIT: /* 接收客户端的握手请求并返回响应 */
-		if data[0] == SOCKS_VERSION_5 && (a.config.version == SOCKS_VERSION_5 || a.config.version == SOCKS_VERSION_COMPATIBLE) {
+		if data[0] == SOCKS_VERSION_5 && (a.cfg.version == SOCKS_VERSION_5 || a.cfg.version == SOCKS_VERSION_COMPATIBLE) {
 			return a.init5(data)
-		} else if data[0] == SOCKS_VERSION_4 && (a.config.version == SOCKS_VERSION_4 || a.config.version == SOCKS_VERSION_COMPATIBLE) {
+		} else if data[0] == SOCKS_VERSION_4 && (a.cfg.version == SOCKS_VERSION_4 || a.cfg.version == SOCKS_VERSION_COMPATIBLE) {
 			return a.init4(data)
 		}
 		return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported socks version %d", data[0])
@@ -190,7 +195,7 @@ func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}
 			return nil, nil, err
 		}
 		rep := socks5AuthResponse{version: req.version}
-		if req.username != a.config.username && req.password != a.config.password {
+		if req.username != a.cfg.username && req.password != a.cfg.password {
 			rep.status = 1
 			return nil, rep.build(), util.NewError(ERROR_INVALID_USERNAME_PASSWORD, "invalid username & password")
 		}
