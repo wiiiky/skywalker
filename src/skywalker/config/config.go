@@ -30,10 +30,10 @@ type SkywalkerConfig struct {
 	BindAddr string `yaml:"bindAddr"`
 	BindPort uint16 `yaml:"bindPort"`
 
-	ClientAgent string                 `yaml:"clientAgent"`
+	ClientAgent    string                 `yaml:"clientAgent"`
 	ClientConfig   map[string]interface{} `yaml:"clientConfig"`
 
-	ServerAgent string                 `yaml:"serverAgent"`
+	ServerAgent    string                 `yaml:"serverAgent"`
 	ServerConfig   map[string]interface{} `yaml:"serverConfig"`
 
 	Log *log.LogConfig `yaml:"log"`

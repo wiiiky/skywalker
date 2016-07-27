@@ -18,7 +18,6 @@
 package util
 
 import (
-	"github.com/hitoshii/golib/src/log"
 	"sync"
 	"time"
 )
@@ -28,7 +27,8 @@ type Cache interface {
 	Set(string, interface{})
 	GetString(string) string
 
-	Timeout()
+	Timeout() int64
+	SetTimeout(int64)
 }
 
 type cacheValue struct {
@@ -54,7 +54,12 @@ func NewDNSCache(timeout int64) Cache {
 	return &dnsCache{make(map[string]cacheValue), timeout, &sync.Mutex{}}
 }
 
-func (c *dnsCache) Timeout() {
+func (c *dnsCache) Timeout() int64{
+	return c.timeout
+}
+
+func (c *dnsCache) SetTimeout(timeout int64) {
+	c.timeout = timeout
 }
 
 func (c *dnsCache) Get(key string) interface{} {
@@ -65,7 +70,6 @@ func (c *dnsCache) Get(key string) interface{} {
 		if c.timeout == 0 || now-val.timestamp < c.timeout {
 			value = val.value
 		} else { /* 已经超时 */
-			log.DEBUG("Cache %s timeouts", key)
 			delete(c.data, key)
 		}
 	}

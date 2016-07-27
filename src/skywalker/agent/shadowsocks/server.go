@@ -158,14 +158,13 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 	method = util.GetMapStringDefault(cfg, "method", "aes-256-cfb")
 	selection = util.GetMapStringDefault(cfg, "select", ss_SERVER_SELECT_ROTATION)
 
-	val, ok = cfg["serverAddress[]"]
+	val, ok = cfg["serverAddr[]"]
 	if ok == true {
-		array := val.([]interface{})
-
-		for _, ele := range array {
-			m := ele.(map[string]interface{})
-			if m == nil {
-				return util.NewError(ERROR_INVALID_CONFIG, "serverAddress must be an object array")
+		array, _ := val.([]interface{})
+		for _, e := range array {
+			 m, ok := e.(map[string]interface{})
+			if m == nil || ok == false {
+				return util.NewError(ERROR_INVALID_CONFIG, "serverAddr[] must be an object array")
 			}
 			addr := util.GetMapStringDefault(m, "serverAddr", serverAddr)
 			port := util.GetMapIntDefault(m, "serverPort", serverPort)

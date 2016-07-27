@@ -24,14 +24,15 @@ import (
 	"time"
 )
 
-/*  DNS缓存 */
-var (
-	gDNSCache Cache
+/* 默认缓存半个小时 */
+const (
+	DEFAULT_TIMEOUT = 1800
 )
 
-func Init(timeout int64) {
-	gDNSCache = NewDNSCache(timeout)
-}
+/*  DNS缓存 */
+var (
+	gDNSCache Cache = NewDNSCache(DEFAULT_TIMEOUT)
+)
 
 /* 从缓存中获取DNS结果，如果没找到则发起解析 */
 func GetHostAddress(host string) string {
