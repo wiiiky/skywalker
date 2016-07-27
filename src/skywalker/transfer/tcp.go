@@ -39,10 +39,10 @@ type TCPTransfer struct {
 	name     string
 }
 
-func NewTCPTransfer(cfg *config.SkyWalkerConfig) (*TCPTransfer, error) {
+func NewTCPTransfer(cfg *config.SkywalkerConfig) (*TCPTransfer, error) {
 	name := cfg.Name
-	ca := cfg.ClientProtocol
-	sa := cfg.ServerProtocol
+	ca := cfg.ClientAgent
+	sa := cfg.ServerAgent
 	if listener, err := util.TCPListen(cfg.BindAddr, int(cfg.BindPort)); err != nil {
 		return nil, err
 	} else {

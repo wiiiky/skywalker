@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	SKYWALKER_VERSION = "1.2.2"
+	SKYWALKER_VERSION = "1.3.0"
 )
 
 /* 命令行参数 */

@@ -153,7 +153,7 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 	var ok bool
 
 	serverAddr = util.GetMapString(cfg, "serverAddr")
-	serverPort = int(util.GetMapInt(cfg, "serverPort"))
+	serverPort = util.GetMapInt(cfg, "serverPort")
 	password = util.GetMapString(cfg, "password")
 	method = util.GetMapStringDefault(cfg, "method", "aes-256-cfb")
 	selection = util.GetMapStringDefault(cfg, "select", ss_SERVER_SELECT_ROTATION)
@@ -168,7 +168,7 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 				return util.NewError(ERROR_INVALID_CONFIG, "serverAddress must be an object array")
 			}
 			addr := util.GetMapStringDefault(m, "serverAddr", serverAddr)
-			port := int(util.GetMapIntDefault(m, "serverPort", int64(serverPort)))
+			port := util.GetMapIntDefault(m, "serverPort", serverPort)
 			password := util.GetMapStringDefault(m, "password", password)
 			method := util.GetMapStringDefault(m, "method", method)
 

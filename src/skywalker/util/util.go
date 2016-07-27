@@ -18,6 +18,7 @@
 package util
 
 import (
+	"github.com/go-yaml/yaml"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -46,22 +47,22 @@ func GetMapStringDefault(m map[string]interface{}, name string, def string) stri
 	return def
 }
 
-func GetMapInt(m map[string]interface{}, name string) int64 {
+func GetMapInt(m map[string]interface{}, name string) int {
 	val, ok := m[name]
 	if !ok {
 		return 0
 	}
-	i, _ := val.(float64)
-	return int64(i)
+	i, _ := val.(int)
+	return i
 }
 
-func GetMapIntDefault(m map[string]interface{}, name string, def int64) int64 {
+func GetMapIntDefault(m map[string]interface{}, name string, def int) int {
 	val, ok := m[name]
 	if !ok {
 		return def
 	}
-	if i, ok := val.(float64); ok {
-		return int64(i)
+	if i, ok := val.(int); ok {
+		return i
 	}
 	return def
 }
@@ -94,6 +95,19 @@ func LoadJsonFile(path string, v interface{}) bool {
 		return false
 	}
 	return true
+}
+
+/* 读取并解析YAML文件 */
+func LoadYamlFile(path string, v interface{}) error {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	err = yaml.Unmarshal(data, v)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func DumpJsonFile(path string, v interface{}) bool {

@@ -1,6 +1,6 @@
 bin/
 pkg/
-config/*.json
+config/*
 src/github.com/
 *~
 .buildconfig

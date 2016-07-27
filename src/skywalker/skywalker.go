@@ -27,7 +27,7 @@ import (
 )
 
 /* 执行配置指定的服务 */
-func execConfig(cfg *config.SkyWalkerConfig) error {
+func execConfig(cfg *config.SkywalkerConfig) error {
 	var tcpTransfer *transfer.TCPTransfer
 	var err error
 
@@ -42,7 +42,6 @@ func execConfig(cfg *config.SkyWalkerConfig) error {
 }
 
 func main() {
-	config.Init()
 	for _, cfg := range config.GetConfigs() {
 		if err := execConfig(cfg); err != nil {
 			log.ERROR(cfg.Name, "%s", err)

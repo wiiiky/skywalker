@@ -21,72 +21,32 @@ import (
 	"github.com/hitoshii/golib/src/log"
 	"os"
 	"skywalker/agent"
-	"skywalker/plugin"
 	"skywalker/util"
 )
 
-type SkyWalkerExtraConfig SkyWalkerConfig
-
 /* 服务配置 */
-type SkyWalkerConfig struct {
-	Name     string `json:"name"`
-	BindAddr string `json:"bindAddr"`
-	BindPort uint16 `json:"bindPort"`
+type SkywalkerConfig struct {
+	Name     string `yaml:"name"`
+	BindAddr string `yaml:"bindAddr"`
+	BindPort uint16 `yaml:"bindPort"`
 
-	ClientProtocol string                 `json:"clientProtocol"`
-	ClientConfig   map[string]interface{} `json:"clientConfig"`
+	ClientAgent string                 `yaml:"clientAgent"`
+	ClientConfig   map[string]interface{} `yaml:"clientConfig"`
 
-	ServerProtocol string                 `json:"serverProtocol"`
-	ServerConfig   map[string]interface{} `json:"serverConfig"`
+	ServerAgent string                 `yaml:"serverAgent"`
+	ServerConfig   map[string]interface{} `yaml:"serverConfig"`
 
-	Log *log.LogConfig `json:"log"`
-
-	DNSTimeout int64 `json:"dnsTimeout"`
-
-	Plugins []*plugin.PluginConfig  `json:"plugin"`
-	Extras  []*SkyWalkerExtraConfig `json:"extra"`
-}
-
-/* 将c的内容合并到cfg中 */
-func (cfg *SkyWalkerConfig) Merge(c *SkyWalkerConfig) {
-	if len(cfg.Name) == 0 {
-		cfg.Name = c.Name
-	}
-	if len(cfg.BindAddr) == 0 {
-		cfg.BindAddr = c.BindAddr
-	}
-	if len(cfg.ClientProtocol) == 0 {
-		cfg.ClientProtocol = c.ClientProtocol
-	}
-	if cfg.ClientConfig == nil {
-		cfg.ClientConfig = c.ClientConfig
-	}
-	if len(cfg.ServerProtocol) == 0 {
-		cfg.ServerProtocol = c.ServerProtocol
-	}
-	if cfg.ServerConfig == nil {
-		cfg.ServerConfig = c.ServerConfig
-	}
-	if cfg.Log == nil {
-		cfg.Log = &log.LogConfig{
-			ShowNamespace: c.Log.ShowNamespace,
-			Loggers:       c.Log.Loggers,
-		}
-	} else if cfg.Log.Loggers == nil {
-		cfg.Log.Loggers = defaultLoggers
-	}
-	cfg.Log.Namespace = cfg.Name
+	Log *log.LogConfig `yaml:"log"`
 }
 
 /*
  * 初始化配置
  * 设置日志、插件并检查CA和SA
  */
-func (cfg *SkyWalkerConfig) Init() error {
+func (cfg *SkywalkerConfig) Init() error {
 	log.Init(cfg.Log)
-	ca := cfg.ClientProtocol
-	sa := cfg.ServerProtocol
-	plugin.Init(cfg.Plugins, cfg.Name)
+	ca := cfg.ClientAgent
+	sa := cfg.ServerAgent
 	if err := agent.CAInit(ca, cfg.Name, cfg.ClientConfig); err != nil {
 		return err
 	} else if err := agent.SAInit(sa, cfg.Name, cfg.ServerConfig); err != nil {
@@ -106,33 +66,27 @@ var (
 	defaultLogConfig = &log.LogConfig{
 		Loggers: defaultLoggers,
 	}
-	gConfig = SkyWalkerConfig{
-		Name:       "default",
-		BindAddr:   "127.0.0.1",
-		BindPort:   12345,
-		DNSTimeout: 3600,
-		/* 默认的日志输出 */
-		Log: defaultLogConfig,
-	}
+	gConfigs = map[string]*SkywalkerConfig{}
 )
 
 const (
-	DEFAULT_USER_CONFIG   = "~/.config/skywalker.json"
-	DEFAULT_GLOBAL_CONFIG = "/etc/skywalker.json"
+	DEFAULT_USER_CONFIG   = "~/.config/skywalker.yaml"
+	DEFAULT_GLOBAL_CONFIG = "/etc/skywalker.yaml"
 )
 
 /* 获取所有配置列表 */
-func GetConfigs() []*SkyWalkerConfig {
-	var configs []*SkyWalkerConfig
+func GetConfigs() []*SkywalkerConfig {
+	var configs []*SkywalkerConfig
 
-	gConfig.Log.Namespace = gConfig.Name
-
-	configs = append(configs, &gConfig)
-	for _, e := range gConfig.Extras {
-		cfg := (*SkyWalkerConfig)(e)
-		cfg.Merge(&gConfig)
+	for name, cfg := range gConfigs {
+		if cfg.Log == nil {
+			cfg.Log = defaultLogConfig
+		}
+		cfg.Name = name
+		cfg.Log.Namespace = name
 		configs = append(configs, cfg)
 	}
+
 	return configs
 }
 
@@ -163,21 +117,12 @@ func findConfigFile() string {
 	return ""
 }
 
-func Init() {
-	log.SetDefault(gConfig.Name)
-}
 
 func init() {
 	cfile := findConfigFile()
 	if len(cfile) == 0 {
 		util.FatalError("No Config Found!")
-	} else if !util.LoadJsonFile(cfile, &gConfig) { /* 读取配置文件 */
-		util.FatalError("Fail To Load Config From %s", cfile)
+	} else if err := util.LoadYamlFile(cfile, &gConfigs); err != nil { /* 读取配置文件 */
+		util.FatalError("%s: %s", cfile, err)
 	}
-	if gConfig.Log == nil {
-		gConfig.Log = defaultLogConfig
-	}
-
-	/* 初始化DNS超时时间 */
-	util.Init(gConfig.DNSTimeout)
 }
