@@ -54,7 +54,7 @@ func NewDNSCache(timeout int64) Cache {
 	return &dnsCache{make(map[string]cacheValue), timeout, &sync.Mutex{}}
 }
 
-func (c *dnsCache) Timeout() int64{
+func (c *dnsCache) Timeout() int64 {
 	return c.timeout
 }
 

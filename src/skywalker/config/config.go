@@ -30,11 +30,11 @@ type SkywalkerConfig struct {
 	BindAddr string `yaml:"bindAddr"`
 	BindPort uint16 `yaml:"bindPort"`
 
-	ClientAgent    string                 `yaml:"clientAgent"`
-	ClientConfig   map[string]interface{} `yaml:"clientConfig"`
+	ClientAgent  string                 `yaml:"clientAgent"`
+	ClientConfig map[string]interface{} `yaml:"clientConfig"`
 
-	ServerAgent    string                 `yaml:"serverAgent"`
-	ServerConfig   map[string]interface{} `yaml:"serverConfig"`
+	ServerAgent  string                 `yaml:"serverAgent"`
+	ServerConfig map[string]interface{} `yaml:"serverConfig"`
 
 	Log *log.LogConfig `yaml:"log"`
 }
@@ -63,8 +63,9 @@ var (
 		log.LoggerConfig{"WARN", "STDERR"},
 		log.LoggerConfig{"ERROR", "STDERR"},
 	}
-	defaultLogConfig = &log.LogConfig{
-		Loggers: defaultLoggers,
+	gLog = &log.LogConfig{
+		Namespace: "luker",
+		Loggers:   defaultLoggers,
 	}
 	gConfigs = map[string]*SkywalkerConfig{}
 )
@@ -79,8 +80,10 @@ func GetConfigs() []*SkywalkerConfig {
 	var configs []*SkywalkerConfig
 
 	for name, cfg := range gConfigs {
-		if cfg.Log == nil {
-			cfg.Log = defaultLogConfig
+		if cfg.Log == nil { /* 如果没有配置日志，则使用全局配置 */
+			cfg.Log = &log.LogConfig{
+				Loggers: gLog.Loggers,
+			}
 		}
 		cfg.Name = name
 		cfg.Log.Namespace = name
@@ -117,12 +120,27 @@ func findConfigFile() string {
 	return ""
 }
 
-
 func init() {
+	var yamlMap map[string]interface{}
+	var data []byte
+
 	cfile := findConfigFile()
 	if len(cfile) == 0 {
 		util.FatalError("No Config Found!")
-	} else if err := util.LoadYamlFile(cfile, &gConfigs); err != nil { /* 读取配置文件 */
+	} else if err := util.LoadYamlFile(cfile, &yamlMap); err != nil { /* 读取配置文件 */
 		util.FatalError("%s: %s", cfile, err)
 	}
+
+	/* 将yaml数据读取到一个通用的map[string]interface{}中，然后分离log和代理，分别读取 */
+
+	if yamlMap["log"] != nil { /* 读取log并从map中删除 */
+		data = util.YamlMarshal(yamlMap["log"])
+		util.YamlUnmarshal(data, gLog)
+		log.Init(gLog)
+		log.SetDefault(gLog.Namespace)
+		delete(yamlMap, "log")
+	}
+
+	data = util.YamlMarshal(yamlMap)
+	util.YamlUnmarshal(data, &gConfigs)
 }

@@ -18,9 +18,9 @@
 package util
 
 import (
-	"github.com/go-yaml/yaml"
 	"encoding/json"
 	"fmt"
+	"github.com/wiiiky/yaml"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -97,6 +97,15 @@ func LoadJsonFile(path string, v interface{}) bool {
 	return true
 }
 
+func DumpJsonFile(path string, v interface{}) bool {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return false
+	}
+
+	return ioutil.WriteFile(path, data, 0644) == nil
+}
+
 /* 读取并解析YAML文件 */
 func LoadYamlFile(path string, v interface{}) error {
 	data, err := ioutil.ReadFile(path)
@@ -110,11 +119,17 @@ func LoadYamlFile(path string, v interface{}) error {
 	return nil
 }
 
-func DumpJsonFile(path string, v interface{}) bool {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return false
+func YamlMarshal(v interface{}) []byte {
+	if data, err := yaml.Marshal(v); err == nil {
+		return data
 	}
+	return nil
+}
 
-	return ioutil.WriteFile(path, data, 0644) == nil
+func YamlUnmarshal(data []byte, v interface{}) {
+	yaml.Unmarshal(data, v)
+}
+
+func init() {
+	yaml.SetDefaultMapType(map[string]interface{}{})
 }

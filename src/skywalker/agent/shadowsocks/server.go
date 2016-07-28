@@ -162,7 +162,7 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 	if ok == true {
 		array, _ := val.([]interface{})
 		for _, e := range array {
-			 m, ok := e.(map[string]interface{})
+			m, ok := e.(map[string]interface{})
 			if m == nil || ok == false {
 				return util.NewError(ERROR_INVALID_CONFIG, "serverAddr[] must be an object array")
 			}
