@@ -1,0 +1,9 @@
+# socks4代理的配置
+
+socks5:
+  bindAddr: 127.0.0.1
+  bindPort: 8080
+  clientAgent: socks
+  clientConfig:
+    version: 4 	#如果不指定则同时支持socks4和socks5
+  serverAgent: direct

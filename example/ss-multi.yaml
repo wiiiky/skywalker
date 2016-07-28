@@ -1,0 +1,21 @@
+# ss代理，同时配置多个服务器
+
+ss-multi:
+  bindAddr: 127.0.0.1
+  bindPort: 12345
+  clientAgent: socks
+  clientConfig:
+    version: 5
+    username: ""
+    password: ""
+  serverAgent: shadowsocks
+  serverConfig:
+    serverPort: 12345
+    method: aes-256-cfb
+    password: abcdefg
+    serverAddr[]:
+    - serverAddr: ss1.example.com
+    - serverAddr: ss2.example.com
+      serverPort: 12346
+    - serverAddr: ss3.example.com
+      password: 123456

@@ -22,6 +22,7 @@ import (
 	"os"
 	"skywalker/agent"
 	"skywalker/util"
+	"strings"
 )
 
 /* 服务配置 */
@@ -80,9 +81,13 @@ func GetConfigs() []*SkywalkerConfig {
 	var configs []*SkywalkerConfig
 
 	for name, cfg := range gConfigs {
+		if strings.HasPrefix(name, "~") {
+			continue
+		}
 		if cfg.Log == nil { /* 如果没有配置日志，则使用全局配置 */
 			cfg.Log = &log.LogConfig{
-				Loggers: gLog.Loggers,
+				ShowNamespace: gLog.ShowNamespace,
+				Loggers:       gLog.Loggers,
 			}
 		}
 		if cfg.Log.Loggers == nil {

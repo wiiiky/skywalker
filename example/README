@@ -1,21 +1,7 @@
 配置文件示例。
+==============
 
-可以添加
-    "plugin":[{
-        "name":"stat",
-        "config":{
-            "save":"~/.skywalker.json"
-        }
-    }]
-来启用流量统计，不过现在还不完善。
+使用yaml格式，不了解yaml格式的可以参考
 
-默认日志输出全部输出到终端，如果要自定义日志输出，请参考下述格式：
+*    [yaml.org](http://www.yaml.org/spec/1.2/spec.html)
 
-    "log": {
-        "showNamespace": true,  # 日志输出时添加配置名
-        "loggers": [{
-            "INFO": "./info.log",
-            "ERROR": "./error.log",
-            "WARN": "./error.log"
-        }]
-    }

@@ -1,0 +1,16 @@
+# ss代理
+
+ss:
+  bindAddr: 127.0.0.1
+  bindPort: 12345
+  clientAgent: socks
+  clientConfig:
+    version: 5
+    username: ""
+    password: ""
+  serverAgent: shadowsocks
+  serverConfig:
+    serverAddr: ss.example.com
+    serverPort: 12345
+    method: aes-256-cfb
+    password: abcdefg

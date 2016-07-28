@@ -1,0 +1,11 @@
+# HTTP代理的配置
+# 支持用户名/密码认证，不过认证方式目前只支持Basic
+
+http:
+  bindAddr: 127.0.0.1
+  bindPort: 8888
+  clientAgent: http
+  clientConfig:
+    username: ""
+    password: ""
+  serverAgent: direct

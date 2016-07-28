@@ -1,0 +1,15 @@
+# 将HTTP代理转成SS代理
+
+http-ss:
+  bindAddr: 127.0.0.1
+  bindPort: 8888
+  clientAgent: http
+  clientConfig:
+    username: ""
+    password: ""
+  serverAgent: shadowsocks
+  serverConfig:
+    serverAddr: ss.example.com
+    serverPort: 12345
+    method: aes-256-cfb
+    password: abcdefg
