@@ -85,6 +85,9 @@ func GetConfigs() []*SkywalkerConfig {
 				Loggers: gLog.Loggers,
 			}
 		}
+		if cfg.Log.Loggers == nil {
+			cfg.Log.Loggers = gLog.Loggers
+		}
 		cfg.Name = name
 		cfg.Log.Namespace = name
 		configs = append(configs, cfg)
@@ -131,7 +134,10 @@ func init() {
 		util.FatalError("%s: %s", cfile, err)
 	}
 
-	/* 将yaml数据读取到一个通用的map[string]interface{}中，然后分离log和代理，分别读取 */
+	/*
+	 * 将yaml数据读取到一个通用的map[string]interface{}中
+	 * 然后分离log和代理，分别读取
+	 */
 
 	if yamlMap["log"] != nil { /* 读取log并从map中删除 */
 		data = util.YamlMarshal(yamlMap["log"])

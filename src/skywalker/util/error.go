@@ -27,7 +27,7 @@ type CodeError struct {
 }
 
 func (e *CodeError) Error() string {
-	return fmt.Sprintf("[%d]%s", e.code, e.msg)
+	return fmt.Sprintf("[%d] %s", e.code, e.msg)
 }
 
 func NewError(code int, format string, params ...interface{}) *CodeError {

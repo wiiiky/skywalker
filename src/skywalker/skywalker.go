@@ -22,22 +22,21 @@ import (
 	"os"
 	"os/signal"
 	"skywalker/config"
-	"skywalker/plugin"
-	"skywalker/transfer"
+	"skywalker/relay"
 )
 
 /* 执行配置指定的服务 */
 func execConfig(cfg *config.SkywalkerConfig) error {
-	var tcpTransfer *transfer.TCPTransfer
+	var r *relay.TcpRelay
 	var err error
 
 	if err = cfg.Init(); err != nil {
 		return err
-	} else if tcpTransfer, err = transfer.NewTCPTransfer(cfg); tcpTransfer == nil {
+	} else if r, err = relay.New(cfg); r == nil {
 		return err
 	}
 
-	go tcpTransfer.Run()
+	go r.Run()
 	return nil
 }
 
@@ -53,5 +52,4 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	s := <-c
 	log.I("Signal: %s", s)
-	plugin.AtExit()
 }

@@ -75,15 +75,18 @@ const (
 	PKG_CONNECT_RESULT = 2
 )
 
+/* 连接请求 */
 func NewConnectPackage(host string, port int) *Package {
 	data := connectData{host: host, port: port}
 	return &Package{cmd: PKG_CONNECT, data: data}
 }
 
+/* 转发数据包 */
 func NewDataPackage(data interface{}) *Package {
 	return &Package{cmd: PKG_DATA, data: data}
 }
 
+/* 连接结果 */
 func NewConnectResultPackage(code int, host string, port int) *Package {
 	data := connectResult{connectData: connectData{host: host, port: port}, code: code}
 	return &Package{cmd: PKG_CONNECT_RESULT, data: data}
