@@ -25,6 +25,7 @@ import (
 	"skywalker/config"
 	"skywalker/core"
 	"skywalker/relay"
+	"skywalker/message"
 )
 
 var (
@@ -50,14 +51,14 @@ func execRelay(cfg *config.RelayConfig) error {
 func listenClient(listener net.Listener) {
 	for {
 		if conn, err := listener.Accept(); err == nil {
-			go handleClient(core.NewClient(conn))
+			go handleClient(message.NewConn(conn))
 		} else {
 			log.W("%v", err)
 		}
 	}
 }
 
-func handleClient(c *core.Client) {
+func handleClient(c *message.Conn) {
 	defer c.Close()
 	for {
 		req := c.Read()

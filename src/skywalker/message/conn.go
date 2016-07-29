@@ -15,30 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package core
+package message
 
 import (
 	"github.com/golang/protobuf/proto"
 	"io"
 	"net"
-	"skywalker/core/message"
 )
 
-type Client struct {
+type Conn struct {
 	conn net.Conn
 }
 
-func NewClient(conn net.Conn) *Client {
-	return &Client{conn: conn}
+func NewConn(conn net.Conn) *Conn {
+	return &Conn{conn: conn}
 }
 
 /* 读取请求，失败返回nil */
-func (c *Client) Read() *message.Request {
+func (c *Conn) Read() *Request {
 	buf := make([]byte, 4)
 	if n, err := io.ReadFull(c.conn, buf); err != nil || n <= 4 {
 		return nil
 	}
-	size := &message.Size{}
+	size := &Size{}
 	if err := proto.Unmarshal(buf, size); err != nil {
 		return nil
 	}
@@ -47,13 +46,13 @@ func (c *Client) Read() *message.Request {
 		return nil
 	}
 
-	req := &message.Request{}
+	req := &Request{}
 	if err := proto.Unmarshal(buf, req); err != nil {
 		return nil
 	}
 	return req
 }
 
-func (c *Client) Close() {
+func (c *Conn) Close() {
 	c.conn.Close()
 }

@@ -22,12 +22,31 @@ import (
 	"net"
 	"skywalker/config"
 	"skywalker/util"
+	"skywalker/relay"
 	"os"
 )
 
 type Yoda struct {
 	InetListener *net.TCPListener
 	UnixListener *net.UnixListener
+
+	relays []*relay.TcpRelay
+}
+
+
+/* 执行配置指定的服务 */
+func (y *Yoda) startRelay(cfg *config.RelayConfig) error {
+	var r *relay.TcpRelay
+	var err error
+
+	if err = cfg.Init(); err != nil {
+		return err
+	} else if r, err = relay.New(cfg); r == nil {
+		return err
+	}
+
+	y.relays = append(y.relays, r)
+	return nil
 }
 
 func Init() *Yoda {
