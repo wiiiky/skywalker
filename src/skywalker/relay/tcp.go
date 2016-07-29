@@ -23,7 +23,7 @@ import (
 	"net"
 	"skywalker/agent"
 	"skywalker/config"
-	"skywalker/core"
+	"skywalker/pkg"
 	"skywalker/util"
 )
 
@@ -35,10 +35,10 @@ import (
  * 大致如下
  *
  * +---+      +----+------------------+----+      +----
- * | C | <==> | CA | <=core.Package=> | SA | <==> | S |
+ * | C | <==> | CA | <=pkg.Package=> | SA | <==> | S |
  * +---+      +----+------------------+----+      +----
  *
- * CA和SA之间使用core.Package通信
+ * CA和SA之间使用pkg.Package通信
  */
 
 type TcpRelay struct {
@@ -89,8 +89,8 @@ func (r *TcpRelay) handle(conn net.Conn) {
 		conn.Close()
 		return
 	}
-	c2s := make(chan *core.Package, 100)
-	s2c := make(chan *core.Package, 100)
+	c2s := make(chan *pkg.Package, 100)
+	s2c := make(chan *pkg.Package, 100)
 	go r.caGoroutine(ca, c2s, s2c, conn)
 	go r.saGoroutine(sa, c2s, s2c)
 }
@@ -102,17 +102,17 @@ func (r *TcpRelay) handle(conn net.Conn) {
  * @tdata 需要转发的数据(Transfer Data)，将发送给ic
  * @rdata 需要返回给数据(Response Data)，将发送给conn
  */
-func (r *TcpRelay) transferData(ic chan *core.Package, conn net.Conn, tdata interface{},
+func (r *TcpRelay) transferData(ic chan *pkg.Package, conn net.Conn, tdata interface{},
 	rdata interface{}, err error) error {
 	/* 转发数据 */
 	switch data := tdata.(type) {
-	case *core.Package:
+	case *pkg.Package:
 		ic <- data
 	case []byte:
-		ic <- core.NewDataPackage(data)
+		ic <- pkg.NewDataPackage(data)
 	case string:
-		ic <- core.NewDataPackage(data)
-	case []*core.Package:
+		ic <- pkg.NewDataPackage(data)
+	case []*pkg.Package:
 		for _, cmd := range data {
 			ic <- cmd
 		}
@@ -139,8 +139,8 @@ func (r *TcpRelay) transferData(ic chan *core.Package, conn net.Conn, tdata inte
 
 /* 处理客户端连接的goroutine */
 func (r *TcpRelay) caGoroutine(ca agent.ClientAgent,
-	c2s chan *core.Package,
-	s2c chan *core.Package,
+	c2s chan *pkg.Package,
+	s2c chan *pkg.Package,
 	cConn net.Conn) {
 	defer cConn.Close()
 	defer close(c2s)
@@ -168,7 +168,7 @@ RUNNING:
 			if ok == false {
 				closed_by_client = false
 				break RUNNING
-			} else if cmd.Type() == core.PKG_DATA {
+			} else if cmd.Type() == pkg.PKG_DATA {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := ca.ReadFromSA(data)
 					if err := r.transferData(c2s, cConn, cmd, rdata, err); err != nil {
@@ -178,15 +178,15 @@ RUNNING:
 						break RUNNING
 					}
 				}
-			} else if cmd.Type() == core.PKG_CONNECT_RESULT {
+			} else if cmd.Type() == pkg.PKG_CONNECT_RESULT {
 				result, host, port := cmd.GetConnectResult()
-				if result == core.CONNECT_RESULT_OK {
+				if result == pkg.CONNECT_RESULT_OK {
 					chain = fmt.Sprintf("%s <==> %s:%v", cConn.RemoteAddr().String(), host, port)
 					log.INFO(r.name, "%s Connected", chain)
 				}
 				cmd, rdata, err := ca.OnConnectResult(result, host, port)
 				err = r.transferData(c2s, cConn, cmd, rdata, err)
-				if result != core.CONNECT_RESULT_OK || err != nil {
+				if result != pkg.CONNECT_RESULT_OK || err != nil {
 					closed_by_client = false
 					break RUNNING
 				}
@@ -209,23 +209,23 @@ RUNNING:
  * 失败返回nil,nil,"",0
  */
 func (r *TcpRelay) connectRemote(h string, p int, sa agent.ServerAgent,
-	s2c chan *core.Package) (net.Conn, chan []byte, string, int) {
+	s2c chan *pkg.Package) (net.Conn, chan []byte, string, int) {
 	/* 获取服务器地址，并链接 */
 	host, port := sa.GetRemoteAddress(h, p)
 	conn, result := util.TCPConnect(host, port)
 
 	/* 连接结果 */
-	var resultCMD *core.Package
-	if result != core.CONNECT_RESULT_OK {
-		resultCMD = core.NewConnectResultPackage(result, h, p)
+	var resultCMD *pkg.Package
+	if result != pkg.CONNECT_RESULT_OK {
+		resultCMD = pkg.NewConnectResultPackage(result, h, p)
 	} else {
-		resultCMD = core.NewConnectResultPackage(result, h, p)
+		resultCMD = pkg.NewConnectResultPackage(result, h, p)
 	}
 	/* 给客户端代理发送连接结果反馈 */
 	s2c <- resultCMD
 	/* 服务端代理链接结果反馈 */
 	cmd, rdata, err := sa.OnConnectResult(result, host, port)
-	if result != core.CONNECT_RESULT_OK || err != nil {
+	if result != pkg.CONNECT_RESULT_OK || err != nil {
 		if conn != nil {
 			conn.Close()
 		}
@@ -247,13 +247,13 @@ func (r *TcpRelay) connectRemote(h string, p int, sa agent.ServerAgent,
  * 从客户端代理收到的第一个数据包一定是服务器地址，无论该数据包被标志成什么类型
  */
 func (r *TcpRelay) saGoroutine(sa agent.ServerAgent,
-	c2s chan *core.Package,
-	s2c chan *core.Package) {
+	c2s chan *pkg.Package,
+	s2c chan *pkg.Package) {
 	defer close(s2c)
 
 	/* 第一个数据包必须是连接请求 */
 	cmd, ok := <-c2s
-	if ok == false || cmd.Type() != core.PKG_CONNECT {
+	if ok == false || cmd.Type() != pkg.PKG_CONNECT {
 		return
 	}
 	host, port := cmd.GetConnectData()
@@ -284,7 +284,7 @@ RUNNING:
 			if ok == false {
 				break RUNNING
 			}
-			if cmd.Type() == core.PKG_DATA {
+			if cmd.Type() == pkg.PKG_DATA {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := sa.ReadFromCA(data)
 					if _err := r.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
@@ -293,7 +293,7 @@ RUNNING:
 						break RUNNING
 					}
 				}
-			} else if cmd.Type() == core.PKG_CONNECT {
+			} else if cmd.Type() == pkg.PKG_CONNECT {
 				/* 需要重新链接服务器 */
 				sConn.Close()
 				host, port := cmd.GetConnectData()

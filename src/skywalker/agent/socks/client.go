@@ -19,7 +19,7 @@ package socks
 
 import (
 	"github.com/hitoshii/golib/src/log"
-	"skywalker/core"
+	"skywalker/pkg"
 	"skywalker/util"
 )
 
@@ -88,11 +88,11 @@ func (a *SocksClientAgent) OnStart(name string) error {
 /* socks5连接结果的处理 */
 func (a *SocksClientAgent) onConnectResult5(result int, host string, port int) (interface{}, interface{}, error) {
 	var reply uint8 = REPLY_GENERAL_FAILURE
-	if result == core.CONNECT_RESULT_OK {
+	if result == pkg.CONNECT_RESULT_OK {
 		reply = REPLY_SUCCEED
-	} else if result == core.CONNECT_RESULT_UNKNOWN_HOST {
+	} else if result == pkg.CONNECT_RESULT_UNKNOWN_HOST {
 		reply = REPLY_HOST_UNREACHABLE
-	} else if result == core.CONNECT_RESULT_UNREACHABLE {
+	} else if result == pkg.CONNECT_RESULT_UNREACHABLE {
 		reply = REPLY_NETWORK_UNREACHABLE
 	}
 	rep := socks5Response{
@@ -108,7 +108,7 @@ func (a *SocksClientAgent) onConnectResult5(result int, host string, port int) (
 /* socks4连接结果的处理 */
 func (a *SocksClientAgent) onConnectResult4(result int, host string, port int) (interface{}, interface{}, error) {
 	var cd uint8 = CD_REQUEST_REJECTED
-	if result == core.CONNECT_RESULT_OK {
+	if result == pkg.CONNECT_RESULT_OK {
 		cd = CD_REQUEST_GRANTED
 	}
 	rep := socks4Response{
@@ -143,7 +143,7 @@ func (a *SocksClientAgent) init4(data []byte) (interface{}, interface{}, error) 
 	a.addr = req.ip
 	a.port = req.port
 	a.state = STATE_TUNNEL
-	return core.NewConnectPackage(req.ip, int(req.port)), nil, nil
+	return pkg.NewConnectPackage(req.ip, int(req.port)), nil, nil
 }
 
 /* 处理socks5协议的第一个请求 */
@@ -216,7 +216,7 @@ func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}
 		a.addr = req.addr
 		a.port = req.port
 		a.state = STATE_TUNNEL
-		return core.NewConnectPackage(req.addr, int(req.port)), nil, nil
+		return pkg.NewConnectPackage(req.addr, int(req.port)), nil, nil
 	case STATE_TUNNEL: /* 直接转发数据 */
 		return data, nil, nil
 	}

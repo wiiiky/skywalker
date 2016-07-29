@@ -35,15 +35,16 @@ type UnixConfig struct {
 
 /* IP/TCP网络配置 */
 type InetConfig struct {
-	IP       string `yaml:"ip"` /* 监听端口，格式为ip:port */
+	IP       string `yaml:"ip"`   /* 监听地址 */
+	Port     int    `yaml:"port"` /* 监听端口 */
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 }
 
 /* 通用配置 */
 type CoreConfig struct {
-	unix *UnixConfig `yaml:"unix"`
-	inet *InetConfig `yaml:"inet"`
+	Unix *UnixConfig `yaml:"unix"`
+	Inet *InetConfig `yaml:"inet"`
 	Log  *log.Config `yaml:"log"`
 }
 
@@ -134,6 +135,10 @@ func GetRelayConfigs() []*RelayConfig {
 	}
 
 	return configs
+}
+
+func GetCoreConfig() *CoreConfig {
+	return gCore
 }
 
 /*

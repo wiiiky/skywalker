@@ -19,7 +19,7 @@ package util
 
 import (
 	"net"
-	"skywalker/core"
+	"skywalker/pkg"
 	"strconv"
 	"time"
 )
@@ -54,19 +54,30 @@ func GetHostAddress(host string) string {
 func TCPConnect(host string, port int) (net.Conn, int) {
 	ip := GetHostAddress(host)
 	if len(ip) == 0 {
-		return nil, core.CONNECT_RESULT_UNKNOWN_HOST
+		return nil, pkg.CONNECT_RESULT_UNKNOWN_HOST
 	}
 	addr := net.JoinHostPort(ip, strconv.Itoa(port))
 	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err == nil {
-		return conn, core.CONNECT_RESULT_OK
+		return conn, pkg.CONNECT_RESULT_OK
 	}
-	return nil, core.CONNECT_RESULT_UNREACHABLE
+	return nil, pkg.CONNECT_RESULT_UNREACHABLE
 }
 
 /* 监听TCP端口 */
-func TCPListen(addr string, port int) (net.Listener, error) {
-	laddr := net.JoinHostPort(addr, strconv.Itoa(port))
-	return net.Listen("tcp", laddr)
+func TCPListen(ip string, port int) (*net.TCPListener, error) {
+	if addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(ip, strconv.Itoa(port))); err != nil {
+		return nil, err
+	} else {
+		return net.ListenTCP("tcp", addr)
+	}
+}
+
+func UnixListen(filepath string) (*net.UnixListener, error) {
+	if addr, err := net.ResolveUnixAddr("unix", filepath); err != nil {
+		return nil, err
+	} else {
+		return net.ListenUnix("unix", addr)
+	}
 }
 
 /* 监听UDP端口 */
@@ -86,8 +97,8 @@ func CreateConnChannel(conn net.Conn) chan []byte {
 	channel := make(chan []byte)
 	go func(conn net.Conn, channel chan []byte) {
 		defer close(channel)
+		buf := make([]byte, 4096)
 		for {
-			buf := make([]byte, 4096)
 			n, err := conn.Read(buf)
 			if err != nil {
 				break

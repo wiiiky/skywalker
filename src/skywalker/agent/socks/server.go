@@ -19,7 +19,7 @@ package socks
 
 import (
 	"net"
-	"skywalker/core"
+	"skywalker/pkg"
 	"skywalker/util"
 )
 
@@ -124,7 +124,7 @@ func (a *SocksServerAgent) GetRemoteAddress(addr string, port int) (string, int)
 }
 
 func (a *SocksServerAgent) onConnectResult5(result int, host string, port int) (interface{}, interface{}, error) {
-	if result == core.CONNECT_RESULT_OK {
+	if result == pkg.CONNECT_RESULT_OK {
 		req := &socks5VersionRequest{
 			version:  a.cfg.version,
 			nmethods: uint8(len(a.cfg.methods)),
@@ -137,7 +137,7 @@ func (a *SocksServerAgent) onConnectResult5(result int, host string, port int) (
 }
 
 func (a *SocksServerAgent) onConnectResult4(result int, host string, port int) (interface{}, interface{}, error) {
-	if result == core.CONNECT_RESULT_OK {
+	if result == pkg.CONNECT_RESULT_OK {
 		req := &socks4Request{
 			vn:   a.cfg.version,
 			cd:   CD_CONNECT,

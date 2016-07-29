@@ -10,5 +10,11 @@ get:
 fmt:
 	find . -name '*.go'|xargs gofmt -w
 
+proto:
+	PATH="$(PATH):./bin" GOPATH=`pwd` protoc --go_out=./ ./src/skywalker/core/message/*.proto
+
+proto-gen:
+	GOPATH=`pwd` go get -u github.com/golang/protobuf/protoc-gen-go
+
 clean:
 	rm -rf bin/skywalker

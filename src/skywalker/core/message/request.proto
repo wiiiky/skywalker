@@ -1,0 +1,10 @@
+syntax = "proto2";
+package message;
+
+enum RequestType {
+    LIST_RELAY = 1;
+}
+
+message Request {
+    required RequestType type = 1;
+}

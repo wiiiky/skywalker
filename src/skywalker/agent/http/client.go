@@ -20,7 +20,7 @@ package http
 import (
 	"github.com/hitoshii/golib/src/log"
 	"net"
-	"skywalker/core"
+	"skywalker/pkg"
 	"skywalker/util"
 	"strconv"
 )
@@ -71,7 +71,7 @@ var (
 )
 
 func (a *HTTPClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
-	if result == core.CONNECT_RESULT_OK {
+	if result == pkg.CONNECT_RESULT_OK {
 		if a.req.Method == "CONNECT" { /* 连接成功且方法是CONNECT */
 			return nil, CONNECT_SUCCESS, nil
 		}
@@ -104,9 +104,9 @@ func (a *HTTPClientAgent) sendRequest(hostport string, request []byte) (interfac
 	if a.host != hostport { /* 如果请求的服务器与上一次不一样则重新连接 */
 		a.host = hostport
 		host, port := splitHostPort(hostport)
-		connectCMD := core.NewConnectPackage(host, port)
-		transferCMD := core.NewDataPackage(request)
-		return []*core.Package{connectCMD, transferCMD}, nil, nil
+		connectCMD := pkg.NewConnectPackage(host, port)
+		transferCMD := pkg.NewDataPackage(request)
+		return []*pkg.Package{connectCMD, transferCMD}, nil, nil
 	}
 	return request, nil, nil
 }
@@ -126,7 +126,7 @@ func (a *HTTPClientAgent) ReadFromClient(data []byte) (interface{}, interface{},
 				host := req.getHost()
 				if req.Method == "CONNECT" {
 					h, p := splitHostPort(host)
-					return core.NewConnectPackage(h, p), nil, nil
+					return pkg.NewConnectPackage(h, p), nil, nil
 				} else {
 					data := req.build()
 					req.reset()

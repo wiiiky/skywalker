@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2016 Wiky L
+ * Copyright (C) 2016 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -17,77 +17,55 @@
 
 package core
 
-type Package struct {
-	cmd  int
-	data interface{}
-}
-
-/* 连接服务器的数据 */
-type connectData struct {
-	host string
-	port int
-}
-
-/* 连接远程服务器的结果 */
-const (
-	CONNECT_RESULT_OK            = 0
-	CONNECT_RESULT_UNKNOWN_HOST  = 1
-	CONNECT_RESULT_UNREACHABLE   = 2
-	CONNECT_RESULT_UNKNOWN_ERROR = 3
+import (
+	"github.com/hitoshii/golib/src/log"
+	"net"
+	"skywalker/config"
+	"skywalker/util"
+	// "github.com/golang/protobuf/proto"
+	// "skywalker/core/message"
+	// "io"
+	"os"
 )
 
-/* 连接服务器结果的数据 */
-type connectResult struct {
-	connectData
-	code int
+type Yoda struct {
+	InetListener *net.TCPListener
+	UnixListener *net.UnixListener
 }
 
-func (c *Package) Type() int {
-	return c.cmd
-}
+func Init() *Yoda {
+	var inetListener *net.TCPListener
+	var unixListener *net.UnixListener
+	var err error
+	cfg := config.GetCoreConfig()
 
-func (c *Package) GetConnectData() (string, int) {
-	data := c.data.(connectData)
-	return data.host, data.port
-}
-
-func (c *Package) GetTransferData() [][]byte {
-	switch d := c.data.(type) {
-	case string:
-		return [][]byte{[]byte(d)}
-	case []byte:
-		return [][]byte{d}
-	case [][]byte:
-		return d
+	if cfg.Inet == nil && cfg.Unix == nil {
+		/* 如果没有配置，则使用默认配置 */
+		cfg.Inet = &config.InetConfig{
+			IP:   "127.0.0.1",
+			Port: 12701,
+		}
 	}
-	return nil
+	if cfg.Inet != nil {
+		if inetListener, err = util.TCPListen(cfg.Inet.IP, cfg.Inet.Port); err != nil {
+			log.E("%v", err)
+			os.Exit(1)
+		}
+	}
+	if cfg.Unix != nil {
+		if unixListener, err = util.UnixListen(cfg.Unix.File); err != nil {
+			log.E("%v", err)
+			os.Exit(2)
+		}
+	}
+	return &Yoda{
+		InetListener: inetListener,
+		UnixListener: unixListener,
+	}
 }
 
-/* 获取链接结果 */
-func (c *Package) GetConnectResult() (int, string, int) {
-	result := c.data.(connectResult)
-	return result.code, result.connectData.host, result.connectData.port
-}
-
-const (
-	PKG_CONNECT        = 0
-	PKG_DATA           = 1
-	PKG_CONNECT_RESULT = 2
-)
-
-/* 连接请求 */
-func NewConnectPackage(host string, port int) *Package {
-	data := connectData{host: host, port: port}
-	return &Package{cmd: PKG_CONNECT, data: data}
-}
-
-/* 转发数据包 */
-func NewDataPackage(data interface{}) *Package {
-	return &Package{cmd: PKG_DATA, data: data}
-}
-
-/* 连接结果 */
-func NewConnectResultPackage(code int, host string, port int) *Package {
-	data := connectResult{connectData: connectData{host: host, port: port}, code: code}
-	return &Package{cmd: PKG_CONNECT_RESULT, data: data}
+func (y *Yoda) Finish() {
+	if y.UnixListener != nil { /* 删除unix套接字文件 */
+		os.Remove(y.UnixListener.Addr().String())
+	}
 }

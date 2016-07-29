@@ -22,7 +22,7 @@ import (
 	"github.com/hitoshii/golib/src/log"
 	"math/rand"
 	"skywalker/cipher"
-	"skywalker/core"
+	"skywalker/pkg"
 	"skywalker/util"
 	"strings"
 )
@@ -232,7 +232,7 @@ func (a *ShadowSocksServerAgent) GetRemoteAddress(addr string, port int) (string
 }
 
 func (a *ShadowSocksServerAgent) OnConnectResult(result int, host string, p int) (interface{}, interface{}, error) {
-	if result == core.CONNECT_RESULT_OK {
+	if result == pkg.CONNECT_RESULT_OK {
 		plain := buildAddressRequest(a.targetAddr, uint16(a.targetPort))
 		buf := bytes.Buffer{}
 		buf.Write(a.iv)
