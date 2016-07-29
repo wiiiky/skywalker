@@ -22,9 +22,6 @@ import (
 	"net"
 	"skywalker/config"
 	"skywalker/util"
-	// "github.com/golang/protobuf/proto"
-	// "skywalker/core/message"
-	// "io"
 	"os"
 )
 
