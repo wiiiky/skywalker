@@ -25,8 +25,40 @@ import (
 	"strings"
 )
 
+/* Unix套接字配置 */
+type UnixConfig struct {
+	File     string `yaml:"file"`
+	Chmod    uint   `yaml:"chmod"` /* 套接字文件的权限 */
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+/* IP/TCP网络配置 */
+type InetConfig struct {
+	IP       string `yaml:"ip"` /* 监听端口，格式为ip:port */
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+/* 通用配置 */
+type CoreConfig struct {
+	unix *UnixConfig `yaml:"unix"`
+	inet *InetConfig `yaml:"inet"`
+	Log  *log.Config `yaml:"log"`
+}
+
+func (cfg *CoreConfig) Init() {
+	if cfg.Log == nil {
+		cfg.Log = &log.Config{
+			Name:    "luker",
+			Loggers: nil,
+		}
+	}
+	log.InitDefault(cfg.Log)
+}
+
 /* 服务配置 */
-type SkywalkerConfig struct {
+type RelayConfig struct {
 	Name     string `yaml:"name"`
 	BindAddr string `yaml:"bindAddr"`
 	BindPort uint16 `yaml:"bindPort"`
@@ -37,14 +69,14 @@ type SkywalkerConfig struct {
 	ServerAgent  string                 `yaml:"serverAgent"`
 	ServerConfig map[string]interface{} `yaml:"serverConfig"`
 
-	Log *log.LogConfig `yaml:"log"`
+	Log *log.Config `yaml:"log"`
 }
 
 /*
  * 初始化配置
  * 设置日志、插件并检查CA和SA
  */
-func (cfg *SkywalkerConfig) Init() error {
+func (cfg *RelayConfig) Init() error {
 	log.Init(cfg.Log)
 	ca := cfg.ClientAgent
 	sa := cfg.ServerAgent
@@ -58,17 +90,19 @@ func (cfg *SkywalkerConfig) Init() error {
 
 var (
 	/* 默认配置 */
-	defaultLoggers = []log.LoggerConfig{
-		log.LoggerConfig{"DEBUG", "STDOUT"},
-		log.LoggerConfig{"INFO", "STDOUT"},
-		log.LoggerConfig{"WARN", "STDERR"},
-		log.LoggerConfig{"ERROR", "STDERR"},
+	defaultLoggers = []log.Logger{
+		log.Logger{"DEBUG", "STDOUT"},
+		log.Logger{"INFO", "STDOUT"},
+		log.Logger{"WARN", "STDERR"},
+		log.Logger{"ERROR", "STDERR"},
 	}
-	gLog = &log.LogConfig{
-		Namespace: "luker",
-		Loggers:   defaultLoggers,
+	gCore = &CoreConfig{
+		Log: &log.Config{
+			Name:    "luker",
+			Loggers: defaultLoggers,
+		},
 	}
-	gConfigs = map[string]*SkywalkerConfig{}
+	gConfigs = map[string]*RelayConfig{}
 )
 
 const (
@@ -77,24 +111,25 @@ const (
 )
 
 /* 获取所有配置列表 */
-func GetConfigs() []*SkywalkerConfig {
-	var configs []*SkywalkerConfig
+func GetRelayConfigs() []*RelayConfig {
+	var configs []*RelayConfig
 
 	for name, cfg := range gConfigs {
+		/* 忽略~开头的配置 */
 		if strings.HasPrefix(name, "~") {
 			continue
 		}
 		if cfg.Log == nil { /* 如果没有配置日志，则使用全局配置 */
-			cfg.Log = &log.LogConfig{
-				ShowNamespace: gLog.ShowNamespace,
-				Loggers:       gLog.Loggers,
+			cfg.Log = &log.Config{
+				ShowName: gCore.Log.ShowName,
+				Loggers:  gCore.Log.Loggers,
 			}
 		}
 		if cfg.Log.Loggers == nil {
-			cfg.Log.Loggers = gLog.Loggers
+			cfg.Log.Loggers = gCore.Log.Loggers
 		}
 		cfg.Name = name
-		cfg.Log.Namespace = name
+		cfg.Log.Name = name
 		configs = append(configs, cfg)
 	}
 
@@ -144,13 +179,12 @@ func init() {
 	 * 然后分离log和代理，分别读取
 	 */
 
-	if yamlMap["log"] != nil { /* 读取log并从map中删除 */
-		data = util.YamlMarshal(yamlMap["log"])
-		util.YamlUnmarshal(data, gLog)
-		log.Init(gLog)
-		log.SetDefault(gLog.Namespace)
-		delete(yamlMap, "log")
+	if yamlMap["core"] != nil { /* 读取log并从map中删除 */
+		data = util.YamlMarshal(yamlMap["core"])
+		util.YamlUnmarshal(data, gCore)
+		delete(yamlMap, "core")
 	}
+	gCore.Init()
 
 	data = util.YamlMarshal(yamlMap)
 	util.YamlUnmarshal(data, &gConfigs)

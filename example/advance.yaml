@@ -5,18 +5,20 @@
 
 
 # 这是全局的日志配置，如果代理下没有指定日志，则使用全局的
-# log是保留字，不能创建一个名叫log的代理
-log:
-  showNamespace: true
-  loggers:
-  - level: DEBUG
-    file: /dev/null	# 指定日志输出的文件
-  - level: INFO
-    file: STDOUT  # STDOUT和STDERR分别表示标准输出和标准错误输出
-  - level: WARN
-    file: STDERR
-  - level: ERROR
-    file: /tmp/skywalker.err
+# core是保留字，不能创建一个名叫core的代理
+# 现在core中只配置日志log，后面会添加新配置
+core:
+  log:
+    showName: true
+    loggers:
+    - level: DEBUG
+      file: /dev/null	# 指定日志输出的文件
+    - level: INFO
+      file: STDOUT  # STDOUT和STDERR分别表示标准输出和标准错误输出
+    - level: WARN
+      file: STDERR
+    - level: ERROR
+      file: /tmp/skywalker.err
 
 # 通用配置，以波浪线~开头，不会当作一个有效代理处理
 ~base: &base

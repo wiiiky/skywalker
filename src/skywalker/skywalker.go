@@ -26,7 +26,7 @@ import (
 )
 
 /* 执行配置指定的服务 */
-func execConfig(cfg *config.SkywalkerConfig) error {
+func execConfig(cfg *config.RelayConfig) error {
 	var r *relay.TcpRelay
 	var err error
 
@@ -41,7 +41,7 @@ func execConfig(cfg *config.SkywalkerConfig) error {
 }
 
 func main() {
-	for _, cfg := range config.GetConfigs() {
+	for _, cfg := range config.GetRelayConfigs() {
 		if err := execConfig(cfg); err != nil {
 			log.ERROR(cfg.Name, "%s", err)
 			return

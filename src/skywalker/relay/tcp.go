@@ -49,7 +49,7 @@ type TcpRelay struct {
 }
 
 /* 创建新的代理，监听本地端口 */
-func New(cfg *config.SkywalkerConfig) (*TcpRelay, error) {
+func New(cfg *config.RelayConfig) (*TcpRelay, error) {
 	name := cfg.Name
 	cname := cfg.ClientAgent
 	sname := cfg.ServerAgent
