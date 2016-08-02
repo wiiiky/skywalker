@@ -42,10 +42,12 @@ import (
  */
 
 type TcpRelay struct {
-	name     string
+	Name    string
+	CAName  string
+	SAName  string
+	Running bool
+
 	listener net.Listener
-	cname    string
-	sname    string
 }
 
 /* 创建新的代理，监听本地端口 */
@@ -59,32 +61,36 @@ func New(cfg *config.RelayConfig) (*TcpRelay, error) {
 		log.INFO(name, "Listen TCP On %s", listener.Addr())
 		return &TcpRelay{
 			listener: listener,
-			name:     name,
-			cname:    cname,
-			sname:    sname,
+			Name:     name,
+			CAName:   cname,
+			SAName:   sname,
+			Running:  false,
 		}, nil
 	}
 }
 
 func (r *TcpRelay) Close() {
+	log.INFO(r.Name, "TCP %s Closed", r.listener.Addr())
 	r.listener.Close()
 }
 
 func (r *TcpRelay) Run() {
 	defer r.Close()
-	for {
+	r.Running = true
+	for r.Running {
 		if conn, err := r.listener.Accept(); err == nil {
 			r.handle(conn)
 		} else {
-			log.WARN(r.name, "Couldn't Accept: %s", err)
+			log.WARN(r.Name, "Couldn't Accept: %s", err)
 		}
 	}
+	r.Running = false
 }
 
 /* 启动数据转发流程 */
 func (r *TcpRelay) handle(conn net.Conn) {
-	ca := agent.GetClientAgent(r.cname, r.name)
-	sa := agent.GetServerAgent(r.sname, r.name)
+	ca := agent.GetClientAgent(r.CAName, r.Name)
+	sa := agent.GetServerAgent(r.SAName, r.Name)
 	if ca == nil || sa == nil {
 		conn.Close()
 		return
@@ -159,7 +165,7 @@ RUNNING:
 			}
 			cmd, rdata, err := ca.ReadFromClient(data)
 			if err := r.transferData(c2s, cConn, cmd, rdata, err); err != nil {
-				log.WARN(r.name, "Read From Client Error: %s %s", cConn.RemoteAddr(),
+				log.WARN(r.Name, "Read From Client Error: %s %s", cConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
 			}
@@ -173,7 +179,7 @@ RUNNING:
 					cmd, rdata, err := ca.ReadFromSA(data)
 					if err := r.transferData(c2s, cConn, cmd, rdata, err); err != nil {
 						closed_by_client = false
-						log.WARN(r.name, "Read From SA Error: %s %s", cConn.RemoteAddr(),
+						log.WARN(r.Name, "Read From SA Error: %s %s", cConn.RemoteAddr(),
 							err.Error())
 						break RUNNING
 					}
@@ -182,7 +188,7 @@ RUNNING:
 				result, host, port := cmd.GetConnectResult()
 				if result == pkg.CONNECT_RESULT_OK {
 					chain = fmt.Sprintf("%s <==> %s:%v", cConn.RemoteAddr().String(), host, port)
-					log.INFO(r.name, "%s Connected", chain)
+					log.INFO(r.Name, "%s Connected", chain)
 				}
 				cmd, rdata, err := ca.OnConnectResult(result, host, port)
 				err = r.transferData(c2s, cConn, cmd, rdata, err)
@@ -191,15 +197,15 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.ERROR(r.name, "Unknown Package From Server Agent! This is a BUG!")
+				log.ERROR(r.Name, "Unknown Package From Server Agent! This is a BUG!")
 			}
 		}
 	}
 	ca.OnClose(closed_by_client)
 	if closed_by_client {
-		log.INFO(r.name, "%s Closed By Client", chain)
+		log.INFO(r.Name, "%s Closed By Client", chain)
 	} else {
-		log.INFO(r.name, "%s Closed By Server", chain)
+		log.INFO(r.Name, "%s Closed By Server", chain)
 	}
 }
 
@@ -234,7 +240,7 @@ func (r *TcpRelay) connectRemote(h string, p int, sa agent.ServerAgent,
 
 	/* 发送服务端代理的处理后数据 */
 	if err := r.transferData(s2c, conn, cmd, rdata, err); err != nil {
-		log.WARN(r.name, "Server Agent OnConnectResult Error, %s", err.Error())
+		log.WARN(r.Name, "Server Agent OnConnectResult Error, %s", err.Error())
 		conn.Close()
 		return nil, nil, "", 0
 	}
@@ -275,7 +281,7 @@ RUNNING:
 			cmd, rdata, err := sa.ReadFromServer(data)
 			if err := r.transferData(s2c, sConn, cmd, rdata, err); err != nil {
 				closed_by_client = false
-				log.WARN(r.name, "Read From Server Error: %s %s", sConn.RemoteAddr(),
+				log.WARN(r.Name, "Read From Server Error: %s %s", sConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
 			}
@@ -288,7 +294,7 @@ RUNNING:
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := sa.ReadFromCA(data)
 					if _err := r.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
-						log.WARN(r.name, "Read From CA Error: %s %s", sConn.RemoteAddr(),
+						log.WARN(r.Name, "Read From CA Error: %s %s", sConn.RemoteAddr(),
 							_err.Error())
 						break RUNNING
 					}
@@ -301,7 +307,7 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.ERROR(r.name, "Unknown Package From Client Agent! This is a BUG!")
+				log.ERROR(r.Name, "Unknown Package From Client Agent! This is a BUG!")
 			}
 		}
 	}
