@@ -1,8 +1,11 @@
 
-all: get skywalker
+all: get skywalker forctl
 
-skywalker:
-	GOPATH=`pwd` go build -o bin/skywalker src/skywalker/skywalker.go
+skywalker: src/skywalker/skywalker.go
+	GOPATH=`pwd` go build -o bin/skywalker $?
+
+forctl: src/forctl/forctl.go
+	GOPATH=`pwd` go build -o bin/forctl $?
 
 get:
 	GOPATH=`pwd` go get --fix skywalker
@@ -16,5 +19,5 @@ proto:
 proto-gen:
 	GOPATH=`pwd` go get -u github.com/golang/protobuf/protoc-gen-go
 
-clean:
-	rm -rf bin/skywalker
+clean: bin/skywalker bin/forctl
+	rm -rf $?
