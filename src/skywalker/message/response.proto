@@ -1,0 +1,15 @@
+syntax = "proto2";
+package message;
+
+import "src/skywalker/message/request.proto";
+
+message RelayStatus {
+    required string name = 1;
+    required string cname = 2;
+    required string sname = 3;
+}
+
+message Response {
+    required RequestType type = 1;
+    repeated RelayStatus status = 2;
+}

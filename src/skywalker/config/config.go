@@ -48,11 +48,18 @@ type CoreConfig struct {
 	Log  *log.Config `yaml:"log"`
 }
 
-func (cfg *CoreConfig) Init() {
+func (cfg *CoreConfig) init() {
 	if cfg.Log == nil {
 		cfg.Log = &log.Config{
 			Name:    "luker",
 			Loggers: nil,
+		}
+	}
+	if cfg.Inet == nil && cfg.Unix == nil {
+		/* 如果没有配置监听端口，则使用默认配置 */
+		cfg.Inet = &InetConfig{
+			IP:   "127.0.0.1",
+			Port: 12701,
 		}
 	}
 	log.InitDefault(cfg.Log)
@@ -189,7 +196,7 @@ func init() {
 		util.YamlUnmarshal(data, gCore)
 		delete(yamlMap, "core")
 	}
-	gCore.Init()
+	gCore.init()
 
 	data = util.YamlMarshal(yamlMap)
 	util.YamlUnmarshal(data, &gConfigs)

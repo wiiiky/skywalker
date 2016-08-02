@@ -2,7 +2,7 @@ syntax = "proto2";
 package message;
 
 enum RequestType {
-    LIST_RELAY = 1;
+    STATUS = 1;   /* 当前状态 */
 }
 
 message Request {

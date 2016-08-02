@@ -18,6 +18,8 @@
 package message
 
 import (
+	"bytes"
+	"encoding/binary"
 	"github.com/golang/protobuf/proto"
 	"io"
 	"net"
@@ -31,26 +33,88 @@ func NewConn(conn net.Conn) *Conn {
 	return &Conn{conn: conn}
 }
 
-/* 读取请求，失败返回nil */
-func (c *Conn) Read() *Request {
-	buf := make([]byte, 4)
-	if n, err := io.ReadFull(c.conn, buf); err != nil || n <= 4 {
-		return nil
-	}
-	size := &Size{}
-	if err := proto.Unmarshal(buf, size); err != nil {
-		return nil
-	}
-	buf = make([]byte, size.GetSize())
-	if n, err := io.ReadFull(c.conn, buf); err != nil || n != len(buf) {
-		return nil
-	}
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.conn.RemoteAddr()
+}
 
+func pack(data []byte) []byte {
+	buf := bytes.Buffer{}
+	binary.Write(&buf, binary.BigEndian, int32(len(data)))
+	return append(buf.Bytes(), data...)
+}
+
+func unpack(data []byte) int {
+	var size int32
+	buf := bytes.NewReader(data)
+	binary.Read(buf, binary.BigEndian, &size)
+	return int(size)
+}
+
+/* 读取数据包，除去长度字段以后的数据，出错返回nil */
+func (c *Conn) read() []byte {
+	buf := make([]byte, 4)
+	if n, err := io.ReadFull(c.conn, buf); err != nil || n != 4 {
+		return nil
+	}
+	size := unpack(buf)
+	buf = make([]byte, size)
+	if n, err := io.ReadFull(c.conn, buf); err != nil || n != size {
+		return nil
+	}
+	return buf
+}
+
+/* 写入数据，使用数据长度封装 */
+func (c *Conn) write(data []byte) error {
+	_, err := c.conn.Write(pack(data))
+	return err
+}
+
+/* 读取请求，失败返回nil */
+func (c *Conn) ReadRequest() *Request {
+	buf := c.read()
+	if buf == nil {
+		return nil
+	}
 	req := &Request{}
 	if err := proto.Unmarshal(buf, req); err != nil {
 		return nil
 	}
 	return req
+}
+
+/* 读取返回结果，失败返回nil */
+func (c *Conn) ReadResponse() *Response {
+	buf := c.read()
+	if buf == nil {
+		return nil
+	}
+
+	rep := &Response{}
+	if err := proto.Unmarshal(buf, rep); err != nil {
+		return nil
+	}
+	return rep
+}
+
+/* 发送请求 */
+func (c *Conn) WriteRequest(req *Request) error {
+	var data []byte
+	var err error
+	if data, err = proto.Marshal(req); err != nil {
+		return err
+	}
+	return c.write(data)
+}
+
+/* 发送结果 */
+func (c *Conn) WriteResponse(rep *Response) error {
+	var data []byte
+	var err error
+	if data, err = proto.Marshal(rep); err != nil {
+		return err
+	}
+	return c.write(data)
 }
 
 func (c *Conn) Close() {

@@ -18,6 +18,7 @@
 package core
 
 import (
+	"github.com/golang/protobuf/proto"
 	"github.com/hitoshii/golib/src/log"
 	"net"
 	"os"
@@ -56,13 +57,6 @@ func Run() *Force {
 	var err error
 	cfg := config.GetCoreConfig()
 
-	if cfg.Inet == nil && cfg.Unix == nil {
-		/* 如果没有配置，则使用默认配置 */
-		cfg.Inet = &config.InetConfig{
-			IP:   "127.0.0.1",
-			Port: 12701,
-		}
-	}
 	if cfg.Inet != nil {
 		if inetListener, err = util.TCPListen(cfg.Inet.IP, cfg.Inet.Port); err != nil {
 			log.E("%v", err)
@@ -126,11 +120,36 @@ func (f *Force) listen() {
 
 /* 处理客户端链接 */
 func (f *Force) handleConn(c *message.Conn) {
+	log.D("client %s", c.RemoteAddr())
 	defer c.Close()
 	for {
-		req := c.Read()
+		req := c.ReadRequest()
+		log.D("request %v", req)
 		if req == nil {
 			break
 		}
+		reqType := req.GetType()
+		switch reqType {
+		case message.RequestType_STATUS:
+			f.handleStatus(c)
+		}
 	}
+	log.D("client %s closed", c.RemoteAddr())
+}
+
+func (f *Force) handleStatus(c *message.Conn) {
+	var status []*message.RelayStatus
+	for _, r := range f.relays {
+		status = append(status, &message.RelayStatus{
+			Name:  proto.String(r.Name),
+			Cname: proto.String(r.CAName),
+			Sname: proto.String(r.SAName),
+		})
+	}
+	reqType := message.RequestType_STATUS
+	rep := &message.Response{
+		Type:   &reqType,
+		Status: status,
+	}
+	c.WriteResponse(rep)
 }

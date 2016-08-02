@@ -1,6 +1,0 @@
-syntax = "proto2";
-package message;
-
-message Size {
-    required int32 size = 1;
-}

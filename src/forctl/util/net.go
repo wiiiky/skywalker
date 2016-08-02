@@ -15,42 +15,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package main
+package util
 
 import (
-	"fmt"
-	"forctl/util"
-	"skywalker/config"
+	"net"
 	"skywalker/message"
+	"strconv"
+	"time"
 )
 
-/*
- * forctl 是skywalker的管理程序
- */
+func TCPConnect(ip string, port int) (*message.Conn, error) {
+	addr := net.JoinHostPort(ip, strconv.Itoa(port))
+	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err != nil {
+		return nil, err
+	} else {
+		return message.NewConn(conn), nil
+	}
+}
 
-func main() {
-	var conn *message.Conn
-	var err error
-	cfg := config.GetCoreConfig()
-	/* 优先通过TCP连接，不存在或者不成功再使用Unix套接字连接 */
-	if cfg.Inet != nil {
-		conn, err = util.TCPConnect(cfg.Inet.IP, cfg.Inet.Port)
+func UnixConnect(filepath string) (*message.Conn, error) {
+	if conn, err := net.DialTimeout("unix", filepath, 10*time.Second); err != nil {
+		return nil, err
+	} else {
+		return message.NewConn(conn), nil
 	}
-	if conn == nil && cfg.Unix != nil {
-		conn, err = util.UnixConnect(cfg.Unix.File)
-	}
-
-	if conn == nil || err != nil {
-		fmt.Printf("%v\n", err)
-		return
-	}
-	reqType := message.RequestType_STATUS
-	req := &message.Request{
-		Type: &reqType,
-	}
-	err = conn.WriteRequest(req)
-	fmt.Printf("write %v\n", err)
-
-	rep := conn.ReadResponse()
-	fmt.Printf("rep: %v\n", rep)
 }
