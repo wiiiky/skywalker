@@ -9,6 +9,7 @@ forctl: src/forctl/forctl.go
 
 get:
 	GOPATH=`pwd` go get --fix skywalker
+	GOPATH=`pwd` go get --fix forctl
 
 fmt:
 	find . -name '*.go'|xargs gofmt -w

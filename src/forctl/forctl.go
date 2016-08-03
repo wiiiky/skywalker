@@ -28,29 +28,55 @@ import (
  * forctl 是skywalker的管理程序
  */
 
+var (
+	gConn *message.Conn
+)
+
 func main() {
-	var conn *message.Conn
 	var err error
+	var rl *util.Readline
 	cfg := config.GetCoreConfig()
 	/* 优先通过TCP连接，不存在或者不成功再使用Unix套接字连接 */
 	if cfg.Inet != nil {
-		conn, err = util.TCPConnect(cfg.Inet.IP, cfg.Inet.Port)
+		gConn, err = util.TCPConnect(cfg.Inet.IP, cfg.Inet.Port)
 	}
-	if conn == nil && cfg.Unix != nil {
-		conn, err = util.UnixConnect(cfg.Unix.File)
+	if gConn == nil && cfg.Unix != nil {
+		gConn, err = util.UnixConnect(cfg.Unix.File)
 	}
 
-	if conn == nil || err != nil {
+	if gConn == nil || err != nil {
 		fmt.Printf("%v\n", err)
 		return
 	}
+
+	if rl, err = util.NewReadline(config.GetRelayConfigs()); err != nil {
+		fmt.Printf("%v\n", err)
+		return
+	}
+	defer rl.Close()
+
+	for {
+		line, err := rl.Readline()
+		if err != nil {
+			break
+		}
+		println(line)
+		if line == "status" {
+			handleStatusCommand()
+		}
+	}
+}
+
+func handleStatusCommand() error {
 	reqType := message.RequestType_STATUS
 	req := &message.Request{
 		Type: &reqType,
 	}
-	err = conn.WriteRequest(req)
-	fmt.Printf("write %v\n", err)
+	if err := gConn.WriteRequest(req); err != nil {
+		return err
+	}
 
-	rep := conn.ReadResponse()
+	rep := gConn.ReadResponse()
 	fmt.Printf("rep: %v\n", rep)
+	return nil
 }
