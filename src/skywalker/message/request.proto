@@ -5,6 +5,11 @@ enum RequestType {
     STATUS = 1;   /* 当前状态 */
 }
 
+message StatusRequest {
+    repeated string name = 1;
+}
+
 message Request {
     required RequestType type = 1;
+    optional StatusRequest status = 2;
 }

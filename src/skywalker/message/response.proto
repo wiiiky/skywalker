@@ -3,13 +3,17 @@ package message;
 
 import "src/skywalker/message/request.proto";
 
-message RelayStatus {
-    required string name = 1;
-    required string cname = 2;
-    required string sname = 3;
+
+message StatusResponse {
+    message Status {
+        required string name = 1;
+        required string cname = 2;
+        required string sname = 3;
+    }
+    repeated Status status = 1;
 }
 
 message Response {
     required RequestType type = 1;
-    repeated RelayStatus status = 2;
+    optional StatusResponse status = 2;
 }

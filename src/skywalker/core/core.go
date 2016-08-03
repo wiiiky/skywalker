@@ -138,9 +138,9 @@ func (f *Force) handleConn(c *message.Conn) {
 }
 
 func (f *Force) handleStatus(c *message.Conn) {
-	var status []*message.RelayStatus
+	var status []*message.StatusResponse_Status
 	for _, r := range f.relays {
-		status = append(status, &message.RelayStatus{
+		status = append(status, &message.StatusResponse_Status{
 			Name:  proto.String(r.Name),
 			Cname: proto.String(r.CAName),
 			Sname: proto.String(r.SAName),
@@ -149,7 +149,7 @@ func (f *Force) handleStatus(c *message.Conn) {
 	reqType := message.RequestType_STATUS
 	rep := &message.Response{
 		Type:   &reqType,
-		Status: status,
+		Status: &message.StatusResponse{Status: status},
 	}
 	c.WriteResponse(rep)
 }
