@@ -19,7 +19,7 @@ package main
 
 import (
 	"fmt"
-	"forctl/util"
+	"forctl/core"
 	"skywalker/config"
 	"skywalker/message"
 )
@@ -34,14 +34,15 @@ var (
 
 func main() {
 	var err error
-	var rl *util.Readline
+	var rl *core.Readline
+	var line *core.Line
 	cfg := config.GetCoreConfig()
 	/* 优先通过TCP连接，不存在或者不成功再使用Unix套接字连接 */
 	if cfg.Inet != nil {
-		gConn, err = util.TCPConnect(cfg.Inet.IP, cfg.Inet.Port)
+		gConn, err = core.TCPConnect(cfg.Inet.IP, cfg.Inet.Port)
 	}
 	if gConn == nil && cfg.Unix != nil {
-		gConn, err = util.UnixConnect(cfg.Unix.File)
+		gConn, err = core.UnixConnect(cfg.Unix.File)
 	}
 
 	if gConn == nil || err != nil {
@@ -49,25 +50,38 @@ func main() {
 		return
 	}
 
-	if rl, err = util.NewReadline(config.GetRelayConfigs()); err != nil {
+	if rl, err = core.NewReadline(config.GetRelayConfigs()); err != nil {
 		fmt.Printf("%v\n", err)
 		return
 	}
 	defer rl.Close()
 
 	for {
-		line, err := rl.Readline()
-		if err != nil {
+		if line, err = rl.Readline(); err != nil || line == nil {
 			break
 		}
-		println(line)
-		if line == "status" {
-			handleStatusCommand()
+		if line.CMD == core.COMMAND_STATUS {
+			status(line.Argument(0))
+		} else if line.CMD == core.COMMAND_HELP {
+			help(line.Argument(0))
+		} else {
+			println(line)
 		}
 	}
 }
 
-func handleStatusCommand() error {
+func help(topic string) {
+	cmd := core.GetCommandDefine(topic)
+	if len(topic) == 0 {
+		fmt.Printf("commands (type help <topic>):\n=====================================\n\t%-7s%-7s\n", core.COMMAND_HELP, core.COMMAND_STATUS)
+	} else if topic == core.COMMAND_STATUS {
+		fmt.Printf("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
+	} else {
+		core.InputError("No help on %s\n", topic)
+	}
+}
+
+func status(topic string) error {
 	reqType := message.RequestType_STATUS
 	req := &message.Request{
 		Type: &reqType,

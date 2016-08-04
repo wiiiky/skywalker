@@ -12,7 +12,7 @@ get:
 	GOPATH=`pwd` go get --fix forctl
 
 fmt:
-	find . -name '*.go'|xargs gofmt -w
+	find ./src/forctl ./src/skywalker -name '*.go'|xargs gofmt -w
 
 proto:
 	PATH="$(PATH):./bin" GOPATH=`pwd` protoc --go_out=./ ./src/skywalker/message/*.proto
