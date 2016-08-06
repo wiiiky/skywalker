@@ -45,7 +45,7 @@ func NewReadline(rcfg []*config.RelayConfig) (*Readline, error) {
 		readline.PcItem(COMMAND_HELP, cmds...),
 	)
 	rl, err := readline.NewEx(&readline.Config{
-		Prompt:       "force>> ",
+		Prompt:       "\x1B[36mforce>>\x1B[0m ",
 		HistoryFile:  "/tmp/force_history",
 		AutoComplete: completer,
 	})
@@ -66,6 +66,10 @@ func (l *Line) Argument(i int) string {
 		return ""
 	}
 	return l.Args[i]
+}
+
+func (l *Line) Arguments() []string {
+	return l.Args
 }
 
 func InputError(format string, v ...interface{}) {

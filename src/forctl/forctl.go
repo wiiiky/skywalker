@@ -18,8 +18,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"forctl/core"
+	"io"
 	"skywalker/config"
 	"skywalker/message"
 )
@@ -56,21 +58,24 @@ func main() {
 	}
 	defer rl.Close()
 
-	for {
+	for err == nil {
 		if line, err = rl.Readline(); err != nil || line == nil {
 			break
 		}
 		if line.CMD == core.COMMAND_STATUS {
-			status(line.Argument(0))
+			err = cmdStatus(line.Arguments()...)
 		} else if line.CMD == core.COMMAND_HELP {
-			help(line.Argument(0))
+			err = cmdHelp(line.Argument(0))
 		} else {
 			println(line)
 		}
 	}
+	if err != io.EOF { /* 忽略EOF */
+		fmt.Printf("%v\n", err)
+	}
 }
 
-func help(topic string) {
+func cmdHelp(topic string) error {
 	cmd := core.GetCommandDefine(topic)
 	if len(topic) == 0 {
 		fmt.Printf("commands (type help <topic>):\n=====================================\n\t%-7s%-7s\n", core.COMMAND_HELP, core.COMMAND_STATUS)
@@ -79,18 +84,55 @@ func help(topic string) {
 	} else {
 		core.InputError("No help on %s\n", topic)
 	}
+	return nil
 }
 
-func status(topic string) error {
+/* 处理status命令 */
+func cmdStatus(name ...string) error {
 	reqType := message.RequestType_STATUS
 	req := &message.Request{
 		Type: &reqType,
+		Status: &message.StatusRequest{
+			Name: name,
+		},
 	}
 	if err := gConn.WriteRequest(req); err != nil {
 		return err
 	}
 
 	rep := gConn.ReadResponse()
-	fmt.Printf("rep: %v\n", rep)
+	if rep == nil {
+		return errors.New("Connection Closed Unexpectedly")
+	}
+	if err := rep.GetErr(); err != nil {
+		core.InputError("%s\n", err.GetMsg())
+	} else {
+		result := rep.GetStatus()
+		var maxlen = []int{10, 20, 7}
+		var rows [][]string
+		for _, status := range result.GetStatus() {
+			var row = []string{
+				status.GetName(),
+				fmt.Sprintf("%s/%s", status.GetCname(), status.GetSname()),
+				"RUNNING",
+			}
+			if !status.GetRunning() {
+				row[2] = "STOPPED"
+			}
+			if len(row[0]) > maxlen[0] {
+				maxlen[0] = len(row[0])
+			}
+			if len(row[1]) > maxlen[1] {
+				maxlen[1] = len(row[1])
+			}
+			rows = append(rows, row)
+		}
+		maxlen[0] += 1
+		maxlen[1] += 2
+		maxlen[2] += 1
+		for _, row := range rows {
+			fmt.Printf("\x1B[32m%-*s\x1B[0m %-*s %-*s\n", maxlen[0], row[0], maxlen[1], row[1], maxlen[2], row[2])
+		}
+	}
 	return nil
 }

@@ -18,6 +18,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/hitoshii/golib/src/log"
 	"net"
@@ -34,7 +35,7 @@ type Force struct {
 	UnixListener *net.UnixListener
 
 	mutex  *sync.Mutex
-	relays []*relay.TcpRelay
+	relays map[string]*relay.TcpRelay
 }
 
 func (f *Force) lock() {
@@ -47,18 +48,20 @@ func (f *Force) unlock() {
 
 /* 载入所有服务，不启动 */
 func (f *Force) loadRelays() error {
+	f.lock()
+	defer f.unlock()
 	for _, cfg := range config.GetRelayConfigs() {
 		if err := cfg.Init(); err != nil {
 			return err
 		}
-		r := relay.New(cfg)
-		f.relays = append(f.relays, r)
+		f.relays[cfg.Name] = relay.New(cfg)
 	}
 	return nil
 }
 
 func (f *Force) autoStartRelays() {
 	f.lock()
+	defer f.unlock()
 	for _, r := range f.relays {
 		if r.AutoStart {
 			if err := r.Start(); err != nil {
@@ -66,19 +69,6 @@ func (f *Force) autoStartRelays() {
 			}
 		}
 	}
-	f.unlock()
-}
-
-/* 执行配置指定的服务 */
-func (f *Force) startRelay(cfg *config.RelayConfig) error {
-	var err error
-
-	if err = cfg.Init(); err != nil {
-		return err
-	}
-
-	f.relays = append(f.relays, relay.New(cfg))
-	return nil
 }
 
 /* 执行服务 */
@@ -105,7 +95,7 @@ func Run() *Force {
 		InetListener: inetListener,
 		UnixListener: unixListener,
 		mutex:        &sync.Mutex{},
-		relays:       nil,
+		relays:       make(map[string]*relay.TcpRelay),
 	}
 
 	if err = force.loadRelays(); err != nil {
@@ -155,28 +145,48 @@ func (f *Force) handleConn(c *message.Conn) {
 		if req == nil {
 			break
 		}
-		reqType := req.GetType()
-		switch reqType {
+		switch req.GetType() {
 		case message.RequestType_STATUS:
-			f.handleStatus(c)
+			c.WriteResponse(f.handleStatus(req.GetStatus()))
 		}
 	}
 	log.D("client %s closed", c.RemoteAddr())
 }
 
-func (f *Force) handleStatus(c *message.Conn) {
-	var status []*message.StatusResponse_Status
-	for _, r := range f.relays {
-		status = append(status, &message.StatusResponse_Status{
-			Name:  proto.String(r.Name),
-			Cname: proto.String(r.CAName),
-			Sname: proto.String(r.SAName),
-		})
+/* 返回代理当前状态 */
+func relayStatus(r *relay.TcpRelay) *message.StatusResponse_Status {
+	return &message.StatusResponse_Status{
+		Name:    proto.String(r.Name),
+		Cname:   proto.String(r.CAName),
+		Sname:   proto.String(r.SAName),
+		Running: proto.Bool(r.Running),
 	}
+}
+
+func (f *Force) handleStatus(req *message.StatusRequest) *message.Response {
+	var result []*message.StatusResponse_Status
+	var err *message.Error
+
+	names := req.GetName()
+	if len(names) == 0 { /* 没有指定参数表示所有代理服务 */
+		for _, r := range f.relays {
+			result = append(result, relayStatus(r))
+		}
+	} else {
+		for _, name := range names {
+			if r := f.relays[name]; r == nil {
+				err = &message.Error{Msg: proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name))}
+				break
+			} else {
+				result = append(result, relayStatus(r))
+			}
+		}
+	}
+
 	reqType := message.RequestType_STATUS
-	rep := &message.Response{
+	return &message.Response{
 		Type:   &reqType,
-		Status: &message.StatusResponse{Status: status},
+		Status: &message.StatusResponse{Status: result},
+		Err:    err,
 	}
-	c.WriteResponse(rep)
 }

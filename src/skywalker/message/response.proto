@@ -4,16 +4,23 @@ package message;
 import "src/skywalker/message/request.proto";
 
 
+/* 出错 */
+message Error {
+    required string msg = 1;
+}
+
 message StatusResponse {
     message Status {
         required string name = 1;
         required string cname = 2;
         required string sname = 3;
+        required bool running = 4;
     }
     repeated Status status = 1;
 }
 
 message Response {
-    required RequestType type = 1;
-    optional StatusResponse status = 2;
+    optional Error err = 1;
+    required RequestType type = 2;
+    optional StatusResponse status = 3;
 }
