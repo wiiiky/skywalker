@@ -26,27 +26,58 @@ import (
 	"skywalker/message"
 	"skywalker/relay"
 	"skywalker/util"
+	"sync"
 )
 
 type Force struct {
 	InetListener *net.TCPListener
 	UnixListener *net.UnixListener
 
+	mutex  *sync.Mutex
 	relays []*relay.TcpRelay
+}
+
+func (f *Force) lock() {
+	f.mutex.Lock()
+}
+
+func (f *Force) unlock() {
+	f.mutex.Unlock()
+}
+
+/* 载入所有服务，不启动 */
+func (f *Force) loadRelays() error {
+	for _, cfg := range config.GetRelayConfigs() {
+		if err := cfg.Init(); err != nil {
+			return err
+		}
+		r := relay.New(cfg)
+		f.relays = append(f.relays, r)
+	}
+	return nil
+}
+
+func (f *Force) autoStartRelays() {
+	f.lock()
+	for _, r := range f.relays {
+		if r.AutoStart {
+			if err := r.Start(); err != nil {
+				log.W("Fail To Auto Start %s", r.Name)
+			}
+		}
+	}
+	f.unlock()
 }
 
 /* 执行配置指定的服务 */
 func (f *Force) startRelay(cfg *config.RelayConfig) error {
-	var r *relay.TcpRelay
 	var err error
 
 	if err = cfg.Init(); err != nil {
 		return err
-	} else if r, err = relay.New(cfg); r == nil {
-		return err
 	}
 
-	f.relays = append(f.relays, r)
+	f.relays = append(f.relays, relay.New(cfg))
 	return nil
 }
 
@@ -73,16 +104,16 @@ func Run() *Force {
 	force := &Force{
 		InetListener: inetListener,
 		UnixListener: unixListener,
+		mutex:        &sync.Mutex{},
 		relays:       nil,
 	}
 
-	for _, cfg := range config.GetRelayConfigs() {
-		if err := force.startRelay(cfg); err != nil {
-			log.ERROR(cfg.Name, "%s", err)
-			return nil
-		}
+	if err = force.loadRelays(); err != nil {
+		log.E("%v", err)
+		return nil
 	}
 
+	force.autoStartRelays()
 	force.listen()
 
 	return force
@@ -111,10 +142,6 @@ func (f *Force) listen() {
 	}
 	if f.UnixListener != nil {
 		go listenFunc(f.UnixListener)
-	}
-
-	for _, r := range f.relays {
-		go r.Run()
 	}
 }
 

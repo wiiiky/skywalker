@@ -77,7 +77,8 @@ type RelayConfig struct {
 	ServerAgent  string                 `yaml:"serverAgent"`
 	ServerConfig map[string]interface{} `yaml:"serverConfig"`
 
-	Log *log.Config `yaml:"log"`
+	Log       *log.Config `yaml:"log"`
+	AutoStart bool        `yaml:"autoStart"`
 }
 
 /*

@@ -47,36 +47,49 @@ type TcpRelay struct {
 	SAName  string
 	Running bool
 
+	BindAddr string
+	BindPort int
 	listener net.Listener
+
+	AutoStart bool
 }
 
 /* 创建新的代理，监听本地端口 */
-func New(cfg *config.RelayConfig) (*TcpRelay, error) {
+func New(cfg *config.RelayConfig) *TcpRelay {
 	name := cfg.Name
 	cname := cfg.ClientAgent
 	sname := cfg.ServerAgent
-	if listener, err := util.TCPListen(cfg.BindAddr, int(cfg.BindPort)); err != nil {
-		return nil, err
-	} else {
-		log.INFO(name, "Listen TCP On %s", listener.Addr())
-		return &TcpRelay{
-			listener: listener,
-			Name:     name,
-			CAName:   cname,
-			SAName:   sname,
-			Running:  false,
-		}, nil
+	return &TcpRelay{
+		Name:      name,
+		CAName:    cname,
+		SAName:    sname,
+		Running:   false,
+		BindAddr:  cfg.BindAddr,
+		BindPort:  int(cfg.BindPort),
+		AutoStart: cfg.AutoStart,
 	}
 }
 
 func (r *TcpRelay) Close() {
-	log.INFO(r.Name, "TCP %s Closed", r.listener.Addr())
+	log.INFO(r.Name, "Listener %s Closed", r.listener.Addr())
 	r.listener.Close()
+	r.Running = false
+}
+
+func (r *TcpRelay) Start() error {
+	listener, err := util.TCPListen(r.BindAddr, r.BindPort)
+	if err != nil {
+		return err
+	}
+	log.INFO(r.Name, "%s is Listening", listener.Addr())
+	r.listener = listener
+	r.Running = true
+	go r.Run()
+	return nil
 }
 
 func (r *TcpRelay) Run() {
 	defer r.Close()
-	r.Running = true
 	for r.Running {
 		if conn, err := r.listener.Accept(); err == nil {
 			r.handle(conn)
@@ -84,7 +97,6 @@ func (r *TcpRelay) Run() {
 			log.WARN(r.Name, "Couldn't Accept: %s", err)
 		}
 	}
-	r.Running = false
 }
 
 /* 启动数据转发流程 */
