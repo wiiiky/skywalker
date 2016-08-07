@@ -3,13 +3,19 @@ package message;
 
 enum RequestType {
     STATUS = 1;   /* 当前状态 */
+    START = 2;    /* 启动服务 */
 }
 
 message StatusRequest {
     repeated string name = 1;
 }
 
+message StartRequest {
+    repeated string name = 1;
+}
+
 message Request {
     required RequestType type = 1;
     optional StatusRequest status = 2;
+    optional StartRequest start = 3;
 }

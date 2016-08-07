@@ -66,7 +66,7 @@ func (cfg *CoreConfig) init() {
 }
 
 /* 服务配置 */
-type RelayConfig struct {
+type ProxyConfig struct {
 	Name     string `yaml:"name"`
 	BindAddr string `yaml:"bindAddr"`
 	BindPort uint16 `yaml:"bindPort"`
@@ -85,7 +85,7 @@ type RelayConfig struct {
  * 初始化配置
  * 设置日志、插件并检查CA和SA
  */
-func (cfg *RelayConfig) Init() error {
+func (cfg *ProxyConfig) Init() error {
 	log.Init(cfg.Log)
 	ca := cfg.ClientAgent
 	sa := cfg.ServerAgent
@@ -111,7 +111,7 @@ var (
 			Loggers: defaultLoggers,
 		},
 	}
-	gConfigs = map[string]*RelayConfig{}
+	gConfigs = map[string]*ProxyConfig{}
 )
 
 const (
@@ -120,8 +120,8 @@ const (
 )
 
 /* 获取所有配置列表 */
-func GetRelayConfigs() []*RelayConfig {
-	var configs []*RelayConfig
+func GetProxyConfigs() []*ProxyConfig {
+	var configs []*ProxyConfig
 
 	for name, cfg := range gConfigs {
 		/* 忽略~开头的配置 */

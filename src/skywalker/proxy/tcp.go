@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package relay
+package proxy
 
 import (
 	"fmt"
@@ -41,7 +41,7 @@ import (
  * CA和SA之间使用pkg.Package通信
  */
 
-type TcpRelay struct {
+type TcpProxy struct {
 	Name    string
 	CAName  string
 	SAName  string
@@ -55,11 +55,11 @@ type TcpRelay struct {
 }
 
 /* 创建新的代理，监听本地端口 */
-func New(cfg *config.RelayConfig) *TcpRelay {
+func New(cfg *config.ProxyConfig) *TcpProxy {
 	name := cfg.Name
 	cname := cfg.ClientAgent
 	sname := cfg.ServerAgent
-	return &TcpRelay{
+	return &TcpProxy{
 		Name:      name,
 		CAName:    cname,
 		SAName:    sname,
@@ -70,47 +70,47 @@ func New(cfg *config.RelayConfig) *TcpRelay {
 	}
 }
 
-func (r *TcpRelay) Close() {
-	log.INFO(r.Name, "Listener %s Closed", r.listener.Addr())
-	r.listener.Close()
-	r.Running = false
+func (p *TcpProxy) Close() {
+	log.INFO(p.Name, "Listener %s Closed", p.listener.Addr())
+	p.listener.Close()
+	p.Running = false
 }
 
-func (r *TcpRelay) Start() error {
-	listener, err := util.TCPListen(r.BindAddr, r.BindPort)
+func (p *TcpProxy) Start() error {
+	listener, err := util.TCPListen(p.BindAddr, p.BindPort)
 	if err != nil {
 		return err
 	}
-	log.INFO(r.Name, "%s is Listening", listener.Addr())
-	r.listener = listener
-	r.Running = true
-	go r.Run()
+	log.INFO(p.Name, "%s is Listening", listener.Addr())
+	p.listener = listener
+	p.Running = true
+	go p.Run()
 	return nil
 }
 
-func (r *TcpRelay) Run() {
-	defer r.Close()
-	for r.Running {
-		if conn, err := r.listener.Accept(); err == nil {
-			r.handle(conn)
+func (p *TcpProxy) Run() {
+	defer p.Close()
+	for p.Running {
+		if conn, err := p.listener.Accept(); err == nil {
+			p.handle(conn)
 		} else {
-			log.WARN(r.Name, "Couldn't Accept: %s", err)
+			log.WARN(p.Name, "Couldn't Accept: %s", err)
 		}
 	}
 }
 
 /* 启动数据转发流程 */
-func (r *TcpRelay) handle(conn net.Conn) {
-	ca := agent.GetClientAgent(r.CAName, r.Name)
-	sa := agent.GetServerAgent(r.SAName, r.Name)
+func (p *TcpProxy) handle(conn net.Conn) {
+	ca := agent.GetClientAgent(p.CAName, p.Name)
+	sa := agent.GetServerAgent(p.SAName, p.Name)
 	if ca == nil || sa == nil {
 		conn.Close()
 		return
 	}
 	c2s := make(chan *pkg.Package, 100)
 	s2c := make(chan *pkg.Package, 100)
-	go r.caGoroutine(ca, c2s, s2c, conn)
-	go r.saGoroutine(sa, c2s, s2c)
+	go p.caGoroutine(ca, c2s, s2c, conn)
+	go p.saGoroutine(sa, c2s, s2c)
 }
 
 /*
@@ -120,7 +120,7 @@ func (r *TcpRelay) handle(conn net.Conn) {
  * @tdata 需要转发的数据(Transfer Data)，将发送给ic
  * @rdata 需要返回给数据(Response Data)，将发送给conn
  */
-func (r *TcpRelay) transferData(ic chan *pkg.Package, conn net.Conn, tdata interface{},
+func (p *TcpProxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interface{},
 	rdata interface{}, err error) error {
 	/* 转发数据 */
 	switch data := tdata.(type) {
@@ -156,7 +156,7 @@ func (r *TcpRelay) transferData(ic chan *pkg.Package, conn net.Conn, tdata inter
 }
 
 /* 处理客户端连接的goroutine */
-func (r *TcpRelay) caGoroutine(ca agent.ClientAgent,
+func (p *TcpProxy) caGoroutine(ca agent.ClientAgent,
 	c2s chan *pkg.Package,
 	s2c chan *pkg.Package,
 	cConn net.Conn) {
@@ -176,8 +176,8 @@ RUNNING:
 				break RUNNING
 			}
 			cmd, rdata, err := ca.ReadFromClient(data)
-			if err := r.transferData(c2s, cConn, cmd, rdata, err); err != nil {
-				log.WARN(r.Name, "Read From Client Error: %s %s", cConn.RemoteAddr(),
+			if err := p.transferData(c2s, cConn, cmd, rdata, err); err != nil {
+				log.WARN(p.Name, "Read From Client Error: %s %s", cConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
 			}
@@ -189,9 +189,9 @@ RUNNING:
 			} else if cmd.Type() == pkg.PKG_DATA {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := ca.ReadFromSA(data)
-					if err := r.transferData(c2s, cConn, cmd, rdata, err); err != nil {
+					if err := p.transferData(c2s, cConn, cmd, rdata, err); err != nil {
 						closed_by_client = false
-						log.WARN(r.Name, "Read From SA Error: %s %s", cConn.RemoteAddr(),
+						log.WARN(p.Name, "Read From SA Error: %s %s", cConn.RemoteAddr(),
 							err.Error())
 						break RUNNING
 					}
@@ -200,24 +200,24 @@ RUNNING:
 				result, host, port := cmd.GetConnectResult()
 				if result == pkg.CONNECT_RESULT_OK {
 					chain = fmt.Sprintf("%s <==> %s:%v", cConn.RemoteAddr().String(), host, port)
-					log.INFO(r.Name, "%s Connected", chain)
+					log.INFO(p.Name, "%s Connected", chain)
 				}
 				cmd, rdata, err := ca.OnConnectResult(result, host, port)
-				err = r.transferData(c2s, cConn, cmd, rdata, err)
+				err = p.transferData(c2s, cConn, cmd, rdata, err)
 				if result != pkg.CONNECT_RESULT_OK || err != nil {
 					closed_by_client = false
 					break RUNNING
 				}
 			} else {
-				log.ERROR(r.Name, "Unknown Package From Server Agent! This is a BUG!")
+				log.ERROR(p.Name, "Unknown Package From Server Agent! This is a BUG!")
 			}
 		}
 	}
 	ca.OnClose(closed_by_client)
 	if closed_by_client {
-		log.INFO(r.Name, "%s Closed By Client", chain)
+		log.INFO(p.Name, "%s Closed By Client", chain)
 	} else {
-		log.INFO(r.Name, "%s Closed By Server", chain)
+		log.INFO(p.Name, "%s Closed By Server", chain)
 	}
 }
 
@@ -226,18 +226,18 @@ RUNNING:
  * 成功返回net.Conn和对应的channel，以及真实链接的服务器地址和端口号
  * 失败返回nil,nil,"",0
  */
-func (r *TcpRelay) connectRemote(h string, p int, sa agent.ServerAgent,
+func (p *TcpProxy) connectRemote(originalHost string, originalPort int, sa agent.ServerAgent,
 	s2c chan *pkg.Package) (net.Conn, chan []byte, string, int) {
 	/* 获取服务器地址，并链接 */
-	host, port := sa.GetRemoteAddress(h, p)
+	host, port := sa.GetRemoteAddress(originalHost, originalPort)
 	conn, result := util.TCPConnect(host, port)
 
 	/* 连接结果 */
 	var resultCMD *pkg.Package
 	if result != pkg.CONNECT_RESULT_OK {
-		resultCMD = pkg.NewConnectResultPackage(result, h, p)
+		resultCMD = pkg.NewConnectResultPackage(result, originalHost, originalPort)
 	} else {
-		resultCMD = pkg.NewConnectResultPackage(result, h, p)
+		resultCMD = pkg.NewConnectResultPackage(result, originalHost, originalPort)
 	}
 	/* 给客户端代理发送连接结果反馈 */
 	s2c <- resultCMD
@@ -251,8 +251,8 @@ func (r *TcpRelay) connectRemote(h string, p int, sa agent.ServerAgent,
 	}
 
 	/* 发送服务端代理的处理后数据 */
-	if err := r.transferData(s2c, conn, cmd, rdata, err); err != nil {
-		log.WARN(r.Name, "Server Agent OnConnectResult Error, %s", err.Error())
+	if err := p.transferData(s2c, conn, cmd, rdata, err); err != nil {
+		log.WARN(p.Name, "Server Agent OnConnectResult Error, %s", err.Error())
 		conn.Close()
 		return nil, nil, "", 0
 	}
@@ -264,7 +264,7 @@ func (r *TcpRelay) connectRemote(h string, p int, sa agent.ServerAgent,
  * 处理服务器连接的goroutine
  * 从客户端代理收到的第一个数据包一定是服务器地址，无论该数据包被标志成什么类型
  */
-func (r *TcpRelay) saGoroutine(sa agent.ServerAgent,
+func (p *TcpProxy) saGoroutine(sa agent.ServerAgent,
 	c2s chan *pkg.Package,
 	s2c chan *pkg.Package) {
 	defer close(s2c)
@@ -275,7 +275,7 @@ func (r *TcpRelay) saGoroutine(sa agent.ServerAgent,
 		return
 	}
 	host, port := cmd.GetConnectData()
-	sConn, sChan, _, _ := r.connectRemote(host, port, sa, s2c)
+	sConn, sChan, _, _ := p.connectRemote(host, port, sa, s2c)
 	if sConn == nil {
 		return
 	}
@@ -291,9 +291,9 @@ RUNNING:
 				break RUNNING
 			}
 			cmd, rdata, err := sa.ReadFromServer(data)
-			if err := r.transferData(s2c, sConn, cmd, rdata, err); err != nil {
+			if err := p.transferData(s2c, sConn, cmd, rdata, err); err != nil {
 				closed_by_client = false
-				log.WARN(r.Name, "Read From Server Error: %s %s", sConn.RemoteAddr(),
+				log.WARN(p.Name, "Read From Server Error: %s %s", sConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
 			}
@@ -305,8 +305,8 @@ RUNNING:
 			if cmd.Type() == pkg.PKG_DATA {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := sa.ReadFromCA(data)
-					if _err := r.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
-						log.WARN(r.Name, "Read From CA Error: %s %s", sConn.RemoteAddr(),
+					if _err := p.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
+						log.WARN(p.Name, "Read From CA Error: %s %s", sConn.RemoteAddr(),
 							_err.Error())
 						break RUNNING
 					}
@@ -315,11 +315,11 @@ RUNNING:
 				/* 需要重新链接服务器 */
 				sConn.Close()
 				host, port := cmd.GetConnectData()
-				if sConn, sChan, _, _ = r.connectRemote(host, port, sa, s2c); sConn == nil {
+				if sConn, sChan, _, _ = p.connectRemote(host, port, sa, s2c); sConn == nil {
 					break RUNNING
 				}
 			} else {
-				log.ERROR(r.Name, "Unknown Package From Client Agent! This is a BUG!")
+				log.ERROR(p.Name, "Unknown Package From Client Agent! This is a BUG!")
 			}
 		}
 	}

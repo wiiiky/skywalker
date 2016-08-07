@@ -24,6 +24,7 @@ import (
 const (
 	COMMAND_HELP   = "help"
 	COMMAND_STATUS = "status"
+	COMMAND_START = "start"
 )
 
 type CommandDefine struct {
@@ -42,7 +43,12 @@ var (
 		COMMAND_STATUS: &CommandDefine{
 			OptionalCount: 100,
 			RequiredCount: 0,
-			Help:          fmt.Sprintf("\tstatus %-15sGet status for one or multiple process\n\tstatus %-15sGet status for all processes\n", "<name>...", " "),
+			Help:          fmt.Sprintf("\tstatus %-15sGet status for one or multiple proxy\n\tstatus %-15sGet status for all processes\n", "<name>...", " "),
+		},
+		COMMAND_START: &CommandDefine{
+			OptionalCount: 100,
+			RequiredCount: 1,
+			Help:          fmt.Sprintf("\tstart %-15sStart one or multiple proxy", "<name>..."),
 		},
 	}
 )

@@ -29,11 +29,11 @@ type Readline struct {
 	rl *readline.Instance
 }
 
-func NewReadline(rcfg []*config.RelayConfig) (*Readline, error) {
+func NewReadline(rcfg []*config.ProxyConfig) (*Readline, error) {
 	/* 自动补全数据 */
-	var relays, cmds []readline.PrefixCompleterInterface
+	var proxies, cmds []readline.PrefixCompleterInterface
 	for _, r := range rcfg {
-		relays = append(relays, readline.PcItem(r.Name))
+		proxies = append(proxies, readline.PcItem(r.Name))
 	}
 	for k, _ := range gCommandMap {
 		if k != COMMAND_HELP {
@@ -41,7 +41,8 @@ func NewReadline(rcfg []*config.RelayConfig) (*Readline, error) {
 		}
 	}
 	completer := readline.NewPrefixCompleter(
-		readline.PcItem(COMMAND_STATUS, relays...),
+		readline.PcItem(COMMAND_STATUS, proxies...),
+		readline.PcItem(COMMAND_START, proxies...),
 		readline.PcItem(COMMAND_HELP, cmds...),
 	)
 	rl, err := readline.NewEx(&readline.Config{
