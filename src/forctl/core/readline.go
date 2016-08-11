@@ -18,7 +18,6 @@
 package core
 
 import (
-	"fmt"
 	"gopkg.in/readline.v1"
 	"skywalker/config"
 	"strings"
@@ -73,11 +72,6 @@ func (l *Line) Arguments() []string {
 	return l.Args
 }
 
-func InputError(format string, v ...interface{}) {
-	format = "*** " + format
-	fmt.Printf(format, v...)
-}
-
 func NewLine(buf string) *Line {
 	var seps []string
 	var cmd *CommandDefine
@@ -92,12 +86,12 @@ func NewLine(buf string) *Line {
 		return nil
 	}
 	if cmd = gCommandMap[seps[0]]; cmd == nil {
-		InputError("Unknown syntax: %s\n", seps[0])
+		OutputError("Unknown syntax: %s\n", seps[0])
 		return nil
 	}
 
 	if cmd.RequiredCount > len(seps[1:]) || cmd.RequiredCount+cmd.OptionalCount < len(seps[1:]) {
-		InputError("Invalid argument for %s\n%s\n", seps[0], cmd.Help)
+		OutputError("Invalid argument for %s\n%s\n", seps[0], cmd.Help)
 		return nil
 	}
 

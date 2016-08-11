@@ -19,9 +19,9 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"forctl/core"
 	"io"
+	"fmt"
 	"skywalker/config"
 	"skywalker/message"
 )
@@ -48,12 +48,12 @@ func main() {
 	}
 
 	if gConn == nil || err != nil {
-		fmt.Printf("%v\n", err)
+		core.Output("%v\n", err)
 		return
 	}
 
 	if rl, err = core.NewReadline(config.GetProxyConfigs()); err != nil {
-		fmt.Printf("%v\n", err)
+		core.Output("%v\n", err)
 		return
 	}
 	defer rl.Close()
@@ -70,24 +70,23 @@ func main() {
 			case core.COMMAND_HELP:
 				err = cmdHelp(line.Argument(0))
 			default:
-				fmt.Printf("%v\n", line)
+				core.Output("%v\n", line)
 		}
 	}
 	if err != io.EOF { /* 忽略EOF */
-		fmt.Printf("%v\n", err)
+		core.Output("%v\n", err)
 	}
 }
 
 func cmdHelp(topic string) error {
 	cmd := core.GetCommandDefine(topic)
 	if len(topic) == 0 {
-		fmt.Printf("commands (type help <topic>):\n=====================================\n\t%-7s%-7s\n", core.COMMAND_HELP, core.COMMAND_STATUS)
-	} else if topic == core.COMMAND_STATUS {
-		fmt.Printf("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
-	} else if topic == core.COMMAND_START {
-		fmt.Printf("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
+		core.Output("commands (type help <topic>):\n=====================================\n\t%s  %s  %s\n",
+				   core.COMMAND_HELP, core.COMMAND_STATUS, core.COMMAND_START)
+	} else if cmd != nil {
+		core.Output("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
 	} else {
-		core.InputError("No help on %s\n", topic)
+		core.OutputError("No help on %s\n", topic)
 	}
 	return nil
 }
@@ -110,7 +109,7 @@ func cmdStatus(name ...string) error {
 		return errors.New("Connection Closed Unexpectedly")
 	}
 	if err := rep.GetErr(); err != nil {
-		core.InputError("%s\n", err.GetMsg())
+		core.OutputError("%s\n", err.GetMsg())
 	} else {
 		result := rep.GetStatus()
 		var maxlen = []int{10, 16, 12, 7}
@@ -133,7 +132,7 @@ func cmdStatus(name ...string) error {
 			maxlen[i] += 2
 		}
 		for _, row := range rows {
-			fmt.Printf("\x1B[32m%-*s\x1B[0m %-*s %-*s %-*s\n", maxlen[0], row[0], maxlen[1], row[1], maxlen[2], row[2], maxlen[3], row[3])
+			core.Output("\x1B[32m%-*s\x1B[0m %-*s %-*s %-*s\n", maxlen[0], row[0], maxlen[1], row[1], maxlen[2], row[2], maxlen[3], row[3])
 		}
 	}
 	return nil
