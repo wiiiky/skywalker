@@ -84,6 +84,8 @@ func cmdHelp(topic string) error {
 		fmt.Printf("commands (type help <topic>):\n=====================================\n\t%-7s%-7s\n", core.COMMAND_HELP, core.COMMAND_STATUS)
 	} else if topic == core.COMMAND_STATUS {
 		fmt.Printf("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
+	} else if topic == core.COMMAND_START {
+		fmt.Printf("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
 	} else {
 		core.InputError("No help on %s\n", topic)
 	}
@@ -113,15 +115,12 @@ func cmdStatus(name ...string) error {
 		result := rep.GetStatus()
 		var maxlen = []int{10, 16, 12, 7}
 		var rows [][]string
-		for _, status := range result.GetStatus() {
+		for _, data := range result.GetData() {
 			var row = []string{
-				status.GetName(),
-				fmt.Sprintf("%s/%s", status.GetCname(), status.GetSname()),
-				fmt.Sprintf("%s:%d", status.GetBindAddr(), status.GetBindPort()),
-				"RUNNING",
-			}
-			if !status.GetRunning() {
-				row[2] = "STOPPED"
+				data.GetName(),
+				fmt.Sprintf("%s/%s", data.GetCname(), data.GetSname()),
+				fmt.Sprintf("%s:%d", data.GetBindAddr(), data.GetBindPort()),
+				data.GetStatus().String(),
 			}
 			for i, col := range row {
 				if len(col) > maxlen[i] {

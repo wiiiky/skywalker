@@ -61,7 +61,7 @@ func (f *Force) autoStartProxies() {
 	f.lock()
 	defer f.unlock()
 	for _, p := range f.proxies {
-		if p.AutoStart && !p.Running {
+		if p.AutoStart && p.Status != proxy.STATUS_RUNNING {
 			if err := p.Start(); err != nil {
 				log.W("Fail To Auto Start %s", p.Name)
 			}

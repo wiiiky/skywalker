@@ -27,12 +27,13 @@ import (
 
 
 /* 返回代理当前状态 */
-func proxyStatus(p *proxy.TcpProxy) *message.StatusResponse_Status {
-	return &message.StatusResponse_Status{
+func proxyStatus(p *proxy.TcpProxy) *message.StatusResponse_Data {
+	status := message.StatusResponse_Status(p.Status)
+	return &message.StatusResponse_Data{
 		Name:    proto.String(p.Name),
 		Cname:   proto.String(p.CAName),
 		Sname:   proto.String(p.SAName),
-		Running: proto.Bool(p.Running),
+		Status:  &status,
 		BindAddr: proto.String(p.BindAddr),
 		BindPort: proto.Int32(int32(p.BindPort)),
 	}
@@ -40,7 +41,7 @@ func proxyStatus(p *proxy.TcpProxy) *message.StatusResponse_Status {
 
 /* 处理status命令 */
 func (f *Force) handleStatus(req *message.StatusRequest) (*message.Response, error) {
-	var result []*message.StatusResponse_Status
+	var result []*message.StatusResponse_Data
 	var err *message.Error
 
 	if req == nil {
@@ -66,7 +67,7 @@ func (f *Force) handleStatus(req *message.StatusRequest) (*message.Response, err
 	reqType := message.RequestType_STATUS
 	return &message.Response{
 		Type:   &reqType,
-		Status: &message.StatusResponse{Status: result},
+		Status: &message.StatusResponse{Data: result},
 		Err:    err,
 	}, nil
 }

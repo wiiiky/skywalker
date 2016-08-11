@@ -10,15 +10,20 @@ message Error {
 }
 
 message StatusResponse {
-    message Status {
+    enum Status {
+        STOPPED = 1;
+        RUNNING = 2;
+        ERROR = 3;
+    }
+    message Data {
         required string name = 1;
         required string cname = 2;
         required string sname = 3;
-        required bool running = 4;
+        required Status status = 4;
         required string bindAddr = 5;
         required int32 bindPort = 6;
     }
-    repeated Status status = 1;
+    repeated Data data = 1;
 }
 
 message Response {

@@ -41,11 +41,17 @@ import (
  * CA和SA之间使用pkg.Package通信
  */
 
+const (
+	STATUS_STOPPED = 1
+	STATUS_RUNNING = 2
+	STATUS_ERROR = 3
+)
+
 type TcpProxy struct {
 	Name    string
 	CAName  string
 	SAName  string
-	Running bool
+	Status  int
 
 	BindAddr string
 	BindPort int
@@ -63,7 +69,7 @@ func New(cfg *config.ProxyConfig) *TcpProxy {
 		Name:      name,
 		CAName:    cname,
 		SAName:    sname,
-		Running:   false,
+		Status:    STATUS_STOPPED,
 		BindAddr:  cfg.BindAddr,
 		BindPort:  int(cfg.BindPort),
 		AutoStart: cfg.AutoStart,
@@ -73,24 +79,25 @@ func New(cfg *config.ProxyConfig) *TcpProxy {
 func (p *TcpProxy) Close() {
 	log.INFO(p.Name, "Listener %s Closed", p.listener.Addr())
 	p.listener.Close()
-	p.Running = false
+	p.Status = STATUS_STOPPED
 }
 
 func (p *TcpProxy) Start() error {
 	listener, err := util.TCPListen(p.BindAddr, p.BindPort)
 	if err != nil {
+		p.Status = STATUS_ERROR
 		return err
 	}
 	log.INFO(p.Name, "%s is Listening", listener.Addr())
 	p.listener = listener
-	p.Running = true
+	p.Status = STATUS_RUNNING
 	go p.Run()
 	return nil
 }
 
 func (p *TcpProxy) Run() {
 	defer p.Close()
-	for p.Running {
+	for p.Status == STATUS_RUNNING {
 		if conn, err := p.listener.Accept(); err == nil {
 			p.handle(conn)
 		} else {
