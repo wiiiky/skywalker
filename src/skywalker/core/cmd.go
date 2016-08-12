@@ -18,48 +18,73 @@
 package core
 
 import (
-	"fmt"
 	"errors"
-	"skywalker/message"
+	"fmt"
 	"github.com/golang/protobuf/proto"
+	"skywalker/message"
 	"skywalker/proxy"
 )
 
+type HandleRequest func(f *Force, v interface{}) (*message.Response, error)
+
+type Command struct {
+	Handle       HandleRequest
+	RequestField string
+}
+
+var (
+	gCommandMap map[message.RequestType]*Command
+)
+
+func init() {
+	gCommandMap = map[message.RequestType]*Command{
+		message.RequestType_STATUS: &Command{
+			Handle:       handleStatus,
+			RequestField: "GetStatus",
+		},
+		message.RequestType_START: &Command{
+			Handle:       handleStart,
+			RequestField: "GetStart",
+		},
+		message.RequestType_STOP: &Command{
+			Handle:       handleStop,
+			RequestField: "GetStop",
+		},
+	}
+}
 
 /* 返回代理当前状态 */
 func proxyStatus(p *proxy.TcpProxy) *message.StatusResponse_Data {
 	status := message.StatusResponse_Status(p.Status)
 	return &message.StatusResponse_Data{
-		Name:    proto.String(p.Name),
-		Cname:   proto.String(p.CAName),
-		Sname:   proto.String(p.SAName),
-		Status:  &status,
+		Name:     proto.String(p.Name),
+		Cname:    proto.String(p.CAName),
+		Sname:    proto.String(p.SAName),
+		Status:   &status,
 		BindAddr: proto.String(p.BindAddr),
 		BindPort: proto.Int32(int32(p.BindPort)),
-		Err: proto.String(""),
+		Err:      proto.String(""),
 	}
 }
 
 func proxyStatusNotFound(name string) *message.StatusResponse_Data {
 	status := message.StatusResponse_STOPPED
 	return &message.StatusResponse_Data{
-		Name:    proto.String(name),
-		Cname:   proto.String(""),
-		Sname:   proto.String(""),
-		Status:  &status,
+		Name:     proto.String(name),
+		Cname:    proto.String(""),
+		Sname:    proto.String(""),
+		Status:   &status,
 		BindAddr: proto.String(""),
 		BindPort: proto.Int32(0),
-		Err: proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
+		Err:      proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
 	}
 }
 
 /* 处理status命令 */
-func (f *Force) handleStatus(req *message.StatusRequest) (*message.Response, error) {
+func handleStatus(f *Force, v interface{}) (*message.Response, error) {
 	var result []*message.StatusResponse_Data
 
-	if req == nil {
-		return nil, errors.New("Invalid Request For `status`")
-	}
+	req := v.(*message.StatusRequest)
 
 	reqType := message.RequestType_STATUS
 	names := req.GetName()
@@ -86,12 +111,10 @@ func (f *Force) handleStatus(req *message.StatusRequest) (*message.Response, err
 }
 
 /* 处理start命令 */
-func (f *Force) handleStart(req *message.StartRequest) (*message.Response, error) {
+func handleStart(f *Force, v interface{}) (*message.Response, error) {
 	var result []*message.StartResponse_Data
 
-	if req == nil {
-		return nil, errors.New("Invalid Request For `start`")
-	}
+	req := v.(*message.StartRequest)
 
 	reqType := message.RequestType_START
 	names := req.GetName()
@@ -99,15 +122,13 @@ func (f *Force) handleStart(req *message.StartRequest) (*message.Response, error
 		return nil, errors.New("Invalid Argument For `start`")
 	}
 	for _, name := range names {
-		if p := f.proxies[name]; p == nil {
-			return nil, errors.New(fmt.Sprintf("'%s' Not Found! (no such proxy)", name))
-		}
-	}
-	for _, name := range names {
 		p := f.proxies[name]
 		status := message.StartResponse_RUNNING
 		errmsg := ""
-		if p.Status != proxy.STATUS_RUNNING {
+		if p == nil {
+			status = message.StartResponse_ERROR
+			errmsg = fmt.Sprintf("no such proxy")
+		} else if p.Status != proxy.STATUS_RUNNING {
 			if e := p.Start(); e != nil {
 				status = message.StartResponse_ERROR
 				errmsg = e.Error()
@@ -115,10 +136,44 @@ func (f *Force) handleStart(req *message.StartRequest) (*message.Response, error
 				status = message.StartResponse_STARTED
 			}
 		}
-		result = append(result, &message.StartResponse_Data{Name:proto.String(p.Name), Status:&status, Err: proto.String(errmsg)})
+		result = append(result, &message.StartResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
 	}
 	return &message.Response{
-		Type:   &reqType,
-		Start:  &message.StartResponse{Data: result},
+		Type:  &reqType,
+		Start: &message.StartResponse{Data: result},
 	}, nil
+}
+
+/* 处理stop命令 */
+func handleStop(f *Force, v interface{}) (*message.Response, error) {
+	var result []*message.StopResponse_Data
+
+	req := v.(*message.StopRequest)
+	reqType := message.RequestType_STOP
+	names := req.GetName()
+	if len(names) == 0 {
+		return nil, errors.New("Invalid Argument For `stop`")
+	}
+	for _, name := range names {
+		p := f.proxies[name]
+		status := message.StopResponse_UNRUNNING
+		errmsg := ""
+		if p == nil {
+			status = message.StopResponse_ERROR
+			errmsg = fmt.Sprintf("no such proxy")
+		} else if p.Status == proxy.STATUS_RUNNING {
+			if e := p.Stop(); e != nil {
+				status = message.StopResponse_ERROR
+				errmsg = e.Error()
+			} else {
+				status = message.StopResponse_STOPPED
+			}
+		}
+		result = append(result, &message.StopResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
+	}
+	return &message.Response{
+		Type: &reqType,
+		Stop: &message.StopResponse{Data: result},
+	}, nil
+	return nil, nil
 }

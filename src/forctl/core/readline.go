@@ -42,6 +42,7 @@ func NewReadline(rcfg []*config.ProxyConfig) (*Readline, error) {
 	completer := readline.NewPrefixCompleter(
 		readline.PcItem(COMMAND_STATUS, proxies...),
 		readline.PcItem(COMMAND_START, proxies...),
+		readline.PcItem(COMMAND_STOP, proxies...),
 		readline.PcItem(COMMAND_HELP, cmds...),
 	)
 	rl, err := readline.NewEx(&readline.Config{
@@ -78,7 +79,9 @@ func NewLine(buf string) *Line {
 		return nil
 	}
 
-	if cmd.RequiredCount > len(seps[1:]) || cmd.RequiredCount+cmd.OptionalCount < len(seps[1:]) {
+	/* 参数个数不正确 */
+	if cmd.Required > len(seps[1:]) ||
+		(cmd.Optional >= 0 && cmd.Required+cmd.Optional < len(seps[1:])) {
 		OutputError("Invalid argument for %s\n%s\n", seps[0], cmd.Help)
 		return nil
 	}

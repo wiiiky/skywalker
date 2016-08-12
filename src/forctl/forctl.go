@@ -56,7 +56,7 @@ func main() {
 	defer rl.Close()
 
 	for err == nil {
-		if line, err = rl.Readline(); err != nil || line == nil {	/* 当Readline返回则要么是nil要么是一个有效的命令 */
+		if line, err = rl.Readline(); err != nil || line == nil { /* 当Readline返回则要么是nil要么是一个有效的命令 */
 			break
 		}
 		cmd := line.Cmd
@@ -77,7 +77,7 @@ func main() {
 			continue
 		}
 		v := reflect.ValueOf(rep).MethodByName(cmd.ResponseField).Call([]reflect.Value{})[0].Interface()
-    	err = cmd.ProcessResponse(v)
+		err = cmd.ProcessResponse(v)
 	}
 	if err != io.EOF { /* 忽略EOF */
 		core.Output("%v\n", err)

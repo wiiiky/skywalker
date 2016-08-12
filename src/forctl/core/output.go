@@ -21,8 +21,7 @@ import (
 	"fmt"
 )
 
-
-func Output(format string, v... interface{}) {
+func Output(format string, v ...interface{}) {
 	fmt.Printf(format, v...)
 }
 

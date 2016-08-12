@@ -25,20 +25,21 @@ import (
 const (
 	COMMAND_HELP   = "help"
 	COMMAND_STATUS = "status"
-	COMMAND_START = "start"
+	COMMAND_START  = "start"
+	COMMAND_STOP   = "stop"
 )
 
 type BuildRequestFunc func(cmd *Command, args ...string) *message.Request
 type ProcessResponseFunc func(resp interface{}) error
 
 type Command struct {
-	OptionalCount int
-	RequiredCount int
-	Help          string
-	ReqType		  message.RequestType
-	BuildRequest  BuildRequestFunc
+	Optional        int
+	Required        int
+	Help            string
+	ReqType         message.RequestType
+	BuildRequest    BuildRequestFunc
 	ProcessResponse ProcessResponseFunc
-	ResponseField string
+	ResponseField   string
 }
 
 var (
@@ -47,34 +48,43 @@ var (
 
 func init() {
 	gCommandMap = map[string]*Command{
-			COMMAND_HELP: &Command{
-				OptionalCount: 1,
-				RequiredCount: 0,
-				Help:          "help <topic>",
-				ReqType: message.RequestType_STATUS,
-				ResponseField: "",
-				BuildRequest: help,
-				ProcessResponse: nil,
-			},
-			COMMAND_STATUS: &Command{
-				OptionalCount: 100,
-				RequiredCount: 0,
-				Help:          fmt.Sprintf("\tstatus %-15sGet status for one or multiple proxy\n\tstatus %-15sGet status for all processes\n", "<name>...", " "),
-				ReqType: message.RequestType_STATUS,
-				ResponseField: "GetStatus",
-				BuildRequest: buildStatusRequest,
-				ProcessResponse: processStatusResponse,
-			},
-			COMMAND_START: &Command{
-				OptionalCount: 100,
-				RequiredCount: 1,
-				Help:          fmt.Sprintf("\tstart %-15sStart one or multiple proxy", "<name>..."),
-				ReqType: message.RequestType_START,
-				ResponseField: "GetStart",
-				BuildRequest: buildStartRequest,
-				ProcessResponse: processStartResponse,
-			},
-		}
+		COMMAND_HELP: &Command{
+			Optional:        1,
+			Required:        0,
+			Help:            "help <topic>",
+			ReqType:         message.RequestType_STATUS,
+			ResponseField:   "",
+			BuildRequest:    help,
+			ProcessResponse: nil,
+		},
+		COMMAND_STATUS: &Command{
+			Optional:        -1,
+			Required:        0,
+			Help:            fmt.Sprintf("\tstatus %-15sGet status for one or multiple proxy\n\tstatus %-15sGet status for all proxies\n", "<name>...", " "),
+			ReqType:         message.RequestType_STATUS,
+			ResponseField:   "GetStatus",
+			BuildRequest:    buildStatusRequest,
+			ProcessResponse: processStatusResponse,
+		},
+		COMMAND_START: &Command{
+			Optional:        -1,
+			Required:        1,
+			Help:            fmt.Sprintf("\tstart %-15sStart one or multiple proxy", "<name>..."),
+			ReqType:         message.RequestType_START,
+			ResponseField:   "GetStart",
+			BuildRequest:    buildStartRequest,
+			ProcessResponse: processStartResponse,
+		},
+		COMMAND_STOP: &Command{
+			Optional:        -1,
+			Required:        1,
+			Help:            fmt.Sprintf("\tstop %-15sStop one or multiple proxy", "<name>..."),
+			ReqType:         message.RequestType_STOP,
+			ResponseField:   "GetStop",
+			BuildRequest:    buildStopRequest,
+			ProcessResponse: processStopResponse,
+		},
+	}
 }
 
 func GetCommand(name string) *Command {
@@ -85,7 +95,7 @@ func GetCommand(name string) *Command {
 func help(help *Command, args ...string) *message.Request {
 	if len(args) == 0 {
 		Output("commands (type help <topic>):\n=====================================\n\t%s  %s  %s\n",
-				   COMMAND_HELP, COMMAND_STATUS, COMMAND_START)
+			COMMAND_HELP, COMMAND_STATUS, COMMAND_START)
 		return nil
 	}
 	topic := args[0]
@@ -163,12 +173,41 @@ func processStartResponse(v interface{}) error {
 		status := data.GetStatus()
 		err := data.GetErr()
 		switch status {
-			case message.StartResponse_STARTED:
-				Output("%s started\n", name)
-			case message.StartResponse_RUNNING:
-				Output("%s: ERROR (already started)\n", name)
-			case message.StartResponse_ERROR:
-				OutputError("%s: ERROR (%s)", name, err)
+		case message.StartResponse_STARTED:
+			Output("%s started\n", name)
+		case message.StartResponse_RUNNING:
+			Output("%s: ERROR (already started)\n", name)
+		case message.StartResponse_ERROR:
+			OutputError("%s: (%s)\n", name, err)
+		}
+	}
+	return nil
+}
+
+/* 构造stop命令请求 */
+func buildStopRequest(cmd *Command, names ...string) *message.Request {
+	return &message.Request{
+		Type: &cmd.ReqType,
+		Stop: &message.StopRequest{
+			Name: names,
+		},
+	}
+}
+
+/* 处理stop返回结果 */
+func processStopResponse(v interface{}) error {
+	rep := v.(*message.StopResponse)
+	for _, data := range rep.GetData() {
+		name := data.GetName()
+		status := data.GetStatus()
+		err := data.GetErr()
+		switch status {
+		case message.StopResponse_STOPPED:
+			Output("%s stopped\n", name)
+		case message.StopResponse_UNRUNNING:
+			Output("%s: ERROR (already stopped)\n", name)
+		case message.StopResponse_ERROR:
+			OutputError("%s: (%s)\n", name, err)
 		}
 	}
 	return nil

@@ -18,10 +18,13 @@
 package core
 
 import (
-	"github.com/hitoshii/golib/src/log"
+	"errors"
+	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/hitoshii/golib/src/log"
 	"net"
 	"os"
+	"reflect"
 	"skywalker/config"
 	"skywalker/message"
 	"skywalker/proxy"
@@ -33,7 +36,7 @@ type Force struct {
 	InetListener *net.TCPListener
 	UnixListener *net.UnixListener
 
-	mutex  *sync.Mutex
+	mutex   *sync.Mutex
 	proxies map[string]*proxy.TcpProxy
 }
 
@@ -94,7 +97,7 @@ func Run() *Force {
 		InetListener: inetListener,
 		UnixListener: unixListener,
 		mutex:        &sync.Mutex{},
-		proxies:       make(map[string]*proxy.TcpProxy),
+		proxies:      make(map[string]*proxy.TcpProxy),
 	}
 
 	if err = force.loadProxies(); err != nil {
@@ -136,7 +139,7 @@ func (f *Force) listen() {
 
 /* 处理客户端链接 */
 func (f *Force) handleConn(c *message.Conn) {
-	log.D("client %s", c.RemoteAddr())
+	log.D("forctl from %s", c.RemoteAddr())
 	var rep *message.Response
 	var err error
 	defer c.Close()
@@ -146,20 +149,25 @@ func (f *Force) handleConn(c *message.Conn) {
 		if req == nil {
 			break
 		}
-		switch req.GetType() {
-		case message.RequestType_STATUS:
-			rep, err = f.handleStatus(req.GetStatus())
-		case message.RequestType_START:
-			rep, err = f.handleStart(req.GetStart())
+		cmd := gCommandMap[req.GetType()]
+		if cmd == nil {
+			err = errors.New(fmt.Sprintf("Unimplement command '%s'", req.GetType()))
+		} else {
+			v := reflect.ValueOf(req).MethodByName(cmd.RequestField).Call([]reflect.Value{})[0].Interface()
+			if v != nil {
+				rep, err = cmd.Handle(f, v)
+			} else {
+				err = errors.New(fmt.Sprintf("Invalid Request"))
+			}
 		}
 		if err != nil {
 			c.WriteResponse(&message.Response{
 				Type: req.Type,
-				Err: &message.Error{Msg: proto.String(err.Error())},
+				Err:  &message.Error{Msg: proto.String(err.Error())},
 			})
 		} else if rep != nil {
 			c.WriteResponse(rep)
 		}
 	}
-	log.D("client %s closed", c.RemoteAddr())
+	log.D("forctl %s closed", c.RemoteAddr())
 }

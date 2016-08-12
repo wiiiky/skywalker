@@ -25,6 +25,8 @@ import (
 	"skywalker/config"
 	"skywalker/pkg"
 	"skywalker/util"
+	"sync"
+	"time"
 )
 
 /*
@@ -44,20 +46,22 @@ import (
 const (
 	STATUS_STOPPED = 1
 	STATUS_RUNNING = 2
-	STATUS_ERROR = 3
+	STATUS_ERROR   = 3
 )
 
 type TcpProxy struct {
-	Name    string
-	CAName  string
-	SAName  string
-	Status  int
+	Name   string
+	CAName string
+	SAName string
+	Status int
 
 	BindAddr string
 	BindPort int
 	listener net.Listener
 
 	AutoStart bool
+	mutex     *sync.Mutex
+	Closing   bool
 }
 
 /* 创建新的代理，监听本地端口 */
@@ -73,7 +77,17 @@ func New(cfg *config.ProxyConfig) *TcpProxy {
 		BindAddr:  cfg.BindAddr,
 		BindPort:  int(cfg.BindPort),
 		AutoStart: cfg.AutoStart,
+		mutex:     &sync.Mutex{},
+		Closing:   false,
 	}
+}
+
+func (p *TcpProxy) lock() {
+	p.mutex.Lock()
+}
+
+func (p *TcpProxy) unlock() {
+	p.mutex.Unlock()
 }
 
 func (p *TcpProxy) Close() {
@@ -83,6 +97,8 @@ func (p *TcpProxy) Close() {
 }
 
 func (p *TcpProxy) Start() error {
+	defer p.unlock()
+	p.lock()
 	listener, err := util.TCPListen(p.BindAddr, p.BindPort)
 	if err != nil {
 		p.Status = STATUS_ERROR
@@ -90,20 +106,42 @@ func (p *TcpProxy) Start() error {
 	}
 	log.INFO(p.Name, "%s is Listening", listener.Addr())
 	p.listener = listener
-	p.Status = STATUS_RUNNING
+	p.Status = STATUS_STOPPED
 	go p.Run()
+	waitTime := time.Duration(50)
+	for p.Status == STATUS_STOPPED {
+		time.Sleep(time.Millisecond * waitTime)
+		waitTime *= 2
+	}
+	return nil
+}
+
+func (p *TcpProxy) Stop() error {
+	defer p.unlock()
+	p.lock()
+	p.Closing = true
+	if conn, _ := util.TCPConnect(p.BindAddr, p.BindPort); conn != nil {
+		conn.Close()
+	}
+	waitTime := time.Duration(50)
+	for p.Closing {
+		time.Sleep(time.Millisecond * waitTime)
+		waitTime *= 2
+	}
 	return nil
 }
 
 func (p *TcpProxy) Run() {
 	defer p.Close()
-	for p.Status == STATUS_RUNNING {
+	for p.Closing == false {
+		p.Status = STATUS_RUNNING
 		if conn, err := p.listener.Accept(); err == nil {
-			p.handle(conn)
+			go p.handle(conn)
 		} else {
 			log.WARN(p.Name, "Couldn't Accept: %s", err)
 		}
 	}
+	p.Closing = false
 }
 
 /* 启动数据转发流程 */

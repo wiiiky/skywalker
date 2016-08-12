@@ -43,9 +43,24 @@ message StartResponse {
     repeated Data data = 1;
 }
 
+message StopResponse {
+    enum Status {
+        STOPPED = 1;
+        ERROR = 2;
+        UNRUNNING = 3;
+    }
+    message Data {
+        required string name = 1;
+        required Status status = 2;
+        required string err = 3;
+    }
+    repeated Data data = 1;
+}
+
 message Response {
     optional Error err = 1;
     required RequestType type = 2;
     optional StatusResponse status = 3;
     optional StartResponse start = 4;
+    optional StopResponse stop = 5;
 }
