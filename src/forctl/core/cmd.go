@@ -157,5 +157,19 @@ func buildStartRequest(cmd *Command, names ...string) *message.Request {
 
 /* 处理start命令的结果 */
 func processStartResponse(v interface{}) error {
+	rep := v.(*message.StartResponse)
+	for _, data := range rep.GetData() {
+		name := data.GetName()
+		status := data.GetStatus()
+		err := data.GetErr()
+		switch status {
+			case message.StartResponse_STARTED:
+				Output("%s started\n", name)
+			case message.StartResponse_RUNNING:
+				Output("%s: ERROR (already started)\n", name)
+			case message.StartResponse_ERROR:
+				OutputError("%s: ERROR (%s)", name, err)
+		}
+	}
 	return nil
 }
