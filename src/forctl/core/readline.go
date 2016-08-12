@@ -56,25 +56,13 @@ func NewReadline(rcfg []*config.ProxyConfig) (*Readline, error) {
 }
 
 type Line struct {
-	CMD  string
+	Cmd  *Command
 	Args []string
-}
-
-/* 获取第i个参数 */
-func (l *Line) Argument(i int) string {
-	if len(l.Args) <= i {
-		return ""
-	}
-	return l.Args[i]
-}
-
-func (l *Line) Arguments() []string {
-	return l.Args
 }
 
 func NewLine(buf string) *Line {
 	var seps []string
-	var cmd *CommandDefine
+	var cmd *Command
 
 	for _, s := range strings.Split(buf, " ") {
 		if len(s) == 0 {
@@ -96,7 +84,7 @@ func NewLine(buf string) *Line {
 	}
 
 	return &Line{
-		CMD:  seps[0],
+		Cmd:  cmd,
 		Args: seps[1:],
 	}
 }

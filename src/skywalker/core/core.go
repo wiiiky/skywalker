@@ -19,6 +19,7 @@ package core
 
 import (
 	"github.com/hitoshii/golib/src/log"
+	"github.com/golang/protobuf/proto"
 	"net"
 	"os"
 	"skywalker/config"
@@ -152,7 +153,10 @@ func (f *Force) handleConn(c *message.Conn) {
 			rep, err = f.handleStart(req.GetStart())
 		}
 		if err != nil {
-			break
+			c.WriteResponse(&message.Response{
+				Type: req.Type,
+				Err: &message.Error{Msg: proto.String(err.Error())},
+			})
 		} else if rep != nil {
 			c.WriteResponse(rep)
 		}

@@ -19,6 +19,7 @@ package core
 
 import (
 	"fmt"
+	"skywalker/message"
 )
 
 const (
@@ -27,33 +28,134 @@ const (
 	COMMAND_START = "start"
 )
 
-type CommandDefine struct {
+type BuildRequestFunc func(cmd *Command, args ...string) *message.Request
+type ProcessResponseFunc func(resp interface{}) error
+
+type Command struct {
 	OptionalCount int
 	RequiredCount int
 	Help          string
+	ReqType		  message.RequestType
+	BuildRequest  BuildRequestFunc
+	ProcessResponse ProcessResponseFunc
+	ResponseField string
 }
 
 var (
-	gCommandMap = map[string]*CommandDefine{
-		COMMAND_HELP: &CommandDefine{
-			OptionalCount: 1,
-			RequiredCount: 0,
-			Help:          "help <topic>",
-		},
-		COMMAND_STATUS: &CommandDefine{
-			OptionalCount: 100,
-			RequiredCount: 0,
-			Help:          fmt.Sprintf("\tstatus %-15sGet status for one or multiple proxy\n\tstatus %-15sGet status for all processes\n", "<name>...", " "),
-		},
-		COMMAND_START: &CommandDefine{
-			OptionalCount: 100,
-			RequiredCount: 1,
-			Help:          fmt.Sprintf("\tstart %-15sStart one or multiple proxy", "<name>..."),
-		},
-	}
+	gCommandMap map[string]*Command
 )
 
-func GetCommandDefine(name string) *CommandDefine {
+func init() {
+	gCommandMap = map[string]*Command{
+			COMMAND_HELP: &Command{
+				OptionalCount: 1,
+				RequiredCount: 0,
+				Help:          "help <topic>",
+				ReqType: message.RequestType_STATUS,
+				ResponseField: "",
+				BuildRequest: help,
+				ProcessResponse: nil,
+			},
+			COMMAND_STATUS: &Command{
+				OptionalCount: 100,
+				RequiredCount: 0,
+				Help:          fmt.Sprintf("\tstatus %-15sGet status for one or multiple proxy\n\tstatus %-15sGet status for all processes\n", "<name>...", " "),
+				ReqType: message.RequestType_STATUS,
+				ResponseField: "GetStatus",
+				BuildRequest: buildStatusRequest,
+				ProcessResponse: processStatusResponse,
+			},
+			COMMAND_START: &Command{
+				OptionalCount: 100,
+				RequiredCount: 1,
+				Help:          fmt.Sprintf("\tstart %-15sStart one or multiple proxy", "<name>..."),
+				ReqType: message.RequestType_START,
+				ResponseField: "GetStart",
+				BuildRequest: buildStartRequest,
+				ProcessResponse: processStartResponse,
+			},
+		}
+}
+
+func GetCommand(name string) *Command {
 	cmd := gCommandMap[name]
 	return cmd
+}
+
+func help(help *Command, args ...string) *message.Request {
+	if len(args) == 0 {
+		Output("commands (type help <topic>):\n=====================================\n\t%s  %s  %s\n",
+				   COMMAND_HELP, COMMAND_STATUS, COMMAND_START)
+		return nil
+	}
+	topic := args[0]
+	if cmd := GetCommand(topic); cmd != nil {
+		Output("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
+	} else {
+		OutputError("No help on %s\n", topic)
+	}
+	return nil
+}
+
+/*  构造status命令的请求 */
+func buildStatusRequest(cmd *Command, names ...string) *message.Request {
+	return &message.Request{
+		Type: &cmd.ReqType,
+		Status: &message.StatusRequest{
+			Name: names,
+		},
+	}
+}
+
+/* 处理status命令 */
+func processStatusResponse(v interface{}) error {
+	rep := v.(*message.StatusResponse)
+	var maxlen = []int{10, 16, 12, 7}
+	var rows [][]string
+	for _, data := range rep.GetData() {
+		var row []string
+		if len(data.GetErr()) == 0 {
+			row = []string{
+				data.GetName(),
+				fmt.Sprintf("%s/%s", data.GetCname(), data.GetSname()),
+				fmt.Sprintf("%s:%d", data.GetBindAddr(), data.GetBindPort()),
+				data.GetStatus().String(),
+			}
+		} else {
+			row = []string{
+				data.GetErr(),
+				"",
+				"",
+				"",
+			}
+		}
+		for i, col := range row {
+			if len(col) > maxlen[i] {
+				maxlen[i] = len(col)
+			}
+		}
+		rows = append(rows, row)
+	}
+	for i, _ := range maxlen {
+		maxlen[i] += 2
+	}
+	for _, row := range rows {
+		Output("%-*s %-*s %-*s %-*s\n", maxlen[0], row[0], maxlen[1], row[1], maxlen[2], row[2], maxlen[3], row[3])
+	}
+	return nil
+}
+
+/* 构造start命令的请求 */
+func buildStartRequest(cmd *Command, names ...string) *message.Request {
+	return &message.Request{
+		Type: &cmd.ReqType,
+		Start: &message.StartRequest{
+			Name: names,
+		},
+	}
+}
+
+/* 处理start命令的结果 */
+func processStartResponse(v interface{}) error {
+	return nil
 }

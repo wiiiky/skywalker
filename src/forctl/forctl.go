@@ -21,7 +21,7 @@ import (
 	"errors"
 	"forctl/core"
 	"io"
-	"fmt"
+	"reflect"
 	"skywalker/config"
 	"skywalker/message"
 )
@@ -30,24 +30,21 @@ import (
  * forctl 是skywalker的管理程序
  */
 
-var (
-	gConn *message.Conn
-)
-
 func main() {
 	var err error
 	var rl *core.Readline
 	var line *core.Line
+	var conn *message.Conn
 	cfg := config.GetCoreConfig()
 	/* 优先通过TCP连接，不存在或者不成功再使用Unix套接字连接 */
 	if cfg.Inet != nil {
-		gConn, err = core.TCPConnect(cfg.Inet.IP, cfg.Inet.Port)
+		conn, err = core.TCPConnect(cfg.Inet.IP, cfg.Inet.Port)
 	}
-	if gConn == nil && cfg.Unix != nil {
-		gConn, err = core.UnixConnect(cfg.Unix.File)
+	if conn == nil && cfg.Unix != nil {
+		conn, err = core.UnixConnect(cfg.Unix.File)
 	}
 
-	if gConn == nil || err != nil {
+	if conn == nil || err != nil {
 		core.Output("%v\n", err)
 		return
 	}
@@ -59,96 +56,30 @@ func main() {
 	defer rl.Close()
 
 	for err == nil {
-		if line, err = rl.Readline(); err != nil || line == nil {
+		if line, err = rl.Readline(); err != nil || line == nil {	/* 当Readline返回则要么是nil要么是一个有效的命令 */
 			break
 		}
-		switch line.CMD{
-			case core.COMMAND_STATUS:
-				err = cmdStatus(line.Arguments()...)
-			case core.COMMAND_START:
-				err = cmdStart(line.Arguments()...)
-			case core.COMMAND_HELP:
-				err = cmdHelp(line.Argument(0))
-			default:
-				core.Output("%v\n", line)
+		cmd := line.Cmd
+		req := cmd.BuildRequest(cmd, line.Args...)
+		if req == nil {
+			continue
 		}
+		if err = conn.WriteRequest(req); err != nil {
+			break
+		}
+		rep := conn.ReadResponse()
+		if rep == nil {
+			err = errors.New("Connection Closed Unexpectedly")
+			break
+		}
+		if e := rep.GetErr(); e != nil {
+			core.OutputError("%s\n", e.GetMsg())
+			continue
+		}
+		v := reflect.ValueOf(rep).MethodByName(cmd.ResponseField).Call([]reflect.Value{})[0].Interface()
+    	err = cmd.ProcessResponse(v)
 	}
 	if err != io.EOF { /* 忽略EOF */
 		core.Output("%v\n", err)
 	}
-}
-
-func cmdHelp(topic string) error {
-	cmd := core.GetCommandDefine(topic)
-	if len(topic) == 0 {
-		core.Output("commands (type help <topic>):\n=====================================\n\t%s  %s  %s\n",
-				   core.COMMAND_HELP, core.COMMAND_STATUS, core.COMMAND_START)
-	} else if cmd != nil {
-		core.Output("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
-	} else {
-		core.OutputError("No help on %s\n", topic)
-	}
-	return nil
-}
-
-/* 处理status命令 */
-func cmdStatus(name ...string) error {
-	reqType := message.RequestType_STATUS
-	req := &message.Request{
-		Type: &reqType,
-		Status: &message.StatusRequest{
-			Name: name,
-		},
-	}
-	if err := gConn.WriteRequest(req); err != nil {
-		return err
-	}
-
-	rep := gConn.ReadResponse()
-	if rep == nil {
-		return errors.New("Connection Closed Unexpectedly")
-	}
-	if err := rep.GetErr(); err != nil {
-		core.OutputError("%s\n", err.GetMsg())
-	} else {
-		result := rep.GetStatus()
-		var maxlen = []int{10, 16, 12, 7}
-		var rows [][]string
-		for _, data := range result.GetData() {
-			var row = []string{
-				data.GetName(),
-				fmt.Sprintf("%s/%s", data.GetCname(), data.GetSname()),
-				fmt.Sprintf("%s:%d", data.GetBindAddr(), data.GetBindPort()),
-				data.GetStatus().String(),
-			}
-			for i, col := range row {
-				if len(col) > maxlen[i] {
-					maxlen[i] = len(col)
-				}
-			}
-			rows = append(rows, row)
-		}
-		for i, _ := range maxlen {
-			maxlen[i] += 2
-		}
-		for _, row := range rows {
-			core.Output("\x1B[32m%-*s\x1B[0m %-*s %-*s %-*s\n", maxlen[0], row[0], maxlen[1], row[1], maxlen[2], row[2], maxlen[3], row[3])
-		}
-	}
-	return nil
-}
-
-/* 处理status命令 */
-func cmdStart(name ...string) error {
-	reqType := message.RequestType_START
-	req := &message.Request{
-		Type: &reqType,
-		Start: &message.StartRequest{
-			Name: name,
-		},
-	}
-	if err := gConn.WriteRequest(req); err != nil {
-		return err
-	}
-	return nil
 }

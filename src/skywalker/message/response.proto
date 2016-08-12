@@ -9,6 +9,7 @@ message Error {
     required string msg = 1;
 }
 
+/* status 命令的返回结果 */
 message StatusResponse {
     enum Status {
         STOPPED = 1;
@@ -22,6 +23,22 @@ message StatusResponse {
         required Status status = 4;
         required string bindAddr = 5;
         required int32 bindPort = 6;
+        required string err = 7;    /* 当不为空时表示出错 */
+    }
+    repeated Data data = 1;
+}
+
+/* start 命令的返回结果 */
+message StartResponse {
+    enum Status {
+        STARTED = 1;
+        ERROR = 2;
+        RUNNING = 3;
+    }
+    message Data {
+        required string name = 1;
+        required Status status = 2;
+        required string err = 3;    /* 当状态是 ERROR 时有效 */
     }
     repeated Data data = 1;
 }
@@ -30,4 +47,5 @@ message Response {
     optional Error err = 1;
     required RequestType type = 2;
     optional StatusResponse status = 3;
+    optional StartResponse start = 4;
 }

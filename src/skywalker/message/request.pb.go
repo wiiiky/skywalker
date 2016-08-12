@@ -15,6 +15,7 @@ It has these top-level messages:
 	Request
 	Error
 	StatusResponse
+	StartResponse
 	Response
 */
 package message
