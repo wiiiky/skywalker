@@ -20,6 +20,7 @@ package core
 import (
 	"fmt"
 	"skywalker/message"
+	"time"
 )
 
 const (
@@ -120,23 +121,26 @@ func buildStatusRequest(cmd *Command, names ...string) *message.Request {
 /* 处理status命令 */
 func processStatusResponse(v interface{}) error {
 	rep := v.(*message.StatusResponse)
-	var maxlen = []int{10, 16, 12, 7}
+	var maxlen = []int{10, 16, 12, 7, 5}
 	var rows [][]string
 	for _, data := range rep.GetData() {
 		var row []string
 		if len(data.GetErr()) == 0 {
+			uptime := ""
+			if data.GetStatus() == message.StatusResponse_RUNNING {
+				d := time.Now().Unix() - data.GetStartTime()
+				uptime = fmt.Sprintf("uptime %d", d)
+			}
 			row = []string{
 				data.GetName(),
 				fmt.Sprintf("%s/%s", data.GetCname(), data.GetSname()),
 				fmt.Sprintf("%s:%d", data.GetBindAddr(), data.GetBindPort()),
 				data.GetStatus().String(),
+				uptime,
 			}
 		} else {
 			row = []string{
 				data.GetErr(),
-				"",
-				"",
-				"",
 			}
 		}
 		for i, col := range row {
@@ -150,7 +154,10 @@ func processStatusResponse(v interface{}) error {
 		maxlen[i] += 2
 	}
 	for _, row := range rows {
-		Output("%-*s %-*s %-*s %-*s\n", maxlen[0], row[0], maxlen[1], row[1], maxlen[2], row[2], maxlen[3], row[3])
+		for i, col := range row {
+			Output("%-*s", maxlen[i], col)
+		}
+		Output("\n")
 	}
 	return nil
 }

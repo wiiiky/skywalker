@@ -63,6 +63,7 @@ func proxyStatus(p *proxy.TcpProxy) *message.StatusResponse_Data {
 		Status:   &status,
 		BindAddr: proto.String(p.BindAddr),
 		BindPort: proto.Int32(int32(p.BindPort)),
+		StartTime: proto.Int64(p.StartTime),
 		Err:      proto.String(""),
 	}
 }
@@ -76,6 +77,7 @@ func proxyStatusNotFound(name string) *message.StatusResponse_Data {
 		Status:   &status,
 		BindAddr: proto.String(""),
 		BindPort: proto.Int32(0),
+		StartTime: proto.Int64(0),
 		Err:      proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
 	}
 }

@@ -23,7 +23,8 @@ message StatusResponse {
         required Status status = 4;
         required string bindAddr = 5;
         required int32 bindPort = 6;
-        required string err = 7;    /* 当不为空时表示出错 */
+        required int64 startTime = 7;
+        required string err = 8;    /* 当不为空时表示出错 */
     }
     repeated Data data = 1;
 }

@@ -62,6 +62,8 @@ type TcpProxy struct {
 	AutoStart bool
 	mutex     *sync.Mutex
 	Closing   bool
+
+	StartTime  int64
 }
 
 /* 创建新的代理，监听本地端口 */
@@ -104,9 +106,10 @@ func (p *TcpProxy) Start() error {
 		p.Status = STATUS_ERROR
 		return err
 	}
-	log.INFO(p.Name, "%s is Listening", listener.Addr())
+	log.INFO(p.Name, "Listen %s", listener.Addr())
 	p.listener = listener
 	p.Status = STATUS_STOPPED
+	p.StartTime = time.Now().Unix()
 	go p.Run()
 	waitTime := time.Duration(50)
 	for p.Status == STATUS_STOPPED {
