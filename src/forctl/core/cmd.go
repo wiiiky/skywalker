@@ -118,6 +118,20 @@ func buildStatusRequest(cmd *Command, names ...string) *message.Request {
 	}
 }
 
+func formatDuration(delta int64) string {
+	days := delta / (3600*24)
+	hours := delta % (3600*24) / 3600
+	minutes := delta % (3600*24) % 3600 / 60
+	seconds := delta % (3600*24) % 3600 % 60
+	if days > 0 {
+		if days > 1 {
+			return fmt.Sprintf("%d days, %02d:%02d:%02d", days, hours, minutes, seconds)
+		}
+		return fmt.Sprintf("%d day, %02d:%02d:%02d", days, hours, minutes, seconds)
+	}
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+}
+
 /* 处理status命令 */
 func processStatusResponse(v interface{}) error {
 	rep := v.(*message.StatusResponse)
@@ -129,7 +143,7 @@ func processStatusResponse(v interface{}) error {
 			uptime := ""
 			if data.GetStatus() == message.StatusResponse_RUNNING {
 				d := time.Now().Unix() - data.GetStartTime()
-				uptime = fmt.Sprintf("uptime %d", d)
+				uptime = fmt.Sprintf("uptime %s", formatDuration(d))
 			}
 			row = []string{
 				data.GetName(),

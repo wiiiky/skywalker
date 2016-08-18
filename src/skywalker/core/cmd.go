@@ -91,7 +91,7 @@ func handleStatus(f *Force, v interface{}) (*message.Response, error) {
 	reqType := message.RequestType_STATUS
 	names := req.GetName()
 	if len(names) == 0 { /* 没有指定参数表示所有代理服务 */
-		for _, p := range f.proxies {
+		for _, p := range f.orderedProxies {
 			result = append(result, proxyStatus(p))
 		}
 	} else {

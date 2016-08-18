@@ -30,6 +30,7 @@ import (
 	"skywalker/proxy"
 	"skywalker/util"
 	"sync"
+	"sort"
 )
 
 type Force struct {
@@ -37,7 +38,10 @@ type Force struct {
 	UnixListener *net.UnixListener
 
 	mutex   *sync.Mutex
+
+	/* 当前服务列表，map用户快速查询某一代理，list用于返回固定顺序的服务 */
 	proxies map[string]*proxy.TcpProxy
+	orderedProxies []*proxy.TcpProxy
 }
 
 func (f *Force) lock() {
@@ -52,11 +56,18 @@ func (f *Force) unlock() {
 func (f *Force) loadProxies() error {
 	f.lock()
 	defer f.unlock()
+
+	names := []string{}
 	for _, cfg := range config.GetProxyConfigs() {
 		if err := cfg.Init(); err != nil {
 			return err
 		}
 		f.proxies[cfg.Name] = proxy.New(cfg)
+		names = append(names, cfg.Name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		f.orderedProxies = append(f.orderedProxies, f.proxies[name])
 	}
 	return nil
 }
@@ -151,7 +162,7 @@ func (f *Force) handleConn(c *message.Conn) {
 		}
 		cmd := gCommandMap[req.GetType()]
 		if cmd == nil {
-			err = errors.New(fmt.Sprintf("Unimplement command '%s'", req.GetType()))
+			err = errors.New(fmt.Sprintf("Unimplement Command '%s'", req.GetType()))
 		} else {
 			v := reflect.ValueOf(req).MethodByName(cmd.RequestField).Call([]reflect.Value{})[0].Interface()
 			if v != nil {
