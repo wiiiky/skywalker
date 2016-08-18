@@ -25,6 +25,10 @@ import (
 	"net"
 )
 
+const (
+	VERSION = 1
+)
+
 type Conn struct {
 	conn net.Conn
 }

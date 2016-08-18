@@ -20,6 +20,7 @@ package core
 import (
 	"fmt"
 	"skywalker/message"
+	"github.com/golang/protobuf/proto"
 	"time"
 )
 
@@ -111,6 +112,7 @@ func help(help *Command, args ...string) *message.Request {
 /*  构造status命令的请求 */
 func buildStatusRequest(cmd *Command, names ...string) *message.Request {
 	return &message.Request{
+		Version: proto.Int32(message.VERSION),
 		Type: &cmd.ReqType,
 		Status: &message.StatusRequest{
 			Name: names,
@@ -179,6 +181,7 @@ func processStatusResponse(v interface{}) error {
 /* 构造start命令的请求 */
 func buildStartRequest(cmd *Command, names ...string) *message.Request {
 	return &message.Request{
+		Version: proto.Int32(message.VERSION),
 		Type: &cmd.ReqType,
 		Start: &message.StartRequest{
 			Name: names,
@@ -208,6 +211,7 @@ func processStartResponse(v interface{}) error {
 /* 构造stop命令请求 */
 func buildStopRequest(cmd *Command, names ...string) *message.Request {
 	return &message.Request{
+		Version: proto.Int32(message.VERSION),
 		Type: &cmd.ReqType,
 		Stop: &message.StopRequest{
 			Name: names,

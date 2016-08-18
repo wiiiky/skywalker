@@ -163,6 +163,8 @@ func (f *Force) handleConn(c *message.Conn) {
 		cmd := gCommandMap[req.GetType()]
 		if cmd == nil {
 			err = errors.New(fmt.Sprintf("Unimplement Command '%s'", req.GetType()))
+		} else if req.GetVersion() != message.VERSION {
+			err = errors.New(fmt.Sprintf("Unmatched Request Version %d <> %d", req.GetVersion(), message.VERSION))
 		} else {
 			v := reflect.ValueOf(req).MethodByName(cmd.RequestField).Call([]reflect.Value{})[0].Interface()
 			if v != nil {

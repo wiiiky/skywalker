@@ -20,8 +20,9 @@ message StopRequest {
 }
 
 message Request {
-    required RequestType type = 1;
-    optional StatusRequest status = 2;
-    optional StartRequest start = 3;
-    optional StopRequest stop = 4;
+    required int32 version = 1;
+    required RequestType type = 2;
+    optional StatusRequest status = 3;
+    optional StartRequest start = 4;
+    optional StopRequest stop = 5;
 }
