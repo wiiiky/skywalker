@@ -67,7 +67,7 @@ func main() {
 		if req = cmd.BuildRequest(cmd, line.Args...); req == nil {
 			continue
 		}
-		if disconnected {	/* 已断开则重新连接 */
+		if disconnected { /* 已断开则重新连接 */
 			if conn, err = connectSkywalker(cfg.Inet, cfg.Unix); err != nil {
 				core.OutputError("%v\n", err)
 				continue

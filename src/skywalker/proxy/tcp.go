@@ -63,7 +63,7 @@ type TcpProxy struct {
 	mutex     *sync.Mutex
 	Closing   bool
 
-	StartTime  int64
+	StartTime int64
 }
 
 /* 创建新的代理，监听本地端口 */

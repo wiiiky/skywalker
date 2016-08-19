@@ -19,8 +19,8 @@ package core
 
 import (
 	"fmt"
-	"skywalker/message"
 	"github.com/golang/protobuf/proto"
+	"skywalker/message"
 	"time"
 )
 
@@ -113,7 +113,7 @@ func help(help *Command, args ...string) *message.Request {
 func buildStatusRequest(cmd *Command, names ...string) *message.Request {
 	return &message.Request{
 		Version: proto.Int32(message.VERSION),
-		Type: &cmd.ReqType,
+		Type:    &cmd.ReqType,
 		Status: &message.StatusRequest{
 			Name: names,
 		},
@@ -121,10 +121,10 @@ func buildStatusRequest(cmd *Command, names ...string) *message.Request {
 }
 
 func formatDuration(delta int64) string {
-	days := delta / (3600*24)
-	hours := delta % (3600*24) / 3600
-	minutes := delta % (3600*24) % 3600 / 60
-	seconds := delta % (3600*24) % 3600 % 60
+	days := delta / (3600 * 24)
+	hours := delta % (3600 * 24) / 3600
+	minutes := delta % (3600 * 24) % 3600 / 60
+	seconds := delta % (3600 * 24) % 3600 % 60
 	if days > 0 {
 		if days > 1 {
 			return fmt.Sprintf("%d days, %02d:%02d:%02d", days, hours, minutes, seconds)
@@ -182,7 +182,7 @@ func processStatusResponse(v interface{}) error {
 func buildStartRequest(cmd *Command, names ...string) *message.Request {
 	return &message.Request{
 		Version: proto.Int32(message.VERSION),
-		Type: &cmd.ReqType,
+		Type:    &cmd.ReqType,
 		Start: &message.StartRequest{
 			Name: names,
 		},
@@ -212,7 +212,7 @@ func processStartResponse(v interface{}) error {
 func buildStopRequest(cmd *Command, names ...string) *message.Request {
 	return &message.Request{
 		Version: proto.Int32(message.VERSION),
-		Type: &cmd.ReqType,
+		Type:    &cmd.ReqType,
 		Stop: &message.StopRequest{
 			Name: names,
 		},

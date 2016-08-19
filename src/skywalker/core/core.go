@@ -29,18 +29,18 @@ import (
 	"skywalker/message"
 	"skywalker/proxy"
 	"skywalker/util"
-	"sync"
 	"sort"
+	"sync"
 )
 
 type Force struct {
 	InetListener *net.TCPListener
 	UnixListener *net.UnixListener
 
-	mutex   *sync.Mutex
+	mutex *sync.Mutex
 
 	/* 当前服务列表，map用户快速查询某一代理，list用于返回固定顺序的服务 */
-	proxies map[string]*proxy.TcpProxy
+	proxies        map[string]*proxy.TcpProxy
 	orderedProxies []*proxy.TcpProxy
 }
 

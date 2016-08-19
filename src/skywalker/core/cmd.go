@@ -57,28 +57,28 @@ func init() {
 func proxyStatus(p *proxy.TcpProxy) *message.StatusResponse_Data {
 	status := message.StatusResponse_Status(p.Status)
 	return &message.StatusResponse_Data{
-		Name:     proto.String(p.Name),
-		Cname:    proto.String(p.CAName),
-		Sname:    proto.String(p.SAName),
-		Status:   &status,
-		BindAddr: proto.String(p.BindAddr),
-		BindPort: proto.Int32(int32(p.BindPort)),
+		Name:      proto.String(p.Name),
+		Cname:     proto.String(p.CAName),
+		Sname:     proto.String(p.SAName),
+		Status:    &status,
+		BindAddr:  proto.String(p.BindAddr),
+		BindPort:  proto.Int32(int32(p.BindPort)),
 		StartTime: proto.Int64(p.StartTime),
-		Err:      proto.String(""),
+		Err:       proto.String(""),
 	}
 }
 
 func proxyStatusNotFound(name string) *message.StatusResponse_Data {
 	status := message.StatusResponse_STOPPED
 	return &message.StatusResponse_Data{
-		Name:     proto.String(name),
-		Cname:    proto.String(""),
-		Sname:    proto.String(""),
-		Status:   &status,
-		BindAddr: proto.String(""),
-		BindPort: proto.Int32(0),
+		Name:      proto.String(name),
+		Cname:     proto.String(""),
+		Sname:     proto.String(""),
+		Status:    &status,
+		BindAddr:  proto.String(""),
+		BindPort:  proto.Int32(0),
 		StartTime: proto.Int64(0),
-		Err:      proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
+		Err:       proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
 	}
 }
 
