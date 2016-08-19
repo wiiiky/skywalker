@@ -18,9 +18,7 @@
 package main
 
 import (
-	"errors"
 	"forctl/core"
-	"io"
 	"reflect"
 	"skywalker/config"
 	"skywalker/message"
@@ -30,24 +28,26 @@ import (
  * forctl 是skywalker的管理程序
  */
 
+func connectSkywalker(inet *config.InetConfig, unix *config.UnixConfig) (*message.Conn, error) {
+	/* 优先通过TCP连接，不存在或者不成功再使用Unix套接字连接 */
+	if inet != nil {
+		return core.TCPConnect(inet.IP, inet.Port)
+	}
+	if unix != nil {
+		return core.UnixConnect(unix.File)
+	}
+	return nil, nil
+}
+
 func main() {
 	var err error
 	var rl *core.Readline
 	var line *core.Line
 	var conn *message.Conn
+	var req *message.Request
+	var rep *message.Response
+	var disconnected bool
 	cfg := config.GetCoreConfig()
-	/* 优先通过TCP连接，不存在或者不成功再使用Unix套接字连接 */
-	if cfg.Inet != nil {
-		conn, err = core.TCPConnect(cfg.Inet.IP, cfg.Inet.Port)
-	}
-	if conn == nil && cfg.Unix != nil {
-		conn, err = core.UnixConnect(cfg.Unix.File)
-	}
-
-	if conn == nil || err != nil {
-		core.Output("%v\n", err)
-		return
-	}
 
 	if rl, err = core.NewReadline(config.GetProxyConfigs()); err != nil {
 		core.Output("%v\n", err)
@@ -55,31 +55,40 @@ func main() {
 	}
 	defer rl.Close()
 
-	for err == nil {
+	if conn, err = connectSkywalker(cfg.Inet, cfg.Unix); err != nil {
+		core.OutputError("%v\n", err)
+		disconnected = true
+	}
+	for {
 		if line, err = rl.Readline(); err != nil || line == nil { /* 当Readline返回则要么是nil要么是一个有效的命令 */
 			break
 		}
 		cmd := line.Cmd
-		req := cmd.BuildRequest(cmd, line.Args...)
-		if req == nil {
+		if req = cmd.BuildRequest(cmd, line.Args...); req == nil {
 			continue
 		}
-		if err = conn.WriteRequest(req); err != nil {
-			break
+		if disconnected {	/* 已断开则重新连接 */
+			if conn, err = connectSkywalker(cfg.Inet, cfg.Unix); err != nil {
+				core.OutputError("%v\n", err)
+				continue
+			}
+			disconnected = false
 		}
-		rep := conn.ReadResponse()
-		if rep == nil {
-			err = errors.New("Connection Closed Unexpectedly")
-			break
+		if err = conn.WriteRequest(req); err != nil {
+			core.OutputError("%v\n", err)
+			disconnected = true
+			continue
+		}
+		if rep = conn.ReadResponse(); rep == nil {
+			continue
 		}
 		if e := rep.GetErr(); e != nil {
 			core.OutputError("%s\n", e.GetMsg())
 			continue
 		}
 		v := reflect.ValueOf(rep).MethodByName(cmd.ResponseField).Call([]reflect.Value{})[0].Interface()
-		err = cmd.ProcessResponse(v)
-	}
-	if err != io.EOF { /* 忽略EOF */
-		core.Output("%v\n", err)
+		if err = cmd.ProcessResponse(v); err != nil {
+			core.OutputError("%s\n", err)
+		}
 	}
 }

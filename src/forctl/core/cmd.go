@@ -96,8 +96,8 @@ func GetCommand(name string) *Command {
 
 func help(help *Command, args ...string) *message.Request {
 	if len(args) == 0 {
-		Output("commands (type help <topic>):\n=====================================\n\t%s  %s  %s\n",
-			COMMAND_HELP, COMMAND_STATUS, COMMAND_START)
+		Output("commands (type help <topic>):\n=====================================\n\t%s %s %s %s\n",
+			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP)
 		return nil
 	}
 	topic := args[0]

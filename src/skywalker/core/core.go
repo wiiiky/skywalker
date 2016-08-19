@@ -150,13 +150,11 @@ func (f *Force) listen() {
 
 /* 处理客户端链接 */
 func (f *Force) handleConn(c *message.Conn) {
-	log.D("forctl from %s", c.RemoteAddr())
 	var rep *message.Response
 	var err error
 	defer c.Close()
 	for {
 		req := c.ReadRequest()
-		log.D("request %v", req)
 		if req == nil {
 			break
 		}
@@ -164,7 +162,7 @@ func (f *Force) handleConn(c *message.Conn) {
 		if cmd == nil {
 			err = errors.New(fmt.Sprintf("Unimplement Command '%s'", req.GetType()))
 		} else if req.GetVersion() != message.VERSION {
-			err = errors.New(fmt.Sprintf("Unmatched Request Version %d <> %d", req.GetVersion(), message.VERSION))
+			err = errors.New(fmt.Sprintf("Unmatched Version %d <> %d", req.GetVersion(), message.VERSION))
 		} else {
 			v := reflect.ValueOf(req).MethodByName(cmd.RequestField).Call([]reflect.Value{})[0].Interface()
 			if v != nil {
@@ -182,5 +180,4 @@ func (f *Force) handleConn(c *message.Conn) {
 			c.WriteResponse(rep)
 		}
 	}
-	log.D("forctl %s closed", c.RemoteAddr())
 }
