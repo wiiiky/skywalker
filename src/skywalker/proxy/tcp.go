@@ -49,6 +49,14 @@ const (
 	STATUS_ERROR   = 3
 )
 
+type ProxyInfo struct {
+	StartTime    int64 /* 服务启动时间 */
+	Sent         int64 /* 发送数据 */
+	Received     int64 /* 接受数据 */
+	SentRate     int64 /* 发送速率，B/S */
+	ReceivedRate int64 /* 接收速率，B/S */
+}
+
 type TcpProxy struct {
 	Name   string
 	CAName string
@@ -63,7 +71,7 @@ type TcpProxy struct {
 	mutex     *sync.Mutex
 	Closing   bool
 
-	StartTime int64
+	Info *ProxyInfo
 }
 
 /* 创建新的代理，监听本地端口 */
@@ -81,6 +89,7 @@ func New(cfg *config.ProxyConfig) *TcpProxy {
 		AutoStart: cfg.AutoStart,
 		mutex:     &sync.Mutex{},
 		Closing:   false,
+		Info:      &ProxyInfo{},
 	}
 }
 
@@ -109,7 +118,7 @@ func (p *TcpProxy) Start() error {
 	log.INFO(p.Name, "Listen %s", listener.Addr())
 	p.listener = listener
 	p.Status = STATUS_STOPPED
-	p.StartTime = time.Now().Unix()
+	p.Info.StartTime = time.Now().Unix()
 	go p.Run()
 	waitTime := time.Duration(50)
 	for p.Status == STATUS_STOPPED {

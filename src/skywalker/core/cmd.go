@@ -63,7 +63,7 @@ func proxyStatus(p *proxy.TcpProxy) *message.StatusResponse_Data {
 		Status:    &status,
 		BindAddr:  proto.String(p.BindAddr),
 		BindPort:  proto.Int32(int32(p.BindPort)),
-		StartTime: proto.Int64(p.StartTime),
+		StartTime: proto.Int64(p.Info.StartTime),
 		Err:       proto.String(""),
 	}
 }
