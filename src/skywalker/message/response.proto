@@ -58,10 +58,34 @@ message StopResponse {
     repeated Data data = 1;
 }
 
+message InfoResponse {
+    enum Status {
+        STOPPED = 1;
+        RUNNING = 2;
+        ERROR = 3;
+    }
+    message Data {
+        required string name = 1;
+        required string cname = 2;
+        required string sname = 3;
+        required Status status = 4;
+        required string bindAddr = 5;
+        required int32 bindPort = 6;
+        required int64 startTime = 7;
+        required string err = 8;    /* 当不为空时表示出错 */
+        required int64 sent = 9;
+        required int64 received = 10;
+        required int64 sentRate = 11;
+        required int64 receivedRate = 12;
+    }
+    repeated Data data = 1;
+}
+
 message Response {
     optional Error err = 1;
     required RequestType type = 2;
     optional StatusResponse status = 3;
     optional StartResponse start = 4;
     optional StopResponse stop = 5;
+    optional InfoResponse info = 6;
 }

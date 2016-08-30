@@ -19,6 +19,7 @@ It has these top-level messages:
 	StatusResponse
 	StartResponse
 	StopResponse
+	InfoResponse
 	Response
 */
 package message

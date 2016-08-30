@@ -36,9 +36,9 @@ import (
  * 一个处理server连接并解析sa协议。
  * 大致如下
  *
- * +---+      +----+------------------+----+      +----
+ * +---+      +----+-----------------+----+      +----
  * | C | <==> | CA | <=pkg.Package=> | SA | <==> | S |
- * +---+      +----+------------------+----+      +----
+ * +---+      +----+-----------------+----+      +----
  *
  * CA和SA之间使用pkg.Package通信
  */
@@ -51,10 +51,10 @@ const (
 
 type ProxyInfo struct {
 	StartTime    int64 /* 服务启动时间 */
-	Sent         int64 /* 发送数据 */
-	Received     int64 /* 接受数据 */
-	SentRate     int64 /* 发送速率，B/S */
-	ReceivedRate int64 /* 接收速率，B/S */
+	Sent         int64 /* 发送数据量，指的是SA发送给Server的数据 */
+	Received     int64 /* 接受数据量，指的是CA发送给Client的数据 */
+	SentRate     int64 /* 发送速率，单位B/S */
+	ReceivedRate int64 /* 接收速率，单位B/S */
 }
 
 type TcpProxy struct {
@@ -178,7 +178,7 @@ func (p *TcpProxy) handle(conn net.Conn) {
  * @rdata 需要返回给数据(Response Data)，将发送给conn
  */
 func (p *TcpProxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interface{},
-	rdata interface{}, err error) error {
+	rdata interface{}, err error, isClient bool) error {
 	/* 转发数据 */
 	switch data := tdata.(type) {
 	case *pkg.Package:
@@ -193,21 +193,33 @@ func (p *TcpProxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata inter
 		}
 	}
 	/* 发送到远端连接 */
+	var size int64 = 0
 	switch data := rdata.(type) {
 	case string:
-		if _, _err := conn.Write([]byte(data)); _err != nil {
-			return _err
+		if n, e := conn.Write([]byte(data)); e != nil {
+			return e
+		}else{
+			size += int64(n)
 		}
 	case []byte:
-		if _, _err := conn.Write(data); _err != nil {
-			return _err
+		if n, e := conn.Write(data); e != nil {
+			return e
+		}else{
+			size += int64(n)
 		}
 	case [][]byte:
 		for _, d := range data {
-			if _, _err := conn.Write(d); _err != nil {
-				return _err
+			if n, e := conn.Write(d); e != nil {
+				return e
+			}else{
+				size += int64(n)
 			}
 		}
+	}
+	if isClient {
+		p.Info.Received += size
+	}else{
+		p.Info.Sent += size
 	}
 	return err
 }
@@ -233,7 +245,7 @@ RUNNING:
 				break RUNNING
 			}
 			cmd, rdata, err := ca.ReadFromClient(data)
-			if err := p.transferData(c2s, cConn, cmd, rdata, err); err != nil {
+			if err := p.transferData(c2s, cConn, cmd, rdata, err, true); err != nil {
 				log.WARN(p.Name, "Read From Client Error: %s %s", cConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
@@ -246,7 +258,7 @@ RUNNING:
 			} else if cmd.Type() == pkg.PKG_DATA {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := ca.ReadFromSA(data)
-					if err := p.transferData(c2s, cConn, cmd, rdata, err); err != nil {
+					if err := p.transferData(c2s, cConn, cmd, rdata, err, true); err != nil {
 						closed_by_client = false
 						log.WARN(p.Name, "Read From SA Error: %s %s", cConn.RemoteAddr(),
 							err.Error())
@@ -260,7 +272,7 @@ RUNNING:
 					log.INFO(p.Name, "%s Connected", chain)
 				}
 				cmd, rdata, err := ca.OnConnectResult(result, host, port)
-				err = p.transferData(c2s, cConn, cmd, rdata, err)
+				err = p.transferData(c2s, cConn, cmd, rdata, err, true)
 				if result != pkg.CONNECT_RESULT_OK || err != nil {
 					closed_by_client = false
 					break RUNNING
@@ -308,7 +320,7 @@ func (p *TcpProxy) connectRemote(originalHost string, originalPort int, sa agent
 	}
 
 	/* 发送服务端代理的处理后数据 */
-	if err := p.transferData(s2c, conn, cmd, rdata, err); err != nil {
+	if err := p.transferData(s2c, conn, cmd, rdata, err, false); err != nil {
 		log.WARN(p.Name, "Server Agent OnConnectResult Error, %s", err.Error())
 		conn.Close()
 		return nil, nil, "", 0
@@ -348,7 +360,7 @@ RUNNING:
 				break RUNNING
 			}
 			cmd, rdata, err := sa.ReadFromServer(data)
-			if err := p.transferData(s2c, sConn, cmd, rdata, err); err != nil {
+			if err := p.transferData(s2c, sConn, cmd, rdata, err, false); err != nil {
 				closed_by_client = false
 				log.WARN(p.Name, "Read From Server Error: %s %s", sConn.RemoteAddr(),
 					err.Error())
@@ -362,7 +374,7 @@ RUNNING:
 			if cmd.Type() == pkg.PKG_DATA {
 				for _, data := range cmd.GetTransferData() {
 					cmd, rdata, err := sa.ReadFromCA(data)
-					if _err := p.transferData(s2c, sConn, cmd, rdata, err); _err != nil {
+					if _err := p.transferData(s2c, sConn, cmd, rdata, err, false); _err != nil {
 						log.WARN(p.Name, "Read From CA Error: %s %s", sConn.RemoteAddr(),
 							_err.Error())
 						break RUNNING

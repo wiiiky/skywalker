@@ -50,6 +50,10 @@ func init() {
 			Handle:       handleStop,
 			RequestField: "GetStop",
 		},
+		message.RequestType_INFO: &Command{
+			Handle:       handleInfo,
+			RequestField: "GetInfo",
+		},
 	}
 }
 
@@ -177,5 +181,8 @@ func handleStop(f *Force, v interface{}) (*message.Response, error) {
 		Type: &reqType,
 		Stop: &message.StopResponse{Data: result},
 	}, nil
+}
+
+func handleInfo(f *Force, v interface{}) (*message.Response, error){
 	return nil, nil
 }
