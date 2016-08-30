@@ -198,27 +198,27 @@ func (p *TcpProxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata inter
 	case string:
 		if n, e := conn.Write([]byte(data)); e != nil {
 			return e
-		}else{
+		} else {
 			size += int64(n)
 		}
 	case []byte:
 		if n, e := conn.Write(data); e != nil {
 			return e
-		}else{
+		} else {
 			size += int64(n)
 		}
 	case [][]byte:
 		for _, d := range data {
 			if n, e := conn.Write(d); e != nil {
 				return e
-			}else{
+			} else {
 				size += int64(n)
 			}
 		}
 	}
 	if isClient {
 		p.Info.Received += size
-	}else{
+	} else {
 		p.Info.Sent += size
 	}
 	return err

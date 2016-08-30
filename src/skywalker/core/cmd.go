@@ -183,6 +183,67 @@ func handleStop(f *Force, v interface{}) (*message.Response, error) {
 	}, nil
 }
 
-func handleInfo(f *Force, v interface{}) (*message.Response, error){
-	return nil, nil
+/* 代理详情 */
+func proxyInfo(p *proxy.TcpProxy) *message.InfoResponse_Data {
+	status := message.InfoResponse_Status(p.Status)
+	return &message.InfoResponse_Data{
+		Name:         proto.String(p.Name),
+		Cname:        proto.String(p.CAName),
+		Sname:        proto.String(p.SAName),
+		Status:       &status,
+		BindAddr:     proto.String(p.BindAddr),
+		BindPort:     proto.Int32(int32(p.BindPort)),
+		StartTime:    proto.Int64(p.Info.StartTime),
+		Err:          proto.String(""),
+		Sent:         proto.Int64(p.Info.Sent),
+		Received:     proto.Int64(p.Info.Received),
+		SentRate:     proto.Int64(p.Info.SentRate),
+		ReceivedRate: proto.Int64(p.Info.ReceivedRate),
+	}
+}
+
+/* 未找的代理详情 */
+func proxyInfoNotFound(name string) *message.InfoResponse_Data {
+	status := message.InfoResponse_STOPPED
+	return &message.InfoResponse_Data{
+		Name:         proto.String(name),
+		Cname:        proto.String(""),
+		Sname:        proto.String(""),
+		Status:       &status,
+		BindAddr:     proto.String(""),
+		BindPort:     proto.Int32(0),
+		StartTime:    proto.Int64(0),
+		Err:          proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
+		Sent:         proto.Int64(0),
+		Received:     proto.Int64(0),
+		SentRate:     proto.Int64(0),
+		ReceivedRate: proto.Int64(0),
+	}
+}
+
+/* info命令，代理详情 */
+func handleInfo(f *Force, v interface{}) (*message.Response, error) {
+	var result []*message.InfoResponse_Data
+
+	req := v.(*message.InfoRequest)
+	reqType := message.RequestType_INFO
+	names := req.GetName()
+	if len(names) == 0 {
+		return nil, errors.New("Invalid Argument For `stop`")
+	} else {
+		var data *message.InfoResponse_Data
+		for _, name := range names {
+			if p := f.proxies[name]; p == nil {
+				data = proxyInfoNotFound(name)
+			} else {
+				data = proxyInfo(p)
+			}
+			result = append(result, data)
+		}
+	}
+
+	return &message.Response{
+		Type: &reqType,
+		Info: &message.InfoResponse{Data: result},
+	}, nil
 }

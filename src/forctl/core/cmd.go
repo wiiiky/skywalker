@@ -29,6 +29,7 @@ const (
 	COMMAND_STATUS = "status"
 	COMMAND_START  = "start"
 	COMMAND_STOP   = "stop"
+	COMMAND_INFO   = "info"
 )
 
 type BuildRequestFunc func(cmd *Command, args ...string) *message.Request
@@ -86,6 +87,15 @@ func init() {
 			BuildRequest:    buildStopRequest,
 			ProcessResponse: processStopResponse,
 		},
+		COMMAND_INFO: &Command{
+			Optional:        -1,
+			Required:        1,
+			Help:            fmt.Sprintf("\tinfo %-15sGet details for one or multiple proxy", "<name>..."),
+			ReqType:         message.RequestType_INFO,
+			ResponseField:   "GetInfo",
+			BuildRequest:    buildInfoRequest,
+			ProcessResponse: processInfoResponse,
+		},
 	}
 }
 
@@ -96,8 +106,8 @@ func GetCommand(name string) *Command {
 
 func help(help *Command, args ...string) *message.Request {
 	if len(args) == 0 {
-		Output("commands (type help <topic>):\n=====================================\n\t%s %s %s %s\n",
-			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP)
+		Output("commands (type help <topic>):\n=====================================\n\t%s %s %s %s %s\n",
+			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_INFO)
 		return nil
 	}
 	topic := args[0]
@@ -120,6 +130,7 @@ func buildStatusRequest(cmd *Command, names ...string) *message.Request {
 	}
 }
 
+/* 格式化时间长度 */
 func formatDuration(delta int64) string {
 	days := delta / (3600 * 24)
 	hours := delta % (3600 * 24) / 3600
@@ -134,6 +145,14 @@ func formatDuration(delta int64) string {
 	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }
 
+/* 格式化时间点 */
+func formatDatetime(timestamp int64) string {
+	t := time.Unix(timestamp, 0)
+	_, month, day := t.Date()
+	hour, min, sec := t.Clock()
+	return fmt.Sprintf("%02d/%02d %02d:%0d:%02d", month, day, hour, min, sec)
+}
+
 /* 处理status命令 */
 func processStatusResponse(v interface{}) error {
 	rep := v.(*message.StatusResponse)
@@ -141,7 +160,7 @@ func processStatusResponse(v interface{}) error {
 	var rows [][]string
 	for _, data := range rep.GetData() {
 		var row []string
-		if len(data.GetErr()) == 0 {
+		if err := data.GetErr(); len(err) == 0 {
 			uptime := ""
 			if data.GetStatus() == message.StatusResponse_RUNNING {
 				d := time.Now().Unix() - data.GetStartTime()
@@ -156,7 +175,7 @@ func processStatusResponse(v interface{}) error {
 			}
 		} else {
 			row = []string{
-				data.GetErr(),
+				err,
 			}
 		}
 		for i, col := range row {
@@ -233,6 +252,57 @@ func processStopResponse(v interface{}) error {
 			Output("%s: ERROR (already stopped)\n", name)
 		case message.StopResponse_ERROR:
 			OutputError("%s: (%s)\n", name, err)
+		}
+	}
+	return nil
+}
+
+/*  构造info命令的请求 */
+func buildInfoRequest(cmd *Command, names ...string) *message.Request {
+	return &message.Request{
+		Version: proto.Int32(message.VERSION),
+		Type:    &cmd.ReqType,
+		Info: &message.InfoRequest{
+			Name: names,
+		},
+	}
+}
+
+/* 格式化数据大小 */
+func formatDataSize(size int64) (string, string) {
+	if size > 1024*1024*1024 {
+		return fmt.Sprintf("%.3f", float64(size)/(1024*1024*1024)), "GB"
+	} else if size > 1024*1024 {
+		return fmt.Sprintf("%.3f", float64(size)/(1024*1024)), "MB"
+	} else if size > 1024 {
+		return fmt.Sprintf("%.3f", float64(size)/1024), "KB"
+	}
+	return fmt.Sprintf("%d", size), "B"
+}
+
+func processInfoResponse(v interface{}) error {
+	rep := v.(*message.InfoResponse)
+	for i, data := range rep.GetData() {
+		if err := data.GetErr(); len(err) > 0 {
+			OutputError("%s\n", err)
+			continue
+		}
+		Output("%s (%s/%s)\n", data.GetName(), data.GetCname(), data.GetSname())
+		Output("    listen on %s:%d %s\n", data.GetBindAddr(), data.GetBindPort(), data.GetStatus())
+		if data.GetStatus() == message.InfoResponse_RUNNING {
+			d := time.Now().Unix() - data.GetStartTime()
+			Output("    start  at %s uptime %s\n", formatDatetime(data.GetStartTime()), formatDuration(d))
+		}
+		sent, sentUnit := formatDataSize(data.GetSent())
+		received, receivedUnit := formatDataSize(data.GetReceived())
+		width := len(sent)
+		if width < len(received) {
+			width = len(received)
+		}
+		Output("    sent     %-*s %-2s rate %d\n", width, sent, sentUnit, data.GetSentRate())
+		Output("    received %-*s %-2s rate %d\n", width, received, receivedUnit, data.GetReceivedRate())
+		if i < len(rep.GetData())-1 {
+			Output("\n")
 		}
 	}
 	return nil
