@@ -50,11 +50,13 @@ const (
 )
 
 type ProxyInfo struct {
-	StartTime    int64 /* 服务启动时间 */
-	Sent         int64 /* 发送数据量，指的是SA发送给Server的数据 */
-	Received     int64 /* 接受数据量，指的是CA发送给Client的数据 */
-	SentRate     int64 /* 发送速率，单位B/S */
-	ReceivedRate int64 /* 接收速率，单位B/S */
+	StartTime     int64           /* 服务启动时间 */
+	Sent          int64           /* 发送数据量，指的是SA发送给Server的数据 */
+	Received      int64           /* 接受数据量，指的是CA发送给Client的数据 */
+	SentQueue     *util.RateQueue /* 接收数据队列，用于计算网络速度 */
+	ReceivedQueue *util.RateQueue /* 发送数据队列，用于计算网络速度 */
+	SentRate      int64           /* 发送速率，单位B/S */
+	ReceivedRate  int64           /* 接收速率，单位B/S */
 }
 
 type TcpProxy struct {
@@ -89,7 +91,10 @@ func New(cfg *config.ProxyConfig) *TcpProxy {
 		AutoStart: cfg.AutoStart,
 		mutex:     &sync.Mutex{},
 		Closing:   false,
-		Info:      &ProxyInfo{},
+		Info: &ProxyInfo{
+			SentQueue:     util.NewRateQueue(2),
+			ReceivedQueue: util.NewRateQueue(2),
+		},
 	}
 }
 
@@ -216,11 +221,15 @@ func (p *TcpProxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata inter
 			}
 		}
 	}
-	if isClient {
+	p.lock()
+	if isClient { /* 发送给客户端的数据 */
 		p.Info.Received += size
-	} else {
+		p.Info.ReceivedQueue.Push(size)
+	} else { /* 发送给服务端的数据 */
 		p.Info.Sent += size
+		p.Info.SentQueue.Push(size)
 	}
+	p.unlock()
 	return err
 }
 

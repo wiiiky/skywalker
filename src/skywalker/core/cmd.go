@@ -197,8 +197,8 @@ func proxyInfo(p *proxy.TcpProxy) *message.InfoResponse_Data {
 		Err:          proto.String(""),
 		Sent:         proto.Int64(p.Info.Sent),
 		Received:     proto.Int64(p.Info.Received),
-		SentRate:     proto.Int64(p.Info.SentRate),
-		ReceivedRate: proto.Int64(p.Info.ReceivedRate),
+		SentRate:     proto.Int64(p.Info.SentQueue.Rate()),
+		ReceivedRate: proto.Int64(p.Info.ReceivedQueue.Rate()),
 	}
 }
 
