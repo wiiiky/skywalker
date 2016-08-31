@@ -280,6 +280,12 @@ func formatDataSize(size int64) (string, string) {
 	return fmt.Sprintf("%d", size), "B"
 }
 
+/* 格式化数据速率 */
+func formatDataRate(rate int64) (string, string) {
+	s, u := formatDataSize(rate)
+	return s, u + "/S"
+}
+
 func processInfoResponse(v interface{}) error {
 	rep := v.(*message.InfoResponse)
 	for i, data := range rep.GetData() {
@@ -295,12 +301,18 @@ func processInfoResponse(v interface{}) error {
 		}
 		sent, sentUnit := formatDataSize(data.GetSent())
 		received, receivedUnit := formatDataSize(data.GetReceived())
-		width := len(sent)
-		if width < len(received) {
-			width = len(received)
+		sentRate, sentRateUnit := formatDataRate(data.GetSentRate())
+		receivedRate, receivedRateUnit := formatDataRate(data.GetReceivedRate())
+		width1 := len(sent)
+		width2 := len(sentRate)
+		if width1 < len(received) {
+			width1 = len(received)
 		}
-		Output("    sent     %-*s %-2s rate %d\n", width, sent, sentUnit, data.GetSentRate())
-		Output("    received %-*s %-2s rate %d\n", width, received, receivedUnit, data.GetReceivedRate())
+		if width2 < len(receivedRate) {
+			width2 = len(receivedRate)
+		}
+		Output("    sent     %-*s %-2s rate %-*s %-4s\n", width1, sent, sentUnit, width2, sentRate, sentRateUnit)
+		Output("    received %-*s %-2s rate %-*s %-4s\n", width1, received, receivedUnit, width2, receivedRate, receivedRateUnit)
 		if i < len(rep.GetData())-1 {
 			Output("\n")
 		}
