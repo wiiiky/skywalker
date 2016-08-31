@@ -55,8 +55,6 @@ type ProxyInfo struct {
 	Received      int64           /* 接受数据量，指的是CA发送给Client的数据 */
 	SentQueue     *util.RateQueue /* 接收数据队列，用于计算网络速度 */
 	ReceivedQueue *util.RateQueue /* 发送数据队列，用于计算网络速度 */
-	SentRate      int64           /* 发送速率，单位B/S */
-	ReceivedRate  int64           /* 接收速率，单位B/S */
 }
 
 type TcpProxy struct {
