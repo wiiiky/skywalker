@@ -44,6 +44,15 @@ type Force struct {
 	orderedProxies []*proxy.TcpProxy
 }
 
+/* 获取所有服务名，按顺序返回 */
+func (f *Force) GetProxyNames() []string {
+	var names []string
+	for _, p := range f.orderedProxies {
+		names = append(names, p.Name)
+	}
+	return names
+}
+
 func (f *Force) lock() {
 	f.mutex.Lock()
 }

@@ -126,6 +126,8 @@ func handleStart(f *Force, v interface{}) (*message.Response, error) {
 	names := req.GetName()
 	if len(names) == 0 {
 		return nil, errors.New("Invalid Argument For `start`")
+	} else if len(names) == 1 && names[0] == "all" {
+		names = f.GetProxyNames()
 	}
 	for _, name := range names {
 		p := f.proxies[name]
@@ -159,6 +161,8 @@ func handleStop(f *Force, v interface{}) (*message.Response, error) {
 	names := req.GetName()
 	if len(names) == 0 {
 		return nil, errors.New("Invalid Argument For `stop`")
+	} else if len(names) == 1 && names[0] == "all" {
+		names = f.GetProxyNames()
 	}
 	for _, name := range names {
 		p := f.proxies[name]
