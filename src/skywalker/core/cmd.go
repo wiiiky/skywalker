@@ -40,19 +40,23 @@ func init() {
 	gCommandMap = map[message.RequestType]*Command{
 		message.RequestType_STATUS: &Command{
 			Handle:       handleStatus,
-			RequestField: "GetStatus",
+			RequestField: "GetCommon",
 		},
 		message.RequestType_START: &Command{
 			Handle:       handleStart,
-			RequestField: "GetStart",
+			RequestField: "GetCommon",
 		},
 		message.RequestType_STOP: &Command{
 			Handle:       handleStop,
-			RequestField: "GetStop",
+			RequestField: "GetCommon",
+		},
+		message.RequestType_RESTART: &Command{
+			Handle:       handleRestart,
+			RequestField: "GetCommon",
 		},
 		message.RequestType_INFO: &Command{
 			Handle:       handleInfo,
-			RequestField: "GetInfo",
+			RequestField: "GetCommon",
 		},
 	}
 }
@@ -90,7 +94,7 @@ func proxyStatusNotFound(name string) *message.StatusResponse_Data {
 func handleStatus(f *Force, v interface{}) (*message.Response, error) {
 	var result []*message.StatusResponse_Data
 
-	req := v.(*message.StatusRequest)
+	req := v.(*message.CommonRequest)
 
 	reqType := message.RequestType_STATUS
 	names := req.GetName()
@@ -120,7 +124,7 @@ func handleStatus(f *Force, v interface{}) (*message.Response, error) {
 func handleStart(f *Force, v interface{}) (*message.Response, error) {
 	var result []*message.StartResponse_Data
 
-	req := v.(*message.StartRequest)
+	req := v.(*message.CommonRequest)
 
 	reqType := message.RequestType_START
 	names := req.GetName()
@@ -156,7 +160,7 @@ func handleStart(f *Force, v interface{}) (*message.Response, error) {
 func handleStop(f *Force, v interface{}) (*message.Response, error) {
 	var result []*message.StopResponse_Data
 
-	req := v.(*message.StopRequest)
+	req := v.(*message.CommonRequest)
 	reqType := message.RequestType_STOP
 	names := req.GetName()
 	if len(names) == 0 {
@@ -184,6 +188,47 @@ func handleStop(f *Force, v interface{}) (*message.Response, error) {
 	return &message.Response{
 		Type: &reqType,
 		Stop: &message.StopResponse{Data: result},
+	}, nil
+}
+
+/* 处理restart命令 */
+func handleRestart(f *Force, v interface{}) (*message.Response, error) {
+	var result []*message.StartResponse_Data
+
+	req := v.(*message.CommonRequest)
+	reqType := message.RequestType_RESTART
+	names := req.GetName()
+	if len(names) == 0 {
+		return nil, errors.New("Invalid Argument For `stop`")
+	} else if len(names) == 1 && names[0] == "all" {
+		names = f.GetProxyNames()
+	}
+	for _, name := range names {
+		p := f.proxies[name]
+		status := message.StartResponse_STARTED
+		errmsg := ""
+		if p == nil {
+			status = message.StartResponse_ERROR
+			errmsg = fmt.Sprintf("no such proxy")
+		} else if p.Status == proxy.STATUS_RUNNING {
+			if e := p.Stop(); e != nil {
+				status = message.StartResponse_ERROR
+				errmsg = e.Error()
+			}
+		}
+		if len(errmsg) == 0 {
+			if e := p.Start(); e != nil {
+				status = message.StartResponse_ERROR
+				errmsg = e.Error()
+			} else {
+				status = message.StartResponse_STARTED
+			}
+		}
+		result = append(result, &message.StartResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
+	}
+	return &message.Response{
+		Type:  &reqType,
+		Start: &message.StartResponse{Data: result},
 	}, nil
 }
 
@@ -229,7 +274,7 @@ func proxyInfoNotFound(name string) *message.InfoResponse_Data {
 func handleInfo(f *Force, v interface{}) (*message.Response, error) {
 	var result []*message.InfoResponse_Data
 
-	req := v.(*message.InfoRequest)
+	req := v.(*message.CommonRequest)
 	reqType := message.RequestType_INFO
 	names := req.GetName()
 	if len(names) == 0 {

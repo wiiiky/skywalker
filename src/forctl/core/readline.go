@@ -43,6 +43,7 @@ func NewReadline(rcfg []*config.ProxyConfig) (*Readline, error) {
 		readline.PcItem(COMMAND_STATUS, proxies...),
 		readline.PcItem(COMMAND_START, proxies...),
 		readline.PcItem(COMMAND_STOP, proxies...),
+		readline.PcItem(COMMAND_RESTART, proxies...),
 		readline.PcItem(COMMAND_INFO, proxies...),
 		readline.PcItem(COMMAND_HELP, cmds...),
 	)

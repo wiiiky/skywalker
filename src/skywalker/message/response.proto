@@ -87,5 +87,5 @@ message Response {
     optional StatusResponse status = 3;
     optional StartResponse start = 4;
     optional StopResponse stop = 5;
-    optional InfoResponse info = 6;
+    optional InfoResponse info = 7;
 }

@@ -5,30 +5,16 @@ enum RequestType {
     STATUS = 1;   /* 当前状态 */
     START = 2;    /* 启动服务 */
     STOP = 3;     /* 停止服务 */
-    INFO = 4;     /* 服务详细信息 */
+    RESTART = 4;  /* 重启服务 */
+    INFO = 5;     /* 服务详细信息 */
 }
 
-message StatusRequest {
-    repeated string name = 1;
-}
-
-message StartRequest {
-    repeated string name = 1;
-}
-
-message StopRequest {
-    repeated string name = 1;
-}
-
-message InfoRequest {
+message CommonRequest {
     repeated string name = 1;
 }
 
 message Request {
     required int32 version = 1;
     required RequestType type = 2;
-    optional StatusRequest status = 3;
-    optional StartRequest start = 4;
-    optional StopRequest stop = 5;
-    optional InfoRequest info = 6;
+    optional CommonRequest common = 3;
 }

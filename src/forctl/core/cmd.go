@@ -25,11 +25,12 @@ import (
 )
 
 const (
-	COMMAND_HELP   = "help"
-	COMMAND_STATUS = "status"
-	COMMAND_START  = "start"
-	COMMAND_STOP   = "stop"
-	COMMAND_INFO   = "info"
+	COMMAND_HELP    = "help"
+	COMMAND_STATUS  = "status"
+	COMMAND_START   = "start"
+	COMMAND_STOP    = "stop"
+	COMMAND_RESTART = "restart"
+	COMMAND_INFO    = "info"
 )
 
 type BuildRequestFunc func(cmd *Command, args ...string) *message.Request
@@ -66,7 +67,7 @@ func init() {
 			Help:            fmt.Sprintf("\tstatus %-15sGet status for one or multiple proxy\n\tstatus %-15sGet status for all proxies\n", "<name>...", " "),
 			ReqType:         message.RequestType_STATUS,
 			ResponseField:   "GetStatus",
-			BuildRequest:    buildStatusRequest,
+			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processStatusResponse,
 		},
 		COMMAND_START: &Command{
@@ -75,7 +76,7 @@ func init() {
 			Help:            fmt.Sprintf("\tstart %-15sStart one or multiple proxy", "<name>..."),
 			ReqType:         message.RequestType_START,
 			ResponseField:   "GetStart",
-			BuildRequest:    buildStartRequest,
+			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processStartResponse,
 		},
 		COMMAND_STOP: &Command{
@@ -84,8 +85,17 @@ func init() {
 			Help:            fmt.Sprintf("\tstop %-15sStop one or multiple proxy", "<name>..."),
 			ReqType:         message.RequestType_STOP,
 			ResponseField:   "GetStop",
-			BuildRequest:    buildStopRequest,
+			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processStopResponse,
+		},
+		COMMAND_RESTART: &Command{
+			Optional:        -1,
+			Required:        1,
+			Help:            fmt.Sprintf("\trestart %-15sRestart one or multiple proxy", "<name>..."),
+			ReqType:         message.RequestType_RESTART,
+			ResponseField:   "GetStart",
+			BuildRequest:    buildCommonRequest,
+			ProcessResponse: processStartResponse,
 		},
 		COMMAND_INFO: &Command{
 			Optional:        -1,
@@ -93,7 +103,7 @@ func init() {
 			Help:            fmt.Sprintf("\tinfo %-15sGet details for one or multiple proxy", "<name>..."),
 			ReqType:         message.RequestType_INFO,
 			ResponseField:   "GetInfo",
-			BuildRequest:    buildInfoRequest,
+			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processInfoResponse,
 		},
 	}
@@ -104,10 +114,24 @@ func GetCommand(name string) *Command {
 	return cmd
 }
 
+/*
+ * 构建通用形式的请求
+ * 如start,stop,restart,info等命令
+ */
+func buildCommonRequest(cmd *Command, names ...string) *message.Request {
+	return &message.Request{
+		Version: proto.Int32(message.VERSION),
+		Type:    &cmd.ReqType,
+		Common: &message.CommonRequest{
+			Name: names,
+		},
+	}
+}
+
 func help(help *Command, args ...string) *message.Request {
 	if len(args) == 0 {
-		Output("commands (type help <topic>):\n=====================================\n\t%s %s %s %s %s\n",
-			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_INFO)
+		Output("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s\n",
+			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_RESTART, COMMAND_INFO)
 		return nil
 	}
 	topic := args[0]
@@ -117,17 +141,6 @@ func help(help *Command, args ...string) *message.Request {
 		OutputError("No help on %s\n", topic)
 	}
 	return nil
-}
-
-/*  构造status命令的请求 */
-func buildStatusRequest(cmd *Command, names ...string) *message.Request {
-	return &message.Request{
-		Version: proto.Int32(message.VERSION),
-		Type:    &cmd.ReqType,
-		Status: &message.StatusRequest{
-			Name: names,
-		},
-	}
 }
 
 /* 格式化时间长度 */
@@ -197,17 +210,6 @@ func processStatusResponse(v interface{}) error {
 	return nil
 }
 
-/* 构造start命令的请求 */
-func buildStartRequest(cmd *Command, names ...string) *message.Request {
-	return &message.Request{
-		Version: proto.Int32(message.VERSION),
-		Type:    &cmd.ReqType,
-		Start: &message.StartRequest{
-			Name: names,
-		},
-	}
-}
-
 /* 处理start命令的结果 */
 func processStartResponse(v interface{}) error {
 	rep := v.(*message.StartResponse)
@@ -227,17 +229,6 @@ func processStartResponse(v interface{}) error {
 	return nil
 }
 
-/* 构造stop命令请求 */
-func buildStopRequest(cmd *Command, names ...string) *message.Request {
-	return &message.Request{
-		Version: proto.Int32(message.VERSION),
-		Type:    &cmd.ReqType,
-		Stop: &message.StopRequest{
-			Name: names,
-		},
-	}
-}
-
 /* 处理stop返回结果 */
 func processStopResponse(v interface{}) error {
 	rep := v.(*message.StopResponse)
@@ -255,17 +246,6 @@ func processStopResponse(v interface{}) error {
 		}
 	}
 	return nil
-}
-
-/*  构造info命令的请求 */
-func buildInfoRequest(cmd *Command, names ...string) *message.Request {
-	return &message.Request{
-		Version: proto.Int32(message.VERSION),
-		Type:    &cmd.ReqType,
-		Info: &message.InfoRequest{
-			Name: names,
-		},
-	}
 }
 
 /* 格式化数据大小 */

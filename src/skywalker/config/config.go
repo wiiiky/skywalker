@@ -18,6 +18,7 @@
 package config
 
 import (
+	"errors"
 	"github.com/hitoshii/golib/src/log"
 	"os"
 	"skywalker/agent"
@@ -86,6 +87,9 @@ type ProxyConfig struct {
  * 设置日志、插件并检查CA和SA
  */
 func (cfg *ProxyConfig) Init() error {
+	if cfg.Name == "all" {
+		return errors.New("'all' is reserved, not allowed as proxy name")
+	}
 	log.Init(cfg.Log)
 	ca := cfg.ClientAgent
 	sa := cfg.ServerAgent
