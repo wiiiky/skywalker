@@ -37,13 +37,13 @@ type BuildRequestFunc func(cmd *Command, args ...string) *message.Request
 type ProcessResponseFunc func(resp interface{}) error
 
 type Command struct {
-	Optional        int
-	Required        int
-	Help            string
-	ReqType         message.RequestType
-	BuildRequest    BuildRequestFunc
-	ProcessResponse ProcessResponseFunc
-	ResponseField   string
+	Optional        int                 /* 可选的参数数量，-1表示无限制 */
+	Required        int                 /* 必须的参数数量 */
+	Help            string              /* 帮助说明 */
+	ReqType         message.RequestType /* 请求类型 */
+	BuildRequest    BuildRequestFunc    /* 构建请求数据包的函数，如果为空则不发送请求 */
+	ProcessResponse ProcessResponseFunc /* 处理返回结果的函数 */
+	ResponseField   string              /* 返回结果的字段 */
 }
 
 var (
@@ -128,6 +128,7 @@ func buildCommonRequest(cmd *Command, names ...string) *message.Request {
 	}
 }
 
+/* 打印帮助信息 */
 func help(help *Command, args ...string) *message.Request {
 	if len(args) == 0 {
 		Output("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s\n",

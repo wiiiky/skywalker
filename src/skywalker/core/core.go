@@ -137,7 +137,7 @@ func (f *Force) Finish() {
 	}
 }
 
-/* 监听请求 */
+/* 监听命令请求 */
 func (f *Force) listen() {
 	listenFunc := func(listener net.Listener) {
 		for {
@@ -157,7 +157,10 @@ func (f *Force) listen() {
 	}
 }
 
-/* 处理客户端链接 */
+/*
+ * 处理客户端链接
+ * 判断命令是否存在，判断命令版本号，执行命令
+ */
 func (f *Force) handleConn(c *message.Conn) {
 	var rep *message.Response
 	var err error

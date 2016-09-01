@@ -23,9 +23,23 @@ SkyWalker(以下简称SW)是一个代理转发程序，可以配置传入和传�
 
 关于如何配置代理，请参考example目录下的示例。
 
-### Multi-Proxy
+### Configuration
 
-可以同时配置多个代理服务，每个代理相对独立，但是可以统一管理。
+可以同时配置多个代理服务，每个代理相对独立，但是可以统一管理。  
+配置文件使用yaml格式，请参考[Yaml1.2](http://www.yaml.org/spec/1.2/spec.html)。
+
+### Build
+
+编译直接在代码目录下执行
+
+*    make
+
+会在bin目录下生成skywalker和forctl两个可执行文件，skywalker是代理程序，forctl是管理程序。
+
+如果你修改了protobuf结构(*src/skywalker/message/&#42;.proto*)；  
+那么需要重新生成相应的go文件(*src/skywalker/message/&#42;.go*)，使用如下命令
+
+*    make proto
 
 ### Screenshot
 

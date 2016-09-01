@@ -21,10 +21,12 @@ import (
 	"fmt"
 )
 
+/* 输出信息 */
 func Output(format string, v ...interface{}) {
 	fmt.Printf(format, v...)
 }
 
+/* 输出错误，在内容前添加 *** */
 func OutputError(format string, v ...interface{}) {
 	format = "*** " + format
 	fmt.Printf(format, v...)

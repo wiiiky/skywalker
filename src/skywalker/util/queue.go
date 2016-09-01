@@ -22,6 +22,10 @@ import (
 	"time"
 )
 
+/*
+ * 此队列用于最近的n条网络数据，用于计算网络速度
+ * maxLen表示要存储的最大长度
+ */
 type LimitedQueue struct {
 	data   *list.List
 	maxLen int
@@ -36,13 +40,9 @@ func NewLimitedQueue(maxLen int) *LimitedQueue {
 
 func (q *LimitedQueue) Push(v interface{}) {
 	q.data.PushBack(v)
-	if q.data.Len() > q.maxLen {
+	if q.data.Len() > q.maxLen { /* 超过最大长度，丢弃第一条 */
 		q.data.Remove(q.data.Front())
 	}
-}
-
-func (q *LimitedQueue) Len() int {
-	return q.data.Len()
 }
 
 func (q *LimitedQueue) Elements() []interface{} {
@@ -53,12 +53,16 @@ func (q *LimitedQueue) Elements() []interface{} {
 	return elements
 }
 
-/* 读取数据的记录 */
+/* 数据的记录，多条记录用于计算网络速度 */
 type DataRecord struct {
-	size      int64
-	timestamp int64
+	size      int64 /* 数据大小 */
+	timestamp int64 /* 产生该记录的时间，单位nanosecond */
 }
 
+/*
+ * queue用于记录网络流量数据，
+ * duration表示计算速率时最大的时间区间
+ */
 type RateQueue struct {
 	queue    *LimitedQueue
 	duration int64
@@ -72,9 +76,6 @@ func NewRateQueue(d int64) *RateQueue {
 }
 
 func (q *RateQueue) Push(size int64) {
-	if size <= 0 {
-		return
-	}
 	q.queue.Push(&DataRecord{
 		size:      size,
 		timestamp: time.Now().UnixNano(),

@@ -99,11 +99,11 @@ func CreateConnChannel(conn net.Conn) chan []byte {
 		defer close(channel)
 		for {
 			buf := make([]byte, 4096) /* channel会把buf的引用传递出去，因此buf需要每次创建 */
-			n, err := conn.Read(buf)
-			if err != nil {
+			if n, err := conn.Read(buf); err != nil {
 				break
+			} else {
+				channel <- buf[:n]
 			}
-			channel <- buf[:n]
 		}
 	}(conn, channel)
 	return channel

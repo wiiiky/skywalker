@@ -34,6 +34,7 @@ import (
  * 一个TCP转发会启动两个goroutine；
  * 一个处理client连接并解析ca协议，
  * 一个处理server连接并解析sa协议。
+ * 每一个代理连接包含一个caGoroutine和saGoroutine，两者同生同灭
  * 大致如下
  *
  * +---+      +----+-----------------+----+      +----
@@ -58,18 +59,19 @@ type ProxyInfo struct {
 }
 
 type TcpProxy struct {
-	Name   string
-	CAName string
-	SAName string
-	Status int
+	Name   string /* 代理名 */
+	CAName string /* ca协议名 */
+	SAName string /* sa协议名 */
+	Status int    /* 状态 */
 
 	BindAddr string
 	BindPort int
 	listener net.Listener
 
-	AutoStart bool
-	mutex     *sync.Mutex
+	AutoStart bool /* 是否自动启动 */
 	Closing   bool
+
+	mutex *sync.Mutex /* 互斥锁 */
 
 	Info *ProxyInfo
 }
@@ -96,6 +98,7 @@ func New(cfg *config.ProxyConfig) *TcpProxy {
 	}
 }
 
+/* 互斥锁的快捷函数 */
 func (p *TcpProxy) lock() {
 	p.mutex.Lock()
 }
@@ -146,6 +149,7 @@ func (p *TcpProxy) Stop() error {
 	return nil
 }
 
+/* 执行代理 */
 func (p *TcpProxy) Run() {
 	defer p.Close()
 	for p.Closing == false {
@@ -219,15 +223,19 @@ func (p *TcpProxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata inter
 			}
 		}
 	}
-	p.lock()
-	if isClient { /* 发送给客户端的数据 */
-		p.Info.Received += size
-		p.Info.ReceivedQueue.Push(size)
-	} else { /* 发送给服务端的数据 */
-		p.Info.Sent += size
-		p.Info.SentQueue.Push(size)
+
+	if size > 0 {
+		/* 增加数据时需要使用锁，因为没有只是单纯增加数据和添加记录，因此不会影响性能 */
+		p.lock()
+		if isClient { /* 发送给客户端的数据 */
+			p.Info.Received += size
+			p.Info.ReceivedQueue.Push(size)
+		} else { /* 发送给服务端的数据 */
+			p.Info.Sent += size
+			p.Info.SentQueue.Push(size)
+		}
+		p.unlock()
 	}
-	p.unlock()
 	return err
 }
 

@@ -24,6 +24,7 @@ import (
 	"time"
 )
 
+/* 连接TCP服务 */
 func TCPConnect(ip string, port int) (*message.Conn, error) {
 	addr := net.JoinHostPort(ip, strconv.Itoa(port))
 	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err != nil {
@@ -33,6 +34,7 @@ func TCPConnect(ip string, port int) (*message.Conn, error) {
 	}
 }
 
+/* 连接Unix套接字服务 */
 func UnixConnect(filepath string) (*message.Conn, error) {
 	if conn, err := net.DialTimeout("unix", filepath, 10*time.Second); err != nil {
 		return nil, err

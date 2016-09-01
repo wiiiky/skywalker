@@ -39,6 +39,7 @@ func NewReadline(rcfg []*config.ProxyConfig) (*Readline, error) {
 			cmds = append(cmds, readline.PcItem(k))
 		}
 	}
+	/* 设置自动补全 */
 	completer := readline.NewPrefixCompleter(
 		readline.PcItem(COMMAND_STATUS, proxies...),
 		readline.PcItem(COMMAND_START, proxies...),
