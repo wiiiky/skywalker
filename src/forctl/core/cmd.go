@@ -188,9 +188,7 @@ func processStatusResponse(v interface{}) error {
 				uptime,
 			}
 		} else {
-			row = []string{
-				err,
-			}
+			row = []string{err}
 		}
 		for i, col := range row {
 			if len(col) > maxlen[i] {
@@ -224,7 +222,7 @@ func processStartResponse(v interface{}) error {
 		case message.StartResponse_RUNNING:
 			Output("%s: ERROR (already started)\n", name)
 		case message.StartResponse_ERROR:
-			OutputError("%s: (%s)\n", name, err)
+			OutputError("%s: ERROR (%s)\n", name, err)
 		}
 	}
 	return nil
@@ -243,7 +241,7 @@ func processStopResponse(v interface{}) error {
 		case message.StopResponse_UNRUNNING:
 			Output("%s: ERROR (already stopped)\n", name)
 		case message.StopResponse_ERROR:
-			OutputError("%s: (%s)\n", name, err)
+			OutputError("%s: ERROR (%s)\n", name, err)
 		}
 	}
 	return nil
@@ -267,6 +265,7 @@ func formatDataRate(rate int64) (string, string) {
 	return s, u + "/S"
 }
 
+/* 处理info命令的返回值 */
 func processInfoResponse(v interface{}) error {
 	rep := v.(*message.InfoResponse)
 	for i, data := range rep.GetData() {

@@ -28,7 +28,7 @@ type Readline struct {
 	rl *readline.Instance
 }
 
-func NewReadline(rcfg []*config.ProxyConfig) (*Readline, error) {
+func NewReadline(ccfg *config.CoreConfig, rcfg []*config.ProxyConfig) (*Readline, error) {
 	/* 自动补全数据 */
 	var proxies, cmds []readline.PrefixCompleterInterface
 	for _, r := range rcfg {
@@ -50,7 +50,7 @@ func NewReadline(rcfg []*config.ProxyConfig) (*Readline, error) {
 	)
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:       "\x1B[36mforce>>\x1B[0m ",
-		HistoryFile:  "/tmp/force_history",
+		HistoryFile:  ccfg.HistoryFile,
 		AutoComplete: completer,
 	})
 	if err != nil {
@@ -69,10 +69,9 @@ func NewLine(buf string) *Line {
 	var cmd *Command
 
 	for _, s := range strings.Split(buf, " ") {
-		if len(s) == 0 {
-			continue
+		if len(s) > 0 {
+			seps = append(seps, s)
 		}
-		seps = append(seps, s)
 	}
 	if len(seps) == 0 {
 		return nil

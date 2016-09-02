@@ -49,7 +49,7 @@ func main() {
 	var disconnected bool
 	cfg := config.GetCoreConfig()
 
-	if rl, err = core.NewReadline(config.GetProxyConfigs()); err != nil {
+	if rl, err = core.NewReadline(config.GetCoreConfig(), config.GetProxyConfigs()); err != nil {
 		core.Output("%v\n", err)
 		return
 	}

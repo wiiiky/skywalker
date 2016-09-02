@@ -111,6 +111,7 @@ func Run() *Force {
 			log.E("%v", err)
 			return nil
 		}
+		os.Chmod(unixListener.Addr().String(), os.FileMode(cfg.Unix.Chmod))
 	}
 
 	force := &Force{

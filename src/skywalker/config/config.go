@@ -44,9 +44,10 @@ type InetConfig struct {
 
 /* 通用配置 */
 type CoreConfig struct {
-	Unix *UnixConfig `yaml:"unix"`
-	Inet *InetConfig `yaml:"inet"`
-	Log  *log.Config `yaml:"log"`
+	Unix        *UnixConfig `yaml:"unix"`    /* Unix套介子服务配置 */
+	Inet        *InetConfig `yaml:"inet"`    /* TCP/IP服务配置 */
+	Log         *log.Config `yaml:"log"`     /* 日志配置 */
+	HistoryFile string      `yaml:"history"` /* 命令的历史记录文件 */
 }
 
 func (cfg *CoreConfig) init() {
@@ -62,6 +63,8 @@ func (cfg *CoreConfig) init() {
 			IP:   "127.0.0.1",
 			Port: 12701,
 		}
+	} else if cfg.Unix != nil && cfg.Unix.Chmod == 0 {
+		cfg.Unix.Chmod = 0644 /* 套接字默认的文件权限 */
 	}
 	log.InitDefault(cfg.Log)
 }
@@ -114,6 +117,7 @@ var (
 			Name:    "luker",
 			Loggers: defaultLoggers,
 		},
+		HistoryFile: util.ResolveHomePath("~/.forctl_history"),
 	}
 	gConfigs = map[string]*ProxyConfig{}
 )

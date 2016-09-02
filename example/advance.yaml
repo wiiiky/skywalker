@@ -6,8 +6,13 @@
 
 # 这是全局的日志配置，如果代理下没有指定日志，则使用全局的
 # core是保留字，不能创建一个名叫core的代理
-# 现在core中只配置日志log，后面会添加新配置
+# 现在core中可以配置命令监听方式和日志log
 core:
+  inet:
+    ip: 127.0.0.1
+    port: 23212
+  unix:
+    file: /tmp/skywalker.sock
   log:
     showName: true
     loggers:
