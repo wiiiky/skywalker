@@ -64,6 +64,10 @@ message InfoResponse {
         RUNNING = 2;
         ERROR = 3;
     }
+    message Info {
+        required string key = 1;
+        required string value = 2;
+    }
     message Data {
         required string name = 1;
         required string cname = 2;
@@ -76,7 +80,9 @@ message InfoResponse {
         required int64 received = 9;
         required int64 sentRate = 10;
         required int64 receivedRate = 11;
-        required string err = 12;    /* 当不为空时表示出错 */
+        repeated Info caInfo = 12;
+        repeated Info saInfo = 13;
+        required string err = 14;    /* 当不为空时表示出错 */
     }
     repeated Data data = 1;
 }

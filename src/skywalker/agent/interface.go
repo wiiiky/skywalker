@@ -57,7 +57,7 @@ type ClientAgent interface {
 	OnClose(bool)
 
 	/* 获取配置相关的详细信息 */
-	GetInfo() map[string]string
+	GetInfo() []map[string]string
 }
 
 /*
@@ -99,7 +99,7 @@ type ServerAgent interface {
 	OnClose(bool)
 
 	/* 获取配置相关的详细信息 */
-	GetInfo() map[string]string
+	GetInfo() []map[string]string
 }
 
 type newClientAgentFunc func(string) ClientAgent

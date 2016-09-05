@@ -265,6 +265,6 @@ func (a *SocksServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, er
 func (a *SocksServerAgent) OnClose(bool) {
 }
 
-func (a *SocksServerAgent) GetInfo() map[string]string {
+func (a *SocksServerAgent) GetInfo() []map[string]string {
 	return nil
 }

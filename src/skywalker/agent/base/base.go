@@ -43,7 +43,7 @@ func (a *BaseAgent) INFO(format string, v ...interface{}) {
 }
 
 /* 实现不重要的代理方法 */
-func (a *BaseAgent) GetInfo() map[string]string {
+func (a *BaseAgent) GetInfo() []map[string]string {
 	return nil
 }
 

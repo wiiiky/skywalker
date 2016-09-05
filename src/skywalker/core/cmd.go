@@ -80,12 +80,7 @@ func proxyStatusNotFound(name string) *message.StatusResponse_Data {
 	status := message.StatusResponse_STOPPED
 	return &message.StatusResponse_Data{
 		Name:      proto.String(name),
-		Cname:     proto.String(""),
-		Sname:     proto.String(""),
 		Status:    &status,
-		BindAddr:  proto.String(""),
-		BindPort:  proto.Int32(0),
-		StartTime: proto.Int64(0),
 		Err:       proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
 	}
 }
@@ -234,7 +229,15 @@ func handleRestart(f *Force, v interface{}) (*message.Response, error) {
 
 /* 代理详情 */
 func proxyInfo(p *proxy.TcpProxy) *message.InfoResponse_Data {
+	var caInfo, saInfo []*message.InfoResponse_Info
 	status := message.InfoResponse_Status(p.Status)
+	ca, sa := p.GetAgents()
+	for _, info := range ca.GetInfo() {
+		caInfo = append(caInfo, &message.InfoResponse_Info{Key:proto.String(info["key"]),Value:proto.String(info["value"])})
+	}
+	for _, info := range sa.GetInfo() {
+		saInfo = append(saInfo, &message.InfoResponse_Info{Key:proto.String(info["key"]),Value:proto.String(info["value"])})
+	}
 	return &message.InfoResponse_Data{
 		Name:         proto.String(p.Name),
 		Cname:        proto.String(p.CAName),
@@ -247,6 +250,8 @@ func proxyInfo(p *proxy.TcpProxy) *message.InfoResponse_Data {
 		Sent:         proto.Int64(p.Info.Sent),
 		Received:     proto.Int64(p.Info.Received),
 		SentRate:     proto.Int64(p.Info.SentQueue.Rate()),
+		CaInfo:       caInfo,
+		SaInfo:       saInfo,
 		ReceivedRate: proto.Int64(p.Info.ReceivedQueue.Rate()),
 	}
 }
@@ -256,17 +261,8 @@ func proxyInfoNotFound(name string) *message.InfoResponse_Data {
 	status := message.InfoResponse_STOPPED
 	return &message.InfoResponse_Data{
 		Name:         proto.String(name),
-		Cname:        proto.String(""),
-		Sname:        proto.String(""),
 		Status:       &status,
-		BindAddr:     proto.String(""),
-		BindPort:     proto.Int32(0),
-		StartTime:    proto.Int64(0),
 		Err:          proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
-		Sent:         proto.Int64(0),
-		Received:     proto.Int64(0),
-		SentRate:     proto.Int64(0),
-		ReceivedRate: proto.Int64(0),
 	}
 }
 

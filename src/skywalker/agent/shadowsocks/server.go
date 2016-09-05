@@ -267,6 +267,6 @@ func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
 	}
 }
 
-func (a *ShadowSocksServerAgent) GetInfo() map[string]string {
+func (a *ShadowSocksServerAgent) GetInfo() []map[string]string {
 	return nil
 }
