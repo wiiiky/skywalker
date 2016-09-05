@@ -18,7 +18,7 @@
 package socks
 
 import (
-	"github.com/hitoshii/golib/src/log"
+	"skywalker/agent/base"
 	"skywalker/pkg"
 	"skywalker/util"
 )
@@ -29,7 +29,7 @@ import (
  */
 
 type SocksClientAgent struct {
-	name    string
+	base.BaseAgent
 	version uint8
 
 	atype uint8
@@ -78,10 +78,9 @@ func (a *SocksClientAgent) OnInit(name string, cfg map[string]interface{}) error
 	return nil
 }
 
-func (a *SocksClientAgent) OnStart(name string) error {
-	a.name = name
+func (a *SocksClientAgent) OnStart() error {
 	a.state = STATE_INIT
-	a.cfg = gCAConfigs[name]
+	a.cfg = gCAConfigs[a.BaseAgent.Name]
 	return nil
 }
 
@@ -169,7 +168,7 @@ func (a *SocksClientAgent) init5(data []byte) (interface{}, interface{}, error) 
 	} else if method == METHOD_USERNAME_PASSWORD { /* 等待客户端认证 */
 		a.state = STATE_AUTH
 	} else {
-		log.E("THIS IS A *BUG*! PLEASE REPORT TO THE DEVELOPER!")
+		a.ERROR("THIS IS A *BUG*! PLEASE REPORT TO THE DEVELOPER!")
 	}
 
 	rep := &socks5VersionResponse{
@@ -228,4 +227,8 @@ func (a *SocksClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, er
 }
 
 func (a *SocksClientAgent) OnClose(bool) {
+}
+
+func (a *SocksClientAgent) GetInfo() map[string]string {
+	return nil
 }

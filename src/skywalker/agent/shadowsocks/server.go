@@ -19,8 +19,8 @@ package shadowsocks
 
 import (
 	"bytes"
-	"github.com/hitoshii/golib/src/log"
 	"math/rand"
+	"skywalker/agent/base"
 	"skywalker/cipher"
 	"skywalker/pkg"
 	"skywalker/util"
@@ -33,6 +33,7 @@ import (
  * 其命名逻辑是面向服务器的代理
  */
 type ShadowSocksServerAgent struct {
+	base.BaseAgent
 	cipherInfo *cipher.CipherInfo
 	encrypter  cipher.Encrypter
 	decrypter  cipher.Decrypter
@@ -44,11 +45,10 @@ type ShadowSocksServerAgent struct {
 	targetAddr string
 	targetPort int
 
-	/* SS连接是否成功 */
+	/* SS握手是否成功 */
 	connected bool
 
-	name string
-	cfg  *ssSAConfig
+	cfg *ssSAConfig
 }
 
 type ssServerAddress struct {
@@ -205,9 +205,8 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 }
 
 /* 初始化读取配置 */
-func (a *ShadowSocksServerAgent) OnStart(name string) error {
-	a.name = name
-	a.cfg = gSAConfigs[name]
+func (a *ShadowSocksServerAgent) OnStart() error {
+	a.cfg = gSAConfigs[a.BaseAgent.Name]
 	serverAddr, serverPort, password, method := a.getServerInfo()
 	info := cipher.GetCipherInfo(strings.ToLower(method))
 	key := generateKey([]byte(password), info.KeySize)
@@ -263,7 +262,11 @@ func (a *ShadowSocksServerAgent) ReadFromCA(data []byte) (interface{}, interface
 
 func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
 	if !closed_by_client && !a.connected { /* 没有建立链接就断开，且不是客户端断开的 */
-		log.WARN(a.name, "Connection Closed Unexpectedly")
+		a.WARN("Connection Closed Unexpectedly")
 		a.onServerError(a.serverAddr)
 	}
+}
+
+func (a *ShadowSocksServerAgent) GetInfo() map[string]string {
+	return nil
 }

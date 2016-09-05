@@ -19,12 +19,13 @@ package socks
 
 import (
 	"net"
+	"skywalker/agent/base"
 	"skywalker/pkg"
 	"skywalker/util"
 )
 
 type SocksServerAgent struct {
-	name string
+	base.BaseAgent
 
 	atype uint8
 	addr  string
@@ -94,9 +95,8 @@ func (a *SocksServerAgent) OnInit(name string, cfg map[string]interface{}) error
 	return nil
 }
 
-func (a *SocksServerAgent) OnStart(name string) error {
-	a.name = name
-	a.cfg = gSAConfig[name]
+func (a *SocksServerAgent) OnStart() error {
+	a.cfg = gSAConfig[a.BaseAgent.Name]
 	a.state = STATE_INIT
 	a.buf = nil
 	return nil
@@ -263,4 +263,8 @@ func (a *SocksServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, er
 }
 
 func (a *SocksServerAgent) OnClose(bool) {
+}
+
+func (a *SocksServerAgent) GetInfo() map[string]string {
+	return nil
 }

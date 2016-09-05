@@ -17,10 +17,15 @@
 
 package direct
 
+import (
+	"skywalker/agent/base"
+)
+
 /*
  * 直连代理只能用作ServerAgent
  */
 type DirectAgent struct {
+	base.BaseAgent
 }
 
 func (a *DirectAgent) Name() string {
@@ -31,7 +36,7 @@ func (a *DirectAgent) OnInit(name string, cfg map[string]interface{}) error {
 	return nil
 }
 
-func (a *DirectAgent) OnStart(logname string) error {
+func (a *DirectAgent) OnStart() error {
 	return nil
 }
 
@@ -49,7 +54,4 @@ func (a *DirectAgent) ReadFromServer(data []byte) (interface{}, interface{}, err
 
 func (a *DirectAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
 	return nil, data, nil
-}
-
-func (a *DirectAgent) OnClose(bool) {
 }

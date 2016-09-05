@@ -18,6 +18,7 @@
 package shadowsocks
 
 import (
+	"skywalker/agent/base"
 	"skywalker/cipher"
 	"skywalker/pkg"
 	"skywalker/util"
@@ -25,7 +26,7 @@ import (
 )
 
 type ShadowSocksClientAgent struct {
-	name      string
+	base.BaseAgent
 	encrypter cipher.Encrypter
 	decrypter cipher.Decrypter
 	key       []byte
@@ -90,9 +91,8 @@ func (a *ShadowSocksClientAgent) OnInit(name string, cfg map[string]interface{})
 	return nil
 }
 
-func (a *ShadowSocksClientAgent) OnStart(name string) error {
-	a.name = name
-	a.cfg = gCAConfigs[name]
+func (a *ShadowSocksClientAgent) OnStart() error {
+	a.cfg = gCAConfigs[a.BaseAgent.Name]
 	key := generateKey([]byte(a.cfg.password), a.cfg.cipherInfo.KeySize)
 	iv := generateIV(a.cfg.cipherInfo.IvSize)
 
@@ -150,7 +150,4 @@ func (a *ShadowSocksClientAgent) ReadFromSA(data []byte) (interface{}, interface
 	}
 	rdata = append(rdata, a.encrypter.Encrypt(data))
 	return nil, rdata, nil
-}
-
-func (a *ShadowSocksClientAgent) OnClose(bool) {
 }

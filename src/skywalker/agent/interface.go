@@ -40,11 +40,10 @@ type ClientAgent interface {
 	 */
 	OnInit(string, map[string]interface{}) error
 	/*
-	 * 参数是日志的命名空间
 	 * 初始化成功，返回nil
 	 * 初始化失败，返回错误
 	 */
-	OnStart(string) error
+	OnStart() error
 
 	/* 连接服务器结果 */
 	OnConnectResult(int, string, int) (interface{}, interface{}, error)
@@ -56,6 +55,9 @@ type ClientAgent interface {
 
 	/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
 	OnClose(bool)
+
+	/* 获取配置相关的详细信息 */
+	GetInfo() map[string]string
 }
 
 /*
@@ -77,7 +79,7 @@ type ServerAgent interface {
 	 * 初始化成功，返回nil
 	 * 初始化失败，返回错误
 	 */
-	OnStart(string) error
+	OnStart() error
 
 	/*
 	 * 获取远程地址，参数是入站协议传递过来的远程服务器地址
@@ -95,7 +97,10 @@ type ServerAgent interface {
 
 	/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
 	OnClose(bool)
+
+	/* 获取配置相关的详细信息 */
+	GetInfo() map[string]string
 }
 
-type newClientAgentFunc func() ClientAgent
-type newServerAgentFunc func() ServerAgent
+type newClientAgentFunc func(string) ClientAgent
+type newServerAgentFunc func(string) ServerAgent

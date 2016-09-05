@@ -163,10 +163,16 @@ func (p *TcpProxy) Run() {
 	p.Closing = false
 }
 
-/* 启动数据转发流程 */
-func (p *TcpProxy) handle(conn net.Conn) {
+/* 返回CA和SA实例 */
+func (p *TcpProxy) GetAgents() (agent.ClientAgent, agent.ServerAgent) {
 	ca := agent.GetClientAgent(p.CAName, p.Name)
 	sa := agent.GetServerAgent(p.SAName, p.Name)
+	return ca, sa
+}
+
+/* 启动数据转发流程 */
+func (p *TcpProxy) handle(conn net.Conn) {
+	ca, sa := p.GetAgents()
 	if ca == nil || sa == nil {
 		conn.Close()
 		return

@@ -18,8 +18,8 @@
 package http
 
 import (
-	"github.com/hitoshii/golib/src/log"
 	"net"
+	"skywalker/agent/base"
 	"skywalker/pkg"
 	"skywalker/util"
 	"strconv"
@@ -27,9 +27,9 @@ import (
 
 /* 每次代理的请求数据 */
 type HTTPClientAgent struct {
+	base.BaseAgent
 	req  *httpRequest
 	host string
-	name string
 	cfg  *httpCAConfig
 }
 
@@ -56,10 +56,9 @@ func (a *HTTPClientAgent) OnInit(name string, cfg map[string]interface{}) error 
 	return nil
 }
 
-func (a *HTTPClientAgent) OnStart(name string) error {
-	a.name = name
+func (a *HTTPClientAgent) OnStart() error {
 	a.req = newHTTPRequest()
-	a.cfg = gCAConfigs[name]
+	a.cfg = gCAConfigs[a.BaseAgent.Name]
 	return nil
 }
 
@@ -81,7 +80,7 @@ func (a *HTTPClientAgent) OnConnectResult(result int, host string, port int) (in
 
 func (a *HTTPClientAgent) isAuthenticated() bool {
 	if len(a.cfg.username) > 0 && len(a.cfg.password) > 0 { /* 验证Proxy代理 */
-		log.DEBUG(a.name, "HTTP Proxy Authorization: %v||%v", a.req.ProxyAuthorization, (a.cfg.username + ":" + a.cfg.password))
+		a.DEBUG("HTTP Proxy Authorization: %v||%v", a.req.ProxyAuthorization, (a.cfg.username + ":" + a.cfg.password))
 		if a.req.ProxyAuthorization != (a.cfg.username + ":" + a.cfg.password) {
 			return false
 		}
@@ -150,7 +149,4 @@ func (a *HTTPClientAgent) ReadFromClient(data []byte) (interface{}, interface{},
 
 func (a *HTTPClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
 	return nil, data, nil
-}
-
-func (a *HTTPClientAgent) OnClose(bool) {
 }
