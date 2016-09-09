@@ -281,32 +281,32 @@ func processInfoResponse(v interface{}) error {
 	for i, data := range rep.GetData() {
 		if err := data.GetErr(); len(err) > 0 {
 			PrintError("%s\n", err)
-			continue
-		}
-		Print("%s (%s/%s)\n", data.GetName(), data.GetCname(), data.GetSname())
-		printInfo(data.GetCname(), data.GetCaInfo())
-		printInfo(data.GetSname(), data.GetSaInfo())
-		Print("\n")
+		} else {
+			Print("%s (%s/%s)\n", data.GetName(), data.GetCname(), data.GetSname())
+			printInfo(data.GetCname(), data.GetCaInfo())
+			printInfo(data.GetSname(), data.GetSaInfo())
+			Print("\n")
 
-		Print("    listen on %s:%d %s\n", data.GetBindAddr(), data.GetBindPort(), data.GetStatus())
-		if data.GetStatus() == message.InfoResponse_RUNNING {
-			d := time.Now().Unix() - data.GetStartTime()
-			Print("    start  at %s uptime %s\n", formatDatetime(data.GetStartTime()), formatDuration(d))
+			Print("    listen on %s:%d %s\n", data.GetBindAddr(), data.GetBindPort(), data.GetStatus())
+			if data.GetStatus() == message.InfoResponse_RUNNING {
+				d := time.Now().Unix() - data.GetStartTime()
+				Print("    start  at %s uptime %s\n", formatDatetime(data.GetStartTime()), formatDuration(d))
+			}
+			sent, sentUnit := formatDataSize(data.GetSent())
+			received, receivedUnit := formatDataSize(data.GetReceived())
+			sentRate, sentRateUnit := formatDataRate(data.GetSentRate())
+			receivedRate, receivedRateUnit := formatDataRate(data.GetReceivedRate())
+			width1 := len(sent)
+			width2 := len(sentRate)
+			if width1 < len(received) {
+				width1 = len(received)
+			}
+			if width2 < len(receivedRate) {
+				width2 = len(receivedRate)
+			}
+			Print("    sent     %-*s %-2s rate %-*s %-4s\n", width1, sent, sentUnit, width2, sentRate, sentRateUnit)
+			Print("    received %-*s %-2s rate %-*s %-4s\n", width1, received, receivedUnit, width2, receivedRate, receivedRateUnit)
 		}
-		sent, sentUnit := formatDataSize(data.GetSent())
-		received, receivedUnit := formatDataSize(data.GetReceived())
-		sentRate, sentRateUnit := formatDataRate(data.GetSentRate())
-		receivedRate, receivedRateUnit := formatDataRate(data.GetReceivedRate())
-		width1 := len(sent)
-		width2 := len(sentRate)
-		if width1 < len(received) {
-			width1 = len(received)
-		}
-		if width2 < len(receivedRate) {
-			width2 = len(receivedRate)
-		}
-		Print("    sent     %-*s %-2s rate %-*s %-4s\n", width1, sent, sentUnit, width2, sentRate, sentRateUnit)
-		Print("    received %-*s %-2s rate %-*s %-4s\n", width1, received, receivedUnit, width2, receivedRate, receivedRateUnit)
 		if i < len(rep.GetData())-1 {
 			Print("%s\n", strings.Repeat("*", GetTerminalWidth()/2))
 		}

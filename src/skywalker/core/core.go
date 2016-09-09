@@ -190,7 +190,9 @@ func (f *Force) handleConn(c *message.Conn) {
 				Err:  &message.Error{Msg: proto.String(err.Error())},
 			})
 		} else if rep != nil {
-			c.WriteResponse(rep)
+			if e := c.WriteResponse(rep); e != nil {
+				log.E("%v\n", e)
+			}
 		}
 	}
 }

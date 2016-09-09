@@ -72,7 +72,6 @@ func proxyStatus(p *proxy.TcpProxy) *message.StatusResponse_Data {
 		BindAddr:  proto.String(p.BindAddr),
 		BindPort:  proto.Int32(int32(p.BindPort)),
 		StartTime: proto.Int64(p.Info.StartTime),
-		Err:       proto.String(""),
 	}
 }
 
@@ -246,7 +245,6 @@ func proxyInfo(p *proxy.TcpProxy) *message.InfoResponse_Data {
 		BindAddr:     proto.String(p.BindAddr),
 		BindPort:     proto.Int32(int32(p.BindPort)),
 		StartTime:    proto.Int64(p.Info.StartTime),
-		Err:          proto.String(""),
 		Sent:         proto.Int64(p.Info.Sent),
 		Received:     proto.Int64(p.Info.Received),
 		SentRate:     proto.Int64(p.Info.SentQueue.Rate()),
@@ -274,7 +272,7 @@ func handleInfo(f *Force, v interface{}) (*message.Response, error) {
 	reqType := message.RequestType_INFO
 	names := req.GetName()
 	if len(names) == 0 {
-		return nil, errors.New("Invalid Argument For `stop`")
+		return nil, errors.New("Invalid Argument For `info`")
 	} else {
 		var data *message.InfoResponse_Data
 		for _, name := range names {
@@ -286,7 +284,6 @@ func handleInfo(f *Force, v interface{}) (*message.Response, error) {
 			result = append(result, data)
 		}
 	}
-
 	return &message.Response{
 		Type: &reqType,
 		Info: &message.InfoResponse{Data: result},

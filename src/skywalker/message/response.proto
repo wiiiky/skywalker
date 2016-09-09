@@ -18,13 +18,13 @@ message StatusResponse {
     }
     message Data {
         required string name = 1;
-        required string cname = 2;
-        required string sname = 3;
+        optional string cname = 2 [default = ""];
+        optional string sname = 3 [default = ""];
         required Status status = 4;
-        required string bindAddr = 5;
-        required int32 bindPort = 6;
-        required int64 startTime = 7;
-        required string err = 8;    /* 当不为空时表示出错 */
+        optional string bindAddr = 5 [default = ""];
+        optional int32 bindPort = 6 [default = 0];
+        optional int64 startTime = 7 [default = 0];
+        optional string err = 8 [default = ""];    /* 当不为空时表示出错 */
     }
     repeated Data data = 1;
 }
@@ -39,7 +39,7 @@ message StartResponse {
     message Data {
         required string name = 1;
         required Status status = 2;
-        required string err = 3;    /* 当状态是 ERROR 时有效 */
+        optional string err = 3 [default = ""];    /* 当状态是 ERROR 时有效 */
     }
     repeated Data data = 1;
 }
@@ -53,7 +53,7 @@ message StopResponse {
     message Data {
         required string name = 1;
         required Status status = 2;
-        required string err = 3;
+        optional string err = 3 [default = ""];
     }
     repeated Data data = 1;
 }
@@ -70,19 +70,19 @@ message InfoResponse {
     }
     message Data {
         required string name = 1;
-        required string cname = 2;
-        required string sname = 3;
+        optional string cname = 2 [default = ""];
+        optional string sname = 3 [default = ""];
         required Status status = 4;
-        required string bindAddr = 5;
-        required int32 bindPort = 6;
-        required int64 startTime = 7;
-        required int64 sent = 8;
-        required int64 received = 9;
-        required int64 sentRate = 10;
-        required int64 receivedRate = 11;
+        optional string bindAddr = 5 [default = ""];
+        optional int32 bindPort = 6 [default = 0];
+        optional int64 startTime = 7 [default = 0];
+        optional int64 sent = 8 [default = 0];
+        optional int64 received = 9 [default = 0];
+        optional int64 sentRate = 10 [default = 0];
+        optional int64 receivedRate = 11 [default = 0];
         repeated Info caInfo = 12;
         repeated Info saInfo = 13;
-        required string err = 14;    /* 当不为空时表示出错 */
+        optional string err = 14 [default = ""];    /* 当不为空时表示出错 */
     }
     repeated Data data = 1;
 }
