@@ -17,17 +17,32 @@
 
 package core
 
+/*
+#include<sys/ioctl.h>
+#include<unistd.h>
+
+int getTerminalWidth(){
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    return w.ws_col;
+}
+*/
+import "C"
 import (
 	"fmt"
 )
 
 /* 输出信息 */
-func Output(format string, v ...interface{}) {
+func Print(format string, v ...interface{}) {
 	fmt.Printf(format, v...)
 }
 
 /* 输出错误，在内容前添加 *** */
-func OutputError(format string, v ...interface{}) {
+func PrintError(format string, v ...interface{}) {
 	format = "*** " + format
 	fmt.Printf(format, v...)
+}
+
+func GetTerminalWidth() int {
+	return int(C.getTerminalWidth())
 }

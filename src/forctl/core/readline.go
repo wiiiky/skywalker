@@ -77,14 +77,14 @@ func NewLine(buf string) *Line {
 		return nil
 	}
 	if cmd = gCommandMap[seps[0]]; cmd == nil {
-		OutputError("Unknown syntax: %s\n", seps[0])
+		PrintError("Unknown syntax: %s\n", seps[0])
 		return nil
 	}
 
 	/* 参数个数不正确 */
 	if cmd.Required > len(seps[1:]) ||
 		(cmd.Optional >= 0 && cmd.Required+cmd.Optional < len(seps[1:])) {
-		OutputError("Invalid argument for %s\n%s\n", seps[0], cmd.Help)
+		PrintError("Invalid argument for %s\n%s\n", seps[0], cmd.Help)
 		return nil
 	}
 

@@ -21,6 +21,7 @@ import (
 	"skywalker/agent/base"
 	"skywalker/pkg"
 	"skywalker/util"
+	"strconv"
 )
 
 /*
@@ -230,5 +231,10 @@ func (a *SocksClientAgent) OnClose(bool) {
 }
 
 func (a *SocksClientAgent) GetInfo() []map[string]string {
-	return nil
+	return []map[string]string{
+		map[string]string{
+			"key":   "version",
+			"value": strconv.Itoa(int(a.cfg.version)),
+		},
+	}
 }

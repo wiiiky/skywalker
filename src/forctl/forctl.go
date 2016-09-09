@@ -50,13 +50,13 @@ func main() {
 	cfg := config.GetCoreConfig()
 
 	if rl, err = core.NewReadline(config.GetCoreConfig(), config.GetProxyConfigs()); err != nil {
-		core.Output("%v\n", err)
+		core.Print("%v\n", err)
 		return
 	}
 	defer rl.Close()
 
 	if conn, err = connectSkywalker(cfg.Inet, cfg.Unix); err != nil {
-		core.OutputError("%v\n", err)
+		core.PrintError("%v\n", err)
 		disconnected = true
 	}
 	for {
@@ -69,13 +69,13 @@ func main() {
 		}
 		if disconnected { /* 已断开则重新连接 */
 			if conn, err = connectSkywalker(cfg.Inet, cfg.Unix); err != nil {
-				core.OutputError("%v\n", err)
+				core.PrintError("%v\n", err)
 				continue
 			}
 			disconnected = false
 		}
 		if err = conn.WriteRequest(req); err != nil {
-			core.OutputError("%v\n", err)
+			core.PrintError("%v\n", err)
 			disconnected = true
 			continue
 		}
@@ -83,12 +83,12 @@ func main() {
 			continue
 		}
 		if e := rep.GetErr(); e != nil {
-			core.OutputError("%s\n", e.GetMsg())
+			core.PrintError("%s\n", e.GetMsg())
 			continue
 		}
 		v := reflect.ValueOf(rep).MethodByName(cmd.ResponseField).Call([]reflect.Value{})[0].Interface()
 		if err = cmd.ProcessResponse(v); err != nil {
-			core.OutputError("%s\n", err)
+			core.PrintError("%s\n", err)
 		}
 	}
 }

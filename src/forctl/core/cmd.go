@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"skywalker/message"
+	"strings"
 	"time"
 )
 
@@ -131,15 +132,15 @@ func buildCommonRequest(cmd *Command, names ...string) *message.Request {
 /* 打印帮助信息 */
 func help(help *Command, args ...string) *message.Request {
 	if len(args) == 0 {
-		Output("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s\n",
+		Print("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s\n",
 			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_RESTART, COMMAND_INFO)
 		return nil
 	}
 	topic := args[0]
 	if cmd := GetCommand(topic); cmd != nil {
-		Output("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
+		Print("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
 	} else {
-		OutputError("No help on %s\n", topic)
+		PrintError("No help on %s\n", topic)
 	}
 	return nil
 }
@@ -202,9 +203,9 @@ func processStatusResponse(v interface{}) error {
 	}
 	for _, row := range rows {
 		for i, col := range row {
-			Output("%-*s", maxlen[i], col)
+			Print("%-*s", maxlen[i], col)
 		}
-		Output("\n")
+		Print("\n")
 	}
 	return nil
 }
@@ -218,11 +219,11 @@ func processStartResponse(v interface{}) error {
 		err := data.GetErr()
 		switch status {
 		case message.StartResponse_STARTED:
-			Output("%s started\n", name)
+			Print("%s started\n", name)
 		case message.StartResponse_RUNNING:
-			Output("%s: ERROR (already started)\n", name)
+			Print("%s: ERROR (already started)\n", name)
 		case message.StartResponse_ERROR:
-			OutputError("%s: ERROR (%s)\n", name, err)
+			PrintError("%s: ERROR (%s)\n", name, err)
 		}
 	}
 	return nil
@@ -237,11 +238,11 @@ func processStopResponse(v interface{}) error {
 		err := data.GetErr()
 		switch status {
 		case message.StopResponse_STOPPED:
-			Output("%s stopped\n", name)
+			Print("%s stopped\n", name)
 		case message.StopResponse_UNRUNNING:
-			Output("%s: ERROR (already stopped)\n", name)
+			Print("%s: ERROR (already stopped)\n", name)
 		case message.StopResponse_ERROR:
-			OutputError("%s: ERROR (%s)\n", name, err)
+			PrintError("%s: ERROR (%s)\n", name, err)
 		}
 	}
 	return nil
@@ -268,16 +269,29 @@ func formatDataRate(rate int64) (string, string) {
 /* 处理info命令的返回值 */
 func processInfoResponse(v interface{}) error {
 	rep := v.(*message.InfoResponse)
+
+	printInfo := func(name string, info []*message.InfoResponse_Info) {
+		if info != nil { /* ca信息 */
+			Print("    %s:\n", name)
+			for _, i := range info {
+				Print("        %s:%s\n", i.GetKey(), i.GetValue())
+			}
+		}
+	}
 	for i, data := range rep.GetData() {
 		if err := data.GetErr(); len(err) > 0 {
-			OutputError("%s\n", err)
+			PrintError("%s\n", err)
 			continue
 		}
-		Output("%s (%s/%s)\n", data.GetName(), data.GetCname(), data.GetSname())
-		Output("    listen on %s:%d %s\n", data.GetBindAddr(), data.GetBindPort(), data.GetStatus())
+		Print("%s (%s/%s)\n", data.GetName(), data.GetCname(), data.GetSname())
+		printInfo(data.GetCname(), data.GetCaInfo())
+		printInfo(data.GetSname(), data.GetSaInfo())
+		Print("\n")
+
+		Print("    listen on %s:%d %s\n", data.GetBindAddr(), data.GetBindPort(), data.GetStatus())
 		if data.GetStatus() == message.InfoResponse_RUNNING {
 			d := time.Now().Unix() - data.GetStartTime()
-			Output("    start  at %s uptime %s\n", formatDatetime(data.GetStartTime()), formatDuration(d))
+			Print("    start  at %s uptime %s\n", formatDatetime(data.GetStartTime()), formatDuration(d))
 		}
 		sent, sentUnit := formatDataSize(data.GetSent())
 		received, receivedUnit := formatDataSize(data.GetReceived())
@@ -291,11 +305,12 @@ func processInfoResponse(v interface{}) error {
 		if width2 < len(receivedRate) {
 			width2 = len(receivedRate)
 		}
-		Output("    sent     %-*s %-2s rate %-*s %-4s\n", width1, sent, sentUnit, width2, sentRate, sentRateUnit)
-		Output("    received %-*s %-2s rate %-*s %-4s\n", width1, received, receivedUnit, width2, receivedRate, receivedRateUnit)
+		Print("    sent     %-*s %-2s rate %-*s %-4s\n", width1, sent, sentUnit, width2, sentRate, sentRateUnit)
+		Print("    received %-*s %-2s rate %-*s %-4s\n", width1, received, receivedUnit, width2, receivedRate, receivedRateUnit)
 		if i < len(rep.GetData())-1 {
-			Output("\n")
+			Print("%s\n", strings.Repeat("*", GetTerminalWidth()/2))
 		}
+
 	}
 	return nil
 }

@@ -19,11 +19,13 @@ package shadowsocks
 
 import (
 	"bytes"
+	"fmt"
 	"math/rand"
 	"skywalker/agent/base"
 	"skywalker/cipher"
 	"skywalker/pkg"
 	"skywalker/util"
+	"strconv"
 	"strings"
 )
 
@@ -268,5 +270,33 @@ func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
 }
 
 func (a *ShadowSocksServerAgent) GetInfo() []map[string]string {
-	return nil
+	formatServerAddrs := func(addrs []ssServerAddress) string {
+		var s []string
+		for _, addr := range addrs {
+			s = append(s, fmt.Sprintf("%s:%d", addr.serverAddr, addr.serverPort))
+		}
+		return "[" + strings.Join(s, ", ") + "]"
+	}
+	if len(a.cfg.serverAddrs) > 0 {
+		return []map[string]string{
+			map[string]string{
+				"key":   "serverAddrs",
+				"value": formatServerAddrs(a.cfg.serverAddrs),
+			},
+			map[string]string{
+				"key":   "selection",
+				"value": a.cfg.selection,
+			},
+		}
+	}
+	return []map[string]string{
+		map[string]string{
+			"key":   "serverAddr",
+			"value": a.cfg.ssServerAddress.serverAddr,
+		},
+		map[string]string{
+			"key":   "serverPort",
+			"value": strconv.Itoa(a.cfg.ssServerAddress.serverPort),
+		},
+	}
 }

@@ -79,9 +79,9 @@ func proxyStatus(p *proxy.TcpProxy) *message.StatusResponse_Data {
 func proxyStatusNotFound(name string) *message.StatusResponse_Data {
 	status := message.StatusResponse_STOPPED
 	return &message.StatusResponse_Data{
-		Name:      proto.String(name),
-		Status:    &status,
-		Err:       proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
+		Name:   proto.String(name),
+		Status: &status,
+		Err:    proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
 	}
 }
 
@@ -233,10 +233,10 @@ func proxyInfo(p *proxy.TcpProxy) *message.InfoResponse_Data {
 	status := message.InfoResponse_Status(p.Status)
 	ca, sa := p.GetAgents()
 	for _, info := range ca.GetInfo() {
-		caInfo = append(caInfo, &message.InfoResponse_Info{Key:proto.String(info["key"]),Value:proto.String(info["value"])})
+		caInfo = append(caInfo, &message.InfoResponse_Info{Key: proto.String(info["key"]), Value: proto.String(info["value"])})
 	}
 	for _, info := range sa.GetInfo() {
-		saInfo = append(saInfo, &message.InfoResponse_Info{Key:proto.String(info["key"]),Value:proto.String(info["value"])})
+		saInfo = append(saInfo, &message.InfoResponse_Info{Key: proto.String(info["key"]), Value: proto.String(info["value"])})
 	}
 	return &message.InfoResponse_Data{
 		Name:         proto.String(p.Name),
@@ -260,9 +260,9 @@ func proxyInfo(p *proxy.TcpProxy) *message.InfoResponse_Data {
 func proxyInfoNotFound(name string) *message.InfoResponse_Data {
 	status := message.InfoResponse_STOPPED
 	return &message.InfoResponse_Data{
-		Name:         proto.String(name),
-		Status:       &status,
-		Err:          proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
+		Name:   proto.String(name),
+		Status: &status,
+		Err:    proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
 	}
 }
 
