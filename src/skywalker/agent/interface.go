@@ -53,6 +53,10 @@ type ClientAgent interface {
 	/* 从SA接收到数据 */
 	ReadFromSA([]byte) (interface{}, interface{}, error)
 
+	UdpSupported() bool
+	RecvFromClient([]byte) (interface{}, interface{}, error)
+	RecvFromSA([]byte) (interface{}, interface{}, error)
+
 	/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
 	OnClose(bool)
 
@@ -94,6 +98,10 @@ type ServerAgent interface {
 	ReadFromServer([]byte) (interface{}, interface{}, error)
 	/* 从CA接收到数据 */
 	ReadFromCA([]byte) (interface{}, interface{}, error)
+
+	UdpSupported() bool
+	RecvFromServer([]byte) (interface{}, interface{}, error)
+	RecvFromCA([]byte) (interface{}, interface{}, error)
 
 	/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
 	OnClose(bool)

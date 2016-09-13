@@ -49,3 +49,24 @@ func (a *BaseAgent) GetInfo() []map[string]string {
 
 func (a *BaseAgent) OnClose(bool) {
 }
+
+/* UDP代理相关方法 */
+func (a *BaseAgent) UdpSupported() bool {
+	return false
+}
+
+func (a *BaseAgent) RecvFromClient([]byte) (interface{}, interface{}, error) {
+	return nil, nil, nil
+}
+
+func (a *BaseAgent) RecvFromSA([]byte) (interface{}, interface{}, error) {
+	return nil, nil, nil
+}
+
+func (a *BaseAgent) RecvFromServer([]byte) (interface{}, interface{}, error) {
+	return nil, nil, nil
+}
+
+func (a *BaseAgent) RecvFromCA([]byte) (interface{}, interface{}, error) {
+	return nil, nil, nil
+}

@@ -62,7 +62,7 @@ func init() {
 }
 
 /* 返回代理当前状态 */
-func proxyStatus(p *proxy.TcpProxy) *message.StatusResponse_Data {
+func proxyStatus(p *proxy.Proxy) *message.StatusResponse_Data {
 	status := message.StatusResponse_Status(p.Status)
 	return &message.StatusResponse_Data{
 		Name:      proto.String(p.Name),
@@ -227,7 +227,7 @@ func handleRestart(f *Force, v interface{}) (*message.Response, error) {
 }
 
 /* 代理详情 */
-func proxyInfo(p *proxy.TcpProxy) *message.InfoResponse_Data {
+func proxyInfo(p *proxy.Proxy) *message.InfoResponse_Data {
 	var caInfo, saInfo []*message.InfoResponse_Info
 	status := message.InfoResponse_Status(p.Status)
 	ca, sa := p.GetAgents()

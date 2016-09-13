@@ -40,8 +40,8 @@ type Force struct {
 	mutex *sync.Mutex
 
 	/* 当前服务列表，map用户快速查询某一代理，list用于返回固定顺序的服务 */
-	proxies        map[string]*proxy.TcpProxy
-	orderedProxies []*proxy.TcpProxy
+	proxies        map[string]*proxy.Proxy
+	orderedProxies []*proxy.Proxy
 }
 
 /* 获取所有服务名，按顺序返回 */
@@ -118,7 +118,7 @@ func Run() *Force {
 		InetListener: inetListener,
 		UnixListener: unixListener,
 		mutex:        &sync.Mutex{},
-		proxies:      make(map[string]*proxy.TcpProxy),
+		proxies:      make(map[string]*proxy.Proxy),
 	}
 
 	if err = force.loadProxies(); err != nil {
