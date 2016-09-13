@@ -44,36 +44,11 @@ import (
  * CA和SA之间使用pkg.Package通信
  */
 
-const (
-	STATUS_STOPPED = 1
-	STATUS_RUNNING = 2
-	STATUS_ERROR   = 3
-)
-
-type ProxyInfo struct {
-	StartTime     int64           /* 服务启动时间 */
-	Sent          int64           /* 发送数据量，指的是SA发送给Server的数据 */
-	Received      int64           /* 接受数据量，指的是CA发送给Client的数据 */
-	SentQueue     *util.RateQueue /* 接收数据队列，用于计算网络速度 */
-	ReceivedQueue *util.RateQueue /* 发送数据队列，用于计算网络速度 */
-}
-
 type TcpProxy struct {
-	Name   string /* 代理名 */
-	CAName string /* ca协议名 */
-	SAName string /* sa协议名 */
-	Status int    /* 状态 */
+	Proxy
 
-	BindAddr string
-	BindPort int
+	Closing  bool
 	listener net.Listener
-
-	AutoStart bool /* 是否自动启动 */
-	Closing   bool
-
-	mutex *sync.Mutex /* 互斥锁 */
-
-	Info *ProxyInfo
 }
 
 /* 创建新的代理，监听本地端口 */
@@ -82,29 +57,22 @@ func New(cfg *config.ProxyConfig) *TcpProxy {
 	cname := cfg.ClientAgent
 	sname := cfg.ServerAgent
 	return &TcpProxy{
-		Name:      name,
-		CAName:    cname,
-		SAName:    sname,
-		Status:    STATUS_STOPPED,
-		BindAddr:  cfg.BindAddr,
-		BindPort:  int(cfg.BindPort),
-		AutoStart: cfg.AutoStart,
-		mutex:     &sync.Mutex{},
-		Closing:   false,
-		Info: &ProxyInfo{
-			SentQueue:     util.NewRateQueue(2),
-			ReceivedQueue: util.NewRateQueue(2),
+		Proxy: Proxy{
+			Name:     name,
+			CAName:   cname,
+			SAName:   sname,
+			Status:   STATUS_STOPPED,
+			BindAddr: cfg.BindAddr,
+			BindPort: int(cfg.BindPort),
+			Info: &ProxyInfo{
+				SentQueue:     util.NewRateQueue(2),
+				ReceivedQueue: util.NewRateQueue(2),
+			},
+			AutoStart: cfg.AutoStart,
+			mutex:     &sync.Mutex{},
 		},
+		Closing: false,
 	}
-}
-
-/* 互斥锁的快捷函数 */
-func (p *TcpProxy) lock() {
-	p.mutex.Lock()
-}
-
-func (p *TcpProxy) unlock() {
-	p.mutex.Unlock()
 }
 
 func (p *TcpProxy) Close() {
