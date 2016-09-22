@@ -81,9 +81,9 @@ func UnixListen(filepath string) (*net.UnixListener, error) {
 }
 
 /* 监听UDP端口 */
-func UDPListen(addr string, port uint16) (*net.UDPConn, error) {
+func UDPListen(addr string, port int) (*net.UDPConn, error) {
 	laddr := net.UDPAddr{
-		Port: int(port),
+		Port: port,
 		IP:   net.ParseIP(addr),
 	}
 	return net.ListenUDP("udp", &laddr)

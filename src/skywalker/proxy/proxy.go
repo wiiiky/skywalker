@@ -19,6 +19,7 @@ package proxy
 
 import (
 	"github.com/hitoshii/golib/src/log"
+	"net"
 	"skywalker/agent"
 	"skywalker/config"
 	"skywalker/util"
@@ -64,21 +65,32 @@ func New(cfg *config.ProxyConfig) *Proxy {
 }
 
 func (p *Proxy) Close() {
-	log.INFO(p.Name, "Listener %s Closed", p.tcpListener.Addr())
+	log.INFO(p.Name, "Listener %s:%d Closed", p.BindAddr, p.BindPort)
 	p.tcpListener.Close()
+	p.udpListener.Close()
 	p.Status = STATUS_STOPPED
 }
 
+/* 启动代理服务，同时监听TCP和UDP端口 */
 func (p *Proxy) Start() error {
 	defer p.unlock()
 	p.lock()
-	tcpListener, err := util.TCPListen(p.BindAddr, p.BindPort)
-	if err != nil {
+
+	var tcpListener net.Listener
+	var udpListener *net.UDPConn
+	var err error
+	if tcpListener, err = util.TCPListen(p.BindAddr, p.BindPort); err != nil {
 		p.Status = STATUS_ERROR
 		return err
 	}
-	log.INFO(p.Name, "Listen %s", tcpListener.Addr())
+	if udpListener, err = util.UDPListen(p.BindAddr, p.BindPort); err != nil {
+		tcpListener.Close()
+		p.Status = STATUS_ERROR
+		return err
+	}
+	log.INFO(p.Name, "Listen %s:%d", p.BindAddr, p.BindPort)
 	p.tcpListener = tcpListener
+	p.udpListener = udpListener
 	p.Status = STATUS_STOPPED
 	p.Info.StartTime = time.Now().Unix()
 	go p.Run()
