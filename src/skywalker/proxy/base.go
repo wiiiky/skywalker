@@ -19,6 +19,7 @@ package proxy
 
 import (
 	"net"
+	"skywalker/pkg"
 	"skywalker/util"
 	"sync"
 )
@@ -52,8 +53,9 @@ type Proxy struct {
 
 	mutex *sync.Mutex /* 互斥锁 */
 
-	Closing  bool
-	listener net.Listener
+	Closing     bool
+	tcpListener net.Listener
+	udpListener *net.UDPConn
 }
 
 /* 互斥锁的快捷函数 */
@@ -63,4 +65,66 @@ func (p *Proxy) lock() {
 
 func (p *Proxy) unlock() {
 	p.mutex.Unlock()
+}
+
+/*
+ * 发送数据
+ * @ic 转发数据的channel
+ * @conn 远程连接(client/server)
+ * @tdata 需要转发的数据(Transfer Data)，将发送给ic
+ * @rdata 需要返回给数据(Response Data)，将发送给conn
+ */
+func (p *Proxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interface{},
+	rdata interface{}, err error, isClient bool) error {
+	/* 转发数据 */
+	switch data := tdata.(type) {
+	case *pkg.Package:
+		ic <- data
+	case []byte:
+		ic <- pkg.NewDataPackage(data)
+	case string:
+		ic <- pkg.NewDataPackage(data)
+	case []*pkg.Package:
+		for _, cmd := range data {
+			ic <- cmd
+		}
+	}
+	/* 发送到远端连接 */
+	var size int64 = 0
+	switch data := rdata.(type) {
+	case string:
+		if n, e := conn.Write([]byte(data)); e != nil {
+			return e
+		} else {
+			size += int64(n)
+		}
+	case []byte:
+		if n, e := conn.Write(data); e != nil {
+			return e
+		} else {
+			size += int64(n)
+		}
+	case [][]byte:
+		for _, d := range data {
+			if n, e := conn.Write(d); e != nil {
+				return e
+			} else {
+				size += int64(n)
+			}
+		}
+	}
+
+	if size > 0 {
+		/* 增加数据时需要使用锁，因为没有只是单纯增加数据和添加记录，因此不会影响性能 */
+		p.lock()
+		if isClient { /* 发送给客户端的数据 */
+			p.Info.Received += size
+			p.Info.ReceivedQueue.Push(size)
+		} else { /* 发送给服务端的数据 */
+			p.Info.Sent += size
+			p.Info.SentQueue.Push(size)
+		}
+		p.unlock()
+	}
+	return err
 }
