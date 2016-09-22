@@ -106,10 +106,9 @@ func (p *Proxy) Stop() error {
 	defer p.unlock()
 	p.lock()
 	p.Closing = true
-	if conn, _ := util.TCPConnect(p.BindAddr, p.BindPort); conn != nil {
-		conn.Close()
-	}
-	waitTime := time.Duration(50)
+
+	p.tcpListener.Close()
+	waitTime := time.Duration(10)
 	for p.Closing {
 		time.Sleep(time.Millisecond * waitTime)
 		waitTime *= 2
@@ -117,15 +116,64 @@ func (p *Proxy) Stop() error {
 	return nil
 }
 
+/* 将TCP监听套接字转化为channel的监听 */
+func (p *Proxy) getTcpListener() chan net.Conn {
+	c := make(chan net.Conn)
+	go func(l net.Listener, c chan net.Conn) {
+		defer close(c)
+		for {
+			if conn, err := l.Accept(); err == nil {
+				c <- conn
+			} else {
+				break
+			}
+		}
+	}(p.tcpListener, c)
+	return c
+}
+
+/* 将UDP套接字的监听转化为channel的监听 */
+func (p *Proxy) getUdpListener() chan []byte {
+	c := make(chan []byte)
+	go func(l *net.UDPConn, c chan []byte) {
+		defer close(c)
+		for {
+			buf := make([]byte, 1<<16)
+			if _, _, err := l.ReadFrom(buf); err == nil {
+				c <- buf
+			} else {
+				break
+			}
+		}
+	}(p.udpListener, c)
+	return c
+}
+
 /* 执行代理 */
 func (p *Proxy) Run() {
 	defer p.Close()
+	var conn net.Conn
+	var buf []byte
+	var ok bool
+
+	tcpListener := p.getTcpListener()
+	udpListener := p.getUdpListener()
+
 	for p.Closing == false {
 		p.Status = STATUS_RUNNING
-		if conn, err := p.tcpListener.Accept(); err == nil {
-			go p.handleTCP(conn)
+		select {
+		case conn, ok = <-tcpListener:
+		case buf, ok = <-udpListener:
+		}
+		if ok {
+			if conn != nil {
+				go p.handleTcp(conn)
+			}
+			if len(buf) > 0 {
+				go p.handleUdp(buf)
+			}
 		} else {
-			log.WARN(p.Name, "Couldn't Accept: %s", err)
+			p.Closing = true
 		}
 	}
 	p.Closing = false

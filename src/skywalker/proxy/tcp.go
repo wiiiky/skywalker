@@ -27,7 +27,7 @@ import (
 )
 
 /* 启动数据转发流程 */
-func (p *Proxy) handleTCP(conn net.Conn) {
+func (p *Proxy) handleTcp(conn net.Conn) {
 	ca, sa := p.GetAgents()
 	if ca == nil || sa == nil {
 		conn.Close()
