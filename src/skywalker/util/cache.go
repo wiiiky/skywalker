@@ -37,21 +37,13 @@ type cacheValue struct {
 }
 
 type dnsCache struct {
-	data    map[string]cacheValue
-	timeout int64
-	mutex   *sync.Mutex /* 多goroutine同时访问，需要加锁 */
-}
-
-func (c *dnsCache) lock() {
-	c.mutex.Lock()
-}
-
-func (c *dnsCache) unlock() {
-	c.mutex.Unlock()
+	sync.Mutex /* 多goroutine同时访问，需要加锁 */
+	data       map[string]cacheValue
+	timeout    int64
 }
 
 func NewDNSCache(timeout int64) Cache {
-	return &dnsCache{make(map[string]cacheValue), timeout, &sync.Mutex{}}
+	return &dnsCache{data: make(map[string]cacheValue), timeout: timeout}
 }
 
 func (c *dnsCache) Timeout() int64 {
@@ -64,7 +56,8 @@ func (c *dnsCache) SetTimeout(timeout int64) {
 
 func (c *dnsCache) Get(key string) interface{} {
 	var value interface{}
-	c.lock()
+	defer c.Unlock()
+	c.Lock()
 	if val, ok := c.data[key]; ok {
 		now := time.Now().Unix()
 		if c.timeout == 0 || now-val.timestamp < c.timeout {
@@ -73,12 +66,12 @@ func (c *dnsCache) Get(key string) interface{} {
 			delete(c.data, key)
 		}
 	}
-	c.unlock()
 	return value
 }
 
 func (c *dnsCache) Set(key string, value interface{}) {
-	c.lock()
+	defer c.Unlock()
+	c.Lock()
 	val, ok := c.data[key]
 	now := time.Now().Unix()
 	if ok == false {
@@ -87,7 +80,6 @@ func (c *dnsCache) Set(key string, value interface{}) {
 		val.value = value
 		val.timestamp = now
 	}
-	c.unlock()
 }
 
 func (c *dnsCache) GetString(key string) string {

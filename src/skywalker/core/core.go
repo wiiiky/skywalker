@@ -34,10 +34,9 @@ import (
 )
 
 type Force struct {
+	sync.Mutex
 	InetListener *net.TCPListener
 	UnixListener *net.UnixListener
-
-	mutex *sync.Mutex
 
 	/* 当前服务列表，map用户快速查询某一代理，list用于返回固定顺序的服务 */
 	proxies        map[string]*proxy.Proxy
@@ -53,18 +52,10 @@ func (f *Force) GetProxyNames() []string {
 	return names
 }
 
-func (f *Force) lock() {
-	f.mutex.Lock()
-}
-
-func (f *Force) unlock() {
-	f.mutex.Unlock()
-}
-
 /* 载入所有服务，不启动 */
 func (f *Force) loadProxies() error {
-	f.lock()
-	defer f.unlock()
+	defer f.Unlock()
+	f.Lock()
 
 	names := []string{}
 	for _, cfg := range config.GetProxyConfigs() {
@@ -73,6 +64,7 @@ func (f *Force) loadProxies() error {
 		}
 		f.proxies[cfg.Name] = proxy.New(cfg)
 		names = append(names, cfg.Name)
+		log.I("load proxy %s %s/%s %v\n", cfg.Name, cfg.ClientAgent, cfg.ServerAgent, cfg.AutoStart)
 	}
 	sort.Strings(names)
 	for _, name := range names {
@@ -81,9 +73,10 @@ func (f *Force) loadProxies() error {
 	return nil
 }
 
+/* 自动启动服务 */
 func (f *Force) autoStartProxies() {
-	f.lock()
-	defer f.unlock()
+	defer f.Unlock()
+	f.Lock()
 	for _, p := range f.proxies {
 		if p.AutoStart && p.Status != proxy.STATUS_RUNNING {
 			if err := p.Start(); err != nil {
@@ -117,7 +110,6 @@ func Run() *Force {
 	force := &Force{
 		InetListener: inetListener,
 		UnixListener: unixListener,
-		mutex:        &sync.Mutex{},
 		proxies:      make(map[string]*proxy.Proxy),
 	}
 

@@ -29,6 +29,7 @@ core:
 ~base: &base
   bindAddr: 127.0.0.1
   serverAgent: shadowsocks
+  autoStart: true           # 程序执行时候，自动启动代理，默认为false
   serverConfig:
     method: rc4-md5
     password: abcdefg
