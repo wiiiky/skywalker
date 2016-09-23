@@ -27,28 +27,30 @@ import (
 )
 
 /* Unix套接字配置 */
-type UnixConfig struct {
-	File     string `yaml:"file"`
-	Chmod    uint   `yaml:"chmod"` /* 套接字文件的权限 */
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-}
+type (
+	UnixConfig struct {
+		File     string `yaml:"file"`
+		Chmod    uint   `yaml:"chmod"` /* 套接字文件的权限 */
+		Username string `yaml:"username"`
+		Password string `yaml:"password"`
+	}
 
-/* IP/TCP网络配置 */
-type InetConfig struct {
-	IP       string `yaml:"ip"`   /* 监听地址 */
-	Port     int    `yaml:"port"` /* 监听端口 */
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-}
+	/* IP/TCP网络配置 */
+	InetConfig struct {
+		IP       string `yaml:"ip"`   /* 监听地址 */
+		Port     int    `yaml:"port"` /* 监听端口 */
+		Username string `yaml:"username"`
+		Password string `yaml:"password"`
+	}
 
-/* 通用配置 */
-type CoreConfig struct {
-	Unix        *UnixConfig `yaml:"unix"`    /* Unix套介子服务配置 */
-	Inet        *InetConfig `yaml:"inet"`    /* TCP/IP服务配置 */
-	Log         *log.Config `yaml:"log"`     /* 日志配置 */
-	HistoryFile string      `yaml:"history"` /* 命令的历史记录文件 */
-}
+	/* 通用配置 */
+	CoreConfig struct {
+		Unix        *UnixConfig `yaml:"unix"`    /* Unix套介子服务配置 */
+		Inet        *InetConfig `yaml:"inet"`    /* TCP/IP服务配置 */
+		Log         *log.Config `yaml:"log"`     /* 日志配置 */
+		HistoryFile string      `yaml:"history"` /* 命令的历史记录文件 */
+	}
+)
 
 func (cfg *CoreConfig) init() {
 	if cfg.Log == nil {

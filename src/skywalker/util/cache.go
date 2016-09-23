@@ -22,25 +22,27 @@ import (
 	"time"
 )
 
-type Cache interface {
-	Get(string) interface{}
-	Set(string, interface{})
-	GetString(string) string
+type (
+	Cache interface {
+		Get(string) interface{}
+		Set(string, interface{})
+		GetString(string) string
 
-	Timeout() int64
-	SetTimeout(int64)
-}
+		Timeout() int64
+		SetTimeout(int64)
+	}
 
-type cacheValue struct {
-	value     interface{}
-	timestamp int64
-}
+	cacheValue struct {
+		value     interface{}
+		timestamp int64
+	}
 
-type dnsCache struct {
-	sync.Mutex /* 多goroutine同时访问，需要加锁 */
-	data       map[string]cacheValue
-	timeout    int64
-}
+	dnsCache struct {
+		sync.Mutex /* 多goroutine同时访问，需要加锁 */
+		data       map[string]cacheValue
+		timeout    int64
+	}
+)
 
 func NewDNSCache(timeout int64) Cache {
 	return &dnsCache{data: make(map[string]cacheValue), timeout: timeout}

@@ -24,29 +24,31 @@ import (
 	"skywalker/util"
 )
 
-type SocksServerAgent struct {
-	base.BaseAgent
+type (
+	SocksServerAgent struct {
+		base.BaseAgent
 
-	atype uint8
-	addr  string
-	port  uint16
+		atype uint8
+		addr  string
+		port  uint16
 
-	state uint8
+		state uint8
 
-	buf [][]byte
+		buf [][]byte
 
-	cfg *socksSAConfig
-}
+		cfg *socksSAConfig
+	}
 
-type socksSAConfig struct {
-	serverAddr string
-	serverPort int
-	username   string
-	password   string
-	version    uint8
+	socksSAConfig struct {
+		serverAddr string
+		serverPort int
+		username   string
+		password   string
+		version    uint8
 
-	methods []byte
-}
+		methods []byte
+	}
+)
 
 var (
 	gSAConfig = map[string]*socksSAConfig{}

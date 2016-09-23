@@ -17,16 +17,24 @@
 
 package pkg
 
-type Package struct {
-	cmd  int
-	data interface{}
-}
+type (
+	Package struct {
+		cmd  int
+		data interface{}
+	}
 
-/* 连接服务器的数据 */
-type connectData struct {
-	host string
-	port int
-}
+	/* 连接服务器的数据 */
+	connectData struct {
+		host string
+		port int
+	}
+
+	/* 连接服务器结果的数据 */
+	connectResult struct {
+		connectData
+		code int
+	}
+)
 
 /* 连接远程服务器的结果 */
 const (
@@ -36,11 +44,11 @@ const (
 	CONNECT_RESULT_UNKNOWN_ERROR = 3
 )
 
-/* 连接服务器结果的数据 */
-type connectResult struct {
-	connectData
-	code int
-}
+const (
+	PKG_CONNECT        = 0
+	PKG_DATA           = 1
+	PKG_CONNECT_RESULT = 2
+)
 
 func (c *Package) Type() int {
 	return c.cmd
@@ -68,12 +76,6 @@ func (c *Package) GetConnectResult() (int, string, int) {
 	result := c.data.(connectResult)
 	return result.code, result.connectData.host, result.connectData.port
 }
-
-const (
-	PKG_CONNECT        = 0
-	PKG_DATA           = 1
-	PKG_CONNECT_RESULT = 2
-)
 
 /* 连接请求 */
 func NewConnectPackage(host string, port int) *Package {

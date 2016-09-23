@@ -26,18 +26,20 @@ import (
 )
 
 /* 每次代理的请求数据 */
-type HTTPClientAgent struct {
-	base.BaseAgent
-	req  *httpRequest
-	host string
-	cfg  *httpCAConfig
-}
+type (
+	HTTPClientAgent struct {
+		base.BaseAgent
+		req  *httpRequest
+		host string
+		cfg  *httpCAConfig
+	}
 
-type httpCAConfig struct {
-	/* 用户名密码 */
-	username string
-	password string
-}
+	httpCAConfig struct {
+		/* 用户名密码 */
+		username string
+		password string
+	}
+)
 
 var (
 	gCAConfigs = map[string]*httpCAConfig{}

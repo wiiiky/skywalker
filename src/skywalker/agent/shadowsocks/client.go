@@ -25,27 +25,29 @@ import (
 	"strings"
 )
 
-type ShadowSocksClientAgent struct {
-	base.BaseAgent
-	encrypter cipher.Encrypter
-	decrypter cipher.Decrypter
-	key       []byte
-	iv        []byte
-	ivSent    bool
+type (
+	ShadowSocksClientAgent struct {
+		base.BaseAgent
+		encrypter cipher.Encrypter
+		decrypter cipher.Decrypter
+		key       []byte
+		iv        []byte
+		ivSent    bool
 
-	targetAddr string
-	targetPort string
+		targetAddr string
+		targetPort string
 
-	connected bool
-	cfg       *ssCAConfig
-}
+		connected bool
+		cfg       *ssCAConfig
+	}
 
-type ssCAConfig struct {
-	password string
-	method   string
+	ssCAConfig struct {
+		password string
+		method   string
 
-	cipherInfo *cipher.CipherInfo
-}
+		cipherInfo *cipher.CipherInfo
+	}
+)
 
 var (
 	gCAConfigs = map[string]*ssCAConfig{}

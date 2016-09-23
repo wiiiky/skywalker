@@ -31,84 +31,86 @@ package agent
  *
  * 数据处理接口返回三个参数分别是要转发给代理(这里对应的代理是ServerAgent)的数据，发送给远程连接(这里对应的连接是Client)的数据，和错误对象
  */
-type ClientAgent interface {
-	/* 返回协议名 */
-	Name() string
-	/*
-	 * 程序初始化时调用，该方法全局只调用一次，读取配置
-	 * 第一个参数是配置名，第二个参数是代理配置
-	 */
-	OnInit(string, map[string]interface{}) error
-	/*
-	 * 初始化成功，返回nil
-	 * 初始化失败，返回错误
-	 */
-	OnStart() error
+type (
+	ClientAgent interface {
+		/* 返回协议名 */
+		Name() string
+		/*
+		 * 程序初始化时调用，该方法全局只调用一次，读取配置
+		 * 第一个参数是配置名，第二个参数是代理配置
+		 */
+		OnInit(string, map[string]interface{}) error
+		/*
+		 * 初始化成功，返回nil
+		 * 初始化失败，返回错误
+		 */
+		OnStart() error
 
-	/* 连接服务器结果 */
-	OnConnectResult(int, string, int) (interface{}, interface{}, error)
+		/* 连接服务器结果 */
+		OnConnectResult(int, string, int) (interface{}, interface{}, error)
 
-	/* 从客户端接收到数据 */
-	ReadFromClient([]byte) (interface{}, interface{}, error)
-	/* 从SA接收到数据 */
-	ReadFromSA([]byte) (interface{}, interface{}, error)
+		/* 从客户端接收到数据 */
+		ReadFromClient([]byte) (interface{}, interface{}, error)
+		/* 从SA接收到数据 */
+		ReadFromSA([]byte) (interface{}, interface{}, error)
 
-	UdpSupported() bool
-	RecvFromClient([]byte) (interface{}, interface{}, error)
-	RecvFromSA([]byte) (interface{}, interface{}, error)
+		UdpSupported() bool
+		RecvFromClient([]byte) (interface{}, interface{}, error)
+		RecvFromSA([]byte) (interface{}, interface{}, error)
 
-	/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
-	OnClose(bool)
+		/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
+		OnClose(bool)
 
-	/* 获取配置相关的详细信息 */
-	GetInfo() []map[string]string
-}
-
-/*
- * 客户端代理
- * 处理面向服务端的连接数据
- *
- * 数据处理接口返回三个参数分别是要转发给代理(这里对应的代理是ClientAgent)的数据，发送给远程连接(这里对应的连接是Server)的数据，和错误对象
- */
-type ServerAgent interface {
-	/* 返回协议名 */
-	Name() string
+		/* 获取配置相关的详细信息 */
+		GetInfo() []map[string]string
+	}
 
 	/*
-	 * 程序初始化时调用，全局只调用一次，读取配置
-	 * 第一个参数是配置名，第二个参数是代理配置
+	 * 客户端代理
+	 * 处理面向服务端的连接数据
+	 *
+	 * 数据处理接口返回三个参数分别是要转发给代理(这里对应的代理是ClientAgent)的数据，发送给远程连接(这里对应的连接是Server)的数据，和错误对象
 	 */
-	OnInit(string, map[string]interface{}) error
-	/*
-	 * 初始化成功，返回nil
-	 * 初始化失败，返回错误
-	 */
-	OnStart() error
+	ServerAgent interface {
+		/* 返回协议名 */
+		Name() string
 
-	/*
-	 * 获取远程地址，参数是入站协议传递过来的远程服务器地址
-	 * 出战协议可以使用该地址也可以覆盖，使用自己定义的地址
-	 */
-	GetRemoteAddress(string, int) (string, int)
+		/*
+		 * 程序初始化时调用，全局只调用一次，读取配置
+		 * 第一个参数是配置名，第二个参数是代理配置
+		 */
+		OnInit(string, map[string]interface{}) error
+		/*
+		 * 初始化成功，返回nil
+		 * 初始化失败，返回错误
+		 */
+		OnStart() error
 
-	/* 连接结果 */
-	OnConnectResult(int, string, int) (interface{}, interface{}, error)
+		/*
+		 * 获取远程地址，参数是入站协议传递过来的远程服务器地址
+		 * 出战协议可以使用该地址也可以覆盖，使用自己定义的地址
+		 */
+		GetRemoteAddress(string, int) (string, int)
 
-	/* 从服务器接收到数据 */
-	ReadFromServer([]byte) (interface{}, interface{}, error)
-	/* 从CA接收到数据 */
-	ReadFromCA([]byte) (interface{}, interface{}, error)
+		/* 连接结果 */
+		OnConnectResult(int, string, int) (interface{}, interface{}, error)
 
-	UdpSupported() bool
-	RecvFromServer([]byte) (interface{}, interface{}, error)
-	RecvFromCA([]byte) (interface{}, interface{}, error)
+		/* 从服务器接收到数据 */
+		ReadFromServer([]byte) (interface{}, interface{}, error)
+		/* 从CA接收到数据 */
+		ReadFromCA([]byte) (interface{}, interface{}, error)
 
-	/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
-	OnClose(bool)
+		UdpSupported() bool
+		RecvFromServer([]byte) (interface{}, interface{}, error)
+		RecvFromCA([]byte) (interface{}, interface{}, error)
 
-	/* 获取配置相关的详细信息 */
-	GetInfo() []map[string]string
-}
+		/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
+		OnClose(bool)
 
-type newClientAgentFunc func(string) ClientAgent
-type newServerAgentFunc func(string) ServerAgent
+		/* 获取配置相关的详细信息 */
+		GetInfo() []map[string]string
+	}
+
+	newClientAgentFunc func(string) ClientAgent
+	newServerAgentFunc func(string) ServerAgent
+)

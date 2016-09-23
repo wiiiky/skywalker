@@ -29,25 +29,27 @@ import (
  * https://tools.ietf.org/html/rfc1928
  */
 
-type SocksClientAgent struct {
-	base.BaseAgent
-	version uint8
+type (
+	SocksClientAgent struct {
+		base.BaseAgent
+		version uint8
 
-	atype uint8
-	addr  string
-	port  uint16
+		atype uint8
+		addr  string
+		port  uint16
 
-	state uint8
+		state uint8
 
-	cfg *socksCAConfig
-}
+		cfg *socksCAConfig
+	}
 
-type socksCAConfig struct {
-	username string
-	password string
-	version  uint8
-	method   uint8
-}
+	socksCAConfig struct {
+		username string
+		password string
+		version  uint8
+		method   uint8
+	}
+)
 
 var (
 	gCAConfigs = map[string]*socksCAConfig{}

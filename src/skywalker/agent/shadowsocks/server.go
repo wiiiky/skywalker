@@ -34,31 +34,33 @@ import (
  * 实现的其实是ShadowSocks的客户端协议，
  * 其命名逻辑是面向服务器的代理
  */
-type ShadowSocksServerAgent struct {
-	base.BaseAgent
-	cipherInfo *cipher.CipherInfo
-	encrypter  cipher.Encrypter
-	decrypter  cipher.Decrypter
-	key        []byte
-	iv         []byte
+type (
+	ShadowSocksServerAgent struct {
+		base.BaseAgent
+		cipherInfo *cipher.CipherInfo
+		encrypter  cipher.Encrypter
+		decrypter  cipher.Decrypter
+		key        []byte
+		iv         []byte
 
-	serverAddr string
-	serverPort int
-	targetAddr string
-	targetPort int
+		serverAddr string
+		serverPort int
+		targetAddr string
+		targetPort int
 
-	/* SS握手是否成功 */
-	connected bool
+		/* SS握手是否成功 */
+		connected bool
 
-	cfg *ssSAConfig
-}
+		cfg *ssSAConfig
+	}
 
-type ssServerAddress struct {
-	serverAddr string
-	serverPort int
-	password   string
-	method     string
-}
+	ssServerAddress struct {
+		serverAddr string
+		serverPort int
+		password   string
+		method     string
+	}
+)
 
 /* 配置参数 */
 type ssSAConfig struct {

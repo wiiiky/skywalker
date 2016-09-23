@@ -25,12 +25,14 @@ import (
 	"skywalker/proxy"
 )
 
-type HandleRequest func(f *Force, v interface{}) (*message.Response, error)
+type (
+	HandleRequest func(f *Force, v interface{}) (*message.Response, error)
 
-type Command struct {
-	Handle       HandleRequest
-	RequestField string
-}
+	Command struct {
+		Handle       HandleRequest
+		RequestField string
+	}
+)
 
 var (
 	gCommandMap map[message.RequestType]*Command

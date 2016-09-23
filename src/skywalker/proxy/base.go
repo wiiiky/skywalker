@@ -30,32 +30,34 @@ const (
 	STATUS_ERROR   = 3
 )
 
-type ProxyInfo struct {
-	StartTime     int64           /* 服务启动时间 */
-	Sent          int64           /* 发送数据量，指的是SA发送给Server的数据 */
-	Received      int64           /* 接受数据量，指的是CA发送给Client的数据 */
-	SentQueue     *util.RateQueue /* 接收数据队列，用于计算网络速度 */
-	ReceivedQueue *util.RateQueue /* 发送数据队列，用于计算网络速度 */
-}
+type (
+	ProxyInfo struct {
+		StartTime     int64           /* 服务启动时间 */
+		Sent          int64           /* 发送数据量，指的是SA发送给Server的数据 */
+		Received      int64           /* 接受数据量，指的是CA发送给Client的数据 */
+		SentQueue     *util.RateQueue /* 接收数据队列，用于计算网络速度 */
+		ReceivedQueue *util.RateQueue /* 发送数据队列，用于计算网络速度 */
+	}
 
-type Proxy struct {
-	sync.Mutex        /* 互斥锁，"继承"锁可直接使用Lock和Unlock */
-	Name       string /* 代理名 */
-	CAName     string /* ca协议名 */
-	SAName     string /* sa协议名 */
-	Status     int    /* 状态 */
+	Proxy struct {
+		sync.Mutex        /* 互斥锁，"继承"锁可直接使用Lock和Unlock */
+		Name       string /* 代理名 */
+		CAName     string /* ca协议名 */
+		SAName     string /* sa协议名 */
+		Status     int    /* 状态 */
 
-	BindAddr string
-	BindPort int
+		BindAddr string
+		BindPort int
 
-	Info *ProxyInfo
+		Info *ProxyInfo
 
-	AutoStart bool /* 是否自动启动 */
+		AutoStart bool /* 是否自动启动 */
 
-	Closing     bool
-	tcpListener net.Listener
-	udpListener *net.UDPConn
-}
+		Closing     bool
+		tcpListener net.Listener
+		udpListener *net.UDPConn
+	}
+)
 
 /*
  * 发送数据
