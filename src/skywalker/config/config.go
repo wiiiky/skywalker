@@ -55,7 +55,7 @@ type (
 func (cfg *CoreConfig) init() {
 	if cfg.Log == nil {
 		cfg.Log = &log.Config{
-			Name:    "luker",
+			Name:    "skywalker",
 			Loggers: nil,
 		}
 	}
@@ -116,7 +116,7 @@ var (
 	}
 	gCore = &CoreConfig{
 		Log: &log.Config{
-			Name:    "luker",
+			Name:    "skywalker",
 			Loggers: defaultLoggers,
 		},
 		HistoryFile: util.ResolveHomePath("~/.forctl_history"),

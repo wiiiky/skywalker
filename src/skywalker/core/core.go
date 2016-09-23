@@ -64,7 +64,7 @@ func (f *Force) loadProxies() error {
 		}
 		f.proxies[cfg.Name] = proxy.New(cfg)
 		names = append(names, cfg.Name)
-		log.I("load proxy %s %s/%s %v\n", cfg.Name, cfg.ClientAgent, cfg.ServerAgent, cfg.AutoStart)
+		log.D("load proxy %s %s/%s %v\n", cfg.Name, cfg.ClientAgent, cfg.ServerAgent, cfg.AutoStart)
 	}
 	sort.Strings(names)
 	for _, name := range names {
