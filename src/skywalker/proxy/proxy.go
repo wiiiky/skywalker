@@ -23,7 +23,6 @@ import (
 	"skywalker/agent"
 	"skywalker/config"
 	"skywalker/util"
-	"sync"
 	"time"
 )
 
@@ -59,7 +58,6 @@ func New(cfg *config.ProxyConfig) *Proxy {
 			ReceivedQueue: util.NewRateQueue(2),
 		},
 		AutoStart: cfg.AutoStart,
-		mutex:     &sync.Mutex{},
 		Closing:   false,
 	}
 }
@@ -73,8 +71,8 @@ func (p *Proxy) Close() {
 
 /* 启动代理服务，同时监听TCP和UDP端口 */
 func (p *Proxy) Start() error {
-	defer p.unlock()
-	p.lock()
+	defer p.Unlock()
+	p.Lock()
 
 	var tcpListener net.Listener
 	var udpListener *net.UDPConn
@@ -103,8 +101,8 @@ func (p *Proxy) Start() error {
 }
 
 func (p *Proxy) Stop() error {
-	defer p.unlock()
-	p.lock()
+	defer p.Unlock()
+	p.Lock()
 	p.Closing = true
 
 	p.tcpListener.Close()

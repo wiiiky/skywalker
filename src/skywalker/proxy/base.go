@@ -39,10 +39,11 @@ type ProxyInfo struct {
 }
 
 type Proxy struct {
-	Name   string /* 代理名 */
-	CAName string /* ca协议名 */
-	SAName string /* sa协议名 */
-	Status int    /* 状态 */
+	sync.Mutex        /* 互斥锁，"继承"锁可直接使用Lock和Unlock */
+	Name       string /* 代理名 */
+	CAName     string /* ca协议名 */
+	SAName     string /* sa协议名 */
+	Status     int    /* 状态 */
 
 	BindAddr string
 	BindPort int
@@ -51,20 +52,9 @@ type Proxy struct {
 
 	AutoStart bool /* 是否自动启动 */
 
-	mutex *sync.Mutex /* 互斥锁 */
-
 	Closing     bool
 	tcpListener net.Listener
 	udpListener *net.UDPConn
-}
-
-/* 互斥锁的快捷函数 */
-func (p *Proxy) lock() {
-	p.mutex.Lock()
-}
-
-func (p *Proxy) unlock() {
-	p.mutex.Unlock()
 }
 
 /*
@@ -116,7 +106,7 @@ func (p *Proxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interfac
 
 	if size > 0 {
 		/* 增加数据时需要使用锁，因为没有只是单纯增加数据和添加记录，因此不会影响性能 */
-		p.lock()
+		p.Lock()
 		if isClient { /* 发送给客户端的数据 */
 			p.Info.Received += size
 			p.Info.ReceivedQueue.Push(size)
@@ -124,7 +114,7 @@ func (p *Proxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interfac
 			p.Info.Sent += size
 			p.Info.SentQueue.Push(size)
 		}
-		p.unlock()
+		p.Unlock()
 	}
 	return err
 }
