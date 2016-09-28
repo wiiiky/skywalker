@@ -19,8 +19,10 @@ package main
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"forctl/core"
+	"github.com/golang/protobuf/proto"
 	"reflect"
 	"skywalker/config"
 	"skywalker/message"
@@ -38,13 +40,45 @@ func init() {
 
 func connectSkywalker(inet *config.InetConfig, unix *config.UnixConfig) (*message.Conn, error) {
 	/* 优先通过TCP连接，不存在或者不成功再使用Unix套接字连接 */
+	var c *message.Conn
+	var err error
+	var username, password string
 	if inet != nil {
-		return core.TCPConnect(inet.IP, inet.Port)
+		c, err = core.TCPConnect(inet.IP, inet.Port)
+		username = inet.Username
+		password = inet.Password
+	} else if unix != nil {
+		c, err = core.UnixConnect(unix.File)
+		username = unix.Username
+		password = unix.Password
 	}
-	if unix != nil {
-		return core.UnixConnect(unix.File)
+	if c == nil {
+		return c, err
 	}
-	return nil, nil
+
+	/* 发起认证 */
+	t := message.RequestType_AUTH
+	if err = c.WriteRequest(&message.Request{
+		Type:    &t,
+		Version: proto.Int32(message.VERSION),
+		Auth: &message.AuthRequest{
+			Username: proto.String(username),
+			Password: proto.String(password),
+		},
+	}); err != nil {
+		c.Close()
+		return nil, err
+	}
+	rep := c.ReadResponse()
+	if rep == nil || rep.GetType() != message.RequestType_AUTH {
+		c.Close()
+		return nil, errors.New("Unknown Error")
+	}
+	if rep.GetAuth().GetStatus() != message.AuthResponse_SUCCESS {
+		c.Close()
+		return nil, errors.New("Invalid Username/Password")
+	}
+	return c, nil
 }
 
 func main() {
@@ -63,7 +97,7 @@ func main() {
 	}
 	defer rl.Close()
 
-	if conn, err = connectSkywalker(cfg.Inet, cfg.Unix); err != nil {
+	if conn, err = connectSkywalker(cfg.Inet, cfg.Unix); conn == nil {
 		core.PrintError("%v\n", err)
 		disconnected = true
 	}
@@ -76,7 +110,7 @@ func main() {
 			continue
 		}
 		if disconnected { /* 已断开则重新连接 */
-			if conn, err = connectSkywalker(cfg.Inet, cfg.Unix); err != nil {
+			if conn, err = connectSkywalker(cfg.Inet, cfg.Unix); conn == nil {
 				core.PrintError("%v\n", err)
 				continue
 			}

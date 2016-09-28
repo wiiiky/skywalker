@@ -2,19 +2,26 @@ syntax = "proto2";
 package message;
 
 enum RequestType {
-    STATUS = 1;   /* 当前状态 */
-    START = 2;    /* 启动服务 */
-    STOP = 3;     /* 停止服务 */
-    RESTART = 4;  /* 重启服务 */
-    INFO = 5;     /* 服务详细信息 */
+    AUTH = 1;      /* 认证 */
+    STATUS = 2;   /* 当前状态 */
+    START = 3;    /* 启动服务 */
+    STOP = 4;     /* 停止服务 */
+    RESTART = 5;  /* 重启服务 */
+    INFO = 6;     /* 服务详细信息 */
 }
 
 message CommonRequest {
     repeated string name = 1;
 }
 
+message AuthRequest {
+    required string username = 1;
+    required string password = 2;
+}
+
 message Request {
     required int32 version = 1;
     required RequestType type = 2;
     optional CommonRequest common = 3;
+    optional AuthRequest auth = 4;
 }

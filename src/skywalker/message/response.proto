@@ -9,6 +9,14 @@ message Error {
     required string msg = 1;
 }
 
+message AuthResponse {
+    enum Status {
+        SUCCESS = 1;
+        FAILURE = 2;
+    }
+    required Status status = 1;
+}
+
 /* status 命令的返回结果 */
 message StatusResponse {
     enum Status {
@@ -90,8 +98,9 @@ message InfoResponse {
 message Response {
     required RequestType type = 1;
     optional Error err = 2;
-    optional StatusResponse status = 3;
-    optional StartResponse start = 4;
-    optional StopResponse stop = 5;
+    optional AuthResponse auth = 3;
+    optional StatusResponse status = 4;
+    optional StartResponse start = 5;
+    optional StopResponse stop = 6;
     optional InfoResponse info = 7;
 }

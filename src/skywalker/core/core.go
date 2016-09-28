@@ -119,7 +119,7 @@ func Run() *Force {
 	}
 
 	force.autoStartProxies()
-	force.listen()
+	force.listen(cfg)
 
 	return force
 }
@@ -131,11 +131,11 @@ func (f *Force) Finish() {
 }
 
 /* 监听命令请求 */
-func (f *Force) listen() {
-	listenFunc := func(listener net.Listener) {
+func (f *Force) listen(cfg *config.CoreConfig) {
+	listenFunc := func(listener net.Listener, username, password string) {
 		for {
 			if conn, err := listener.Accept(); err == nil {
-				go f.handleConn(message.NewConn(conn))
+				go f.handleConn(message.NewConn(conn), username, password)
 			} else {
 				log.W("%v", err)
 			}
@@ -143,21 +143,51 @@ func (f *Force) listen() {
 	}
 
 	if f.InetListener != nil {
-		go listenFunc(f.InetListener)
+		go listenFunc(f.InetListener, cfg.Inet.Username, cfg.Inet.Password)
 	}
 	if f.UnixListener != nil {
-		go listenFunc(f.UnixListener)
+		go listenFunc(f.UnixListener, cfg.Unix.Username, cfg.Unix.Password)
 	}
+}
+
+/*
+ * 认证用户名密码
+ * 每次连接都需要有认证过程；
+ * 如果，没有设置用户名、密码则认证的用户名、密码为空
+ */
+func authenticate(c *message.Conn, username, password string) bool {
+	req := c.ReadRequest()
+	if req == nil || req.GetType() != message.RequestType_AUTH {
+		return false
+	}
+	auth := req.GetAuth()
+
+	authStatus := message.AuthResponse_SUCCESS
+	if auth.GetUsername() != username && auth.GetPassword() != password {
+		/* 用户名或密码错误 */
+		authStatus = message.AuthResponse_FAILURE
+	}
+	e := c.WriteResponse(&message.Response{
+		Type: req.Type,
+		Auth: &message.AuthResponse{Status: &authStatus},
+	})
+	return e == nil && authStatus == message.AuthResponse_SUCCESS
 }
 
 /*
  * 处理客户端链接
  * 判断命令是否存在，判断命令版本号，执行命令
  */
-func (f *Force) handleConn(c *message.Conn) {
+func (f *Force) handleConn(c *message.Conn, username, password string) {
 	var rep *message.Response
 	var err error
 	defer c.Close()
+
+	/* 认证用户名密码 */
+	if !authenticate(c, username, password) {
+		return
+	}
+
 	for {
 		req := c.ReadRequest()
 		if req == nil {
@@ -173,7 +203,7 @@ func (f *Force) handleConn(c *message.Conn) {
 			if v != nil {
 				rep, err = cmd.Handle(f, v)
 			} else {
-				err = errors.New(fmt.Sprintf("Invalid Request"))
+				err = errors.New("Invalid Request")
 			}
 		}
 		if err != nil {
