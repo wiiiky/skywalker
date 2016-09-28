@@ -18,11 +18,19 @@
 package main
 
 import (
+	"encoding/base64"
+	"fmt"
 	"forctl/core"
 	"reflect"
 	"skywalker/config"
 	"skywalker/message"
 )
+
+func init() {
+	b64 := "IF9fX19fX18gICBfX19fX18gICAuX19fX19fICAgICAgICBfX19fX18gLl9fX19fX19fX19fLiBfXyAgICAgIAp8ICAgX19fX3wgLyAgX18gIFwgIHwgICBfICBcICAgICAgLyAgICAgIHx8ICAgICAgICAgICB8fCAgfCAgICAgCnwgIHxfXyAgIHwgIHwgIHwgIHwgfCAgfF8pICB8ICAgIHwgICwtLS0tJ2AtLS18ICB8LS0tLWB8ICB8ICAgICAKfCAgIF9ffCAgfCAgfCAgfCAgfCB8ICAgICAgLyAgICAgfCAgfCAgICAgICAgIHwgIHwgICAgIHwgIHwgICAgIAp8ICB8ICAgICB8ICBgLS0nICB8IHwgIHxcICBcLS0tLS58ICBgLS0tLS4gICAgfCAgfCAgICAgfCAgYC0tLS0uCnxfX3wgICAgICBcX19fX19fLyAgfCBffCBgLl9fX19ffCBcX19fX19ffCAgICB8X198ICAgICB8X19fX19fX3wKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIA"
+	logo, _ := base64.StdEncoding.DecodeString(b64)
+	fmt.Printf("%s\n", logo)
+}
 
 /*
  * forctl 是skywalker的管理程序
