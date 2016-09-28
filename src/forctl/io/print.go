@@ -15,30 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package core
+package io
 
+/*
+#include<sys/ioctl.h>
+#include<unistd.h>
+
+int getTerminalWidth(){
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    return w.ws_col;
+}
+*/
+import "C"
 import (
-	"net"
-	"skywalker/message"
-	"strconv"
-	"time"
+	"fmt"
 )
 
-/* 连接TCP服务 */
-func TCPConnect(ip string, port int) (*message.Conn, error) {
-	addr := net.JoinHostPort(ip, strconv.Itoa(port))
-	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err != nil {
-		return nil, err
-	} else {
-		return message.NewConn(conn), nil
-	}
+/* 输出信息 */
+func Print(format string, v ...interface{}) {
+	fmt.Printf(format, v...)
 }
 
-/* 连接Unix套接字服务 */
-func UnixConnect(filepath string) (*message.Conn, error) {
-	if conn, err := net.DialTimeout("unix", filepath, 10*time.Second); err != nil {
-		return nil, err
-	} else {
-		return message.NewConn(conn), nil
-	}
+/* 输出错误，在内容前添加 *** */
+func PrintError(format string, v ...interface{}) {
+	format = "*** " + format
+	fmt.Printf(format, v...)
+}
+
+func GetTerminalWidth() int {
+	return int(C.getTerminalWidth())
 }

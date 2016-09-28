@@ -15,26 +15,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package core
+package reader
 
 import (
+	. "forctl/cmd"
+	"forctl/io"
 	"gopkg.in/readline.v1"
 	"skywalker/config"
 	"strings"
 )
 
 /* 对readline的简单封装 */
-type Readline struct {
+type Reader struct {
 	rl *readline.Instance
 }
 
-func NewReadline(ccfg *config.CoreConfig, rcfg []*config.ProxyConfig) (*Readline, error) {
+func New(ccfg *config.CoreConfig, rcfg []*config.ProxyConfig) (*Reader, error) {
 	/* 自动补全数据 */
 	var proxies, cmds []readline.PrefixCompleterInterface
 	for _, r := range rcfg {
 		proxies = append(proxies, readline.PcItem(r.Name))
 	}
-	for k, _ := range gCommandMap {
+	for k, _ := range GetCommands() {
 		if k != COMMAND_HELP {
 			cmds = append(cmds, readline.PcItem(k))
 		}
@@ -56,15 +58,15 @@ func NewReadline(ccfg *config.CoreConfig, rcfg []*config.ProxyConfig) (*Readline
 	if err != nil {
 		return nil, err
 	}
-	return &Readline{rl: rl}, nil
+	return &Reader{rl: rl}, nil
 }
 
-type Line struct {
+type Input struct {
 	Cmd  *Command
 	Args []string
 }
 
-func NewLine(buf string) *Line {
+func NewInput(buf string) *Input {
 	var seps []string
 	var cmd *Command
 
@@ -76,29 +78,29 @@ func NewLine(buf string) *Line {
 	if len(seps) == 0 {
 		return nil
 	}
-	if cmd = gCommandMap[seps[0]]; cmd == nil {
-		PrintError("Unknown syntax: %s\n", seps[0])
+	if cmd = GetCommand(seps[0]); cmd == nil {
+		io.PrintError("Unknown syntax: %s\n", seps[0])
 		return nil
 	}
 
 	/* 参数个数不正确 */
 	if cmd.Required > len(seps[1:]) ||
 		(cmd.Optional >= 0 && cmd.Required+cmd.Optional < len(seps[1:])) {
-		PrintError("Invalid argument for %s\n%s\n", seps[0], cmd.Help)
+		io.PrintError("Invalid argument for %s\n%s\n", seps[0], cmd.Help)
 		return nil
 	}
 
-	return &Line{
+	return &Input{
 		Cmd:  cmd,
 		Args: seps[1:],
 	}
 }
 
-/* 读取已行，去除首尾空格 */
-func (r *Readline) Readline() (*Line, error) {
+/* 读取一行命令，去除首尾空格 */
+func (r *Reader) Read() (*Input, error) {
 	var buf string
 	var err error
-	var line *Line
+	var ipt *Input
 	for {
 		buf, err = r.rl.Readline()
 		if err != nil {
@@ -106,13 +108,13 @@ func (r *Readline) Readline() (*Line, error) {
 		}
 		if buf = strings.Trim(buf, " "); len(buf) == 0 {
 			continue
-		} else if line = NewLine(buf); line != nil {
+		} else if ipt = NewInput(buf); ipt != nil {
 			break
 		}
 	}
-	return line, nil
+	return ipt, nil
 }
 
-func (r *Readline) Close() {
+func (r *Reader) Close() {
 	r.rl.Close()
 }

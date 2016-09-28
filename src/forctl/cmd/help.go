@@ -15,34 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package core
+package cmd
 
-/*
-#include<sys/ioctl.h>
-#include<unistd.h>
-
-int getTerminalWidth(){
-    struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    return w.ws_col;
-}
-*/
-import "C"
 import (
-	"fmt"
+	. "forctl/io"
+	"skywalker/message"
 )
 
-/* 输出信息 */
-func Print(format string, v ...interface{}) {
-	fmt.Printf(format, v...)
-}
-
-/* 输出错误，在内容前添加 *** */
-func PrintError(format string, v ...interface{}) {
-	format = "*** " + format
-	fmt.Printf(format, v...)
-}
-
-func GetTerminalWidth() int {
-	return int(C.getTerminalWidth())
+/* 打印帮助信息 */
+func help(help *Command, args ...string) *message.Request {
+	if len(args) == 0 {
+		Print("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s\n",
+			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_RESTART, COMMAND_INFO)
+		return nil
+	}
+	topic := args[0]
+	if cmd := GetCommand(topic); cmd != nil {
+		Print("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
+	} else {
+		PrintError("No help on %s\n", topic)
+	}
+	return nil
 }

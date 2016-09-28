@@ -15,13 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package core
+package cmd
 
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"skywalker/message"
-	"strings"
 	"time"
 )
 
@@ -117,34 +116,8 @@ func GetCommand(name string) *Command {
 	return cmd
 }
 
-/*
- * 构建通用形式的请求
- * 如start,stop,restart,info等命令
- */
-func buildCommonRequest(cmd *Command, names ...string) *message.Request {
-	return &message.Request{
-		Version: proto.Int32(message.VERSION),
-		Type:    &cmd.ReqType,
-		Common: &message.CommonRequest{
-			Name: names,
-		},
-	}
-}
-
-/* 打印帮助信息 */
-func help(help *Command, args ...string) *message.Request {
-	if len(args) == 0 {
-		Print("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s\n",
-			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_RESTART, COMMAND_INFO)
-		return nil
-	}
-	topic := args[0]
-	if cmd := GetCommand(topic); cmd != nil {
-		Print("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
-	} else {
-		PrintError("No help on %s\n", topic)
-	}
-	return nil
+func GetCommands() map[string]*Command {
+	return gCommandMap
 }
 
 /* 格式化时间长度 */
@@ -170,84 +143,18 @@ func formatDatetime(timestamp int64) string {
 	return fmt.Sprintf("%02d/%02d %02d:%0d:%02d", month, day, hour, min, sec)
 }
 
-/* 处理status命令 */
-func processStatusResponse(v interface{}) error {
-	rep := v.(*message.StatusResponse)
-	var maxlen = []int{10, 16, 12, 7, 5}
-	var rows [][]string
-	for _, data := range rep.GetData() {
-		var row []string
-		if err := data.GetErr(); len(err) == 0 {
-			uptime := ""
-			if data.GetStatus() == message.StatusResponse_RUNNING {
-				d := time.Now().Unix() - data.GetStartTime()
-				uptime = fmt.Sprintf("uptime %s", formatDuration(d))
-			}
-			row = []string{
-				data.GetName(),
-				fmt.Sprintf("%s/%s", data.GetCname(), data.GetSname()),
-				fmt.Sprintf("%s:%d", data.GetBindAddr(), data.GetBindPort()),
-				data.GetStatus().String(),
-				uptime,
-			}
-		} else {
-			row = []string{err}
-		}
-		for i, col := range row {
-			if len(col) > maxlen[i] {
-				maxlen[i] = len(col)
-			}
-		}
-		rows = append(rows, row)
+/*
+ * 构建通用形式的请求
+ * 如start,stop,restart,info等命令
+ */
+func buildCommonRequest(cmd *Command, names ...string) *message.Request {
+	return &message.Request{
+		Version: proto.Int32(message.VERSION),
+		Type:    &cmd.ReqType,
+		Common: &message.CommonRequest{
+			Name: names,
+		},
 	}
-	for i, _ := range maxlen {
-		maxlen[i] += 2
-	}
-	for _, row := range rows {
-		for i, col := range row {
-			Print("%-*s", maxlen[i], col)
-		}
-		Print("\n")
-	}
-	return nil
-}
-
-/* 处理start命令的结果 */
-func processStartResponse(v interface{}) error {
-	rep := v.(*message.StartResponse)
-	for _, data := range rep.GetData() {
-		name := data.GetName()
-		status := data.GetStatus()
-		err := data.GetErr()
-		switch status {
-		case message.StartResponse_STARTED:
-			Print("%s started\n", name)
-		case message.StartResponse_RUNNING:
-			Print("%s: ERROR (already started)\n", name)
-		case message.StartResponse_ERROR:
-			PrintError("%s: ERROR (%s)\n", name, err)
-		}
-	}
-	return nil
-}
-
-/* 处理stop返回结果 */
-func processStopResponse(v interface{}) error {
-	rep := v.(*message.StopResponse)
-	for _, data := range rep.GetData() {
-		name := data.GetName()
-		status := data.GetStatus()
-		err := data.GetErr()
-		switch status {
-		case message.StopResponse_STOPPED:
-			Print("%s stopped\n", name)
-		case message.StopResponse_UNRUNNING:
-			Print("%s: ERROR (already stopped)\n", name)
-		case message.StopResponse_ERROR:
-			PrintError("%s: ERROR (%s)\n", name, err)
-		}
-	}
-	return nil
 }
 
 /* 格式化数据大小 */
@@ -266,53 +173,4 @@ func formatDataSize(size int64) (string, string) {
 func formatDataRate(rate int64) (string, string) {
 	s, u := formatDataSize(rate)
 	return s, u + "/S"
-}
-
-/* 处理info命令的返回值 */
-func processInfoResponse(v interface{}) error {
-	rep := v.(*message.InfoResponse)
-
-	printInfo := func(name string, info []*message.InfoResponse_Info) {
-		if info != nil { /* ca信息 */
-			Print("    %s:\n", name)
-			for _, i := range info {
-				Print("        %s:%s\n", i.GetKey(), i.GetValue())
-			}
-		}
-	}
-	for i, data := range rep.GetData() {
-		if err := data.GetErr(); len(err) > 0 {
-			PrintError("%s\n", err)
-		} else {
-			Print("%s (%s/%s)\n", data.GetName(), data.GetCname(), data.GetSname())
-			printInfo(data.GetCname(), data.GetCaInfo())
-			printInfo(data.GetSname(), data.GetSaInfo())
-			Print("\n")
-
-			Print("    listen on %s:%d %s\n", data.GetBindAddr(), data.GetBindPort(), data.GetStatus())
-			if data.GetStatus() == message.InfoResponse_RUNNING {
-				d := time.Now().Unix() - data.GetStartTime()
-				Print("    start  at %s uptime %s\n", formatDatetime(data.GetStartTime()), formatDuration(d))
-			}
-			sent, sentUnit := formatDataSize(data.GetSent())
-			received, receivedUnit := formatDataSize(data.GetReceived())
-			sentRate, sentRateUnit := formatDataRate(data.GetSentRate())
-			receivedRate, receivedRateUnit := formatDataRate(data.GetReceivedRate())
-			width1 := len(sent)
-			width2 := len(sentRate)
-			if width1 < len(received) {
-				width1 = len(received)
-			}
-			if width2 < len(receivedRate) {
-				width2 = len(receivedRate)
-			}
-			Print("    sent     %-*s %-2s rate %-*s %-4s\n", width1, sent, sentUnit, width2, sentRate, sentRateUnit)
-			Print("    received %-*s %-2s rate %-*s %-4s\n", width1, received, receivedUnit, width2, receivedRate, receivedRateUnit)
-		}
-		if i < len(rep.GetData())-1 {
-			Print("%s\n", strings.Repeat("*", GetTerminalWidth()/2))
-		}
-
-	}
-	return nil
 }
