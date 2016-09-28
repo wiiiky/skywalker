@@ -3,6 +3,7 @@
 socks5:
   bindAddr: 127.0.0.1
   bindPort: 8080
+  autoStart: true
   clientAgent: socks
   clientConfig:
     version: 5		#如果不指定则同时支持socks4和socks5

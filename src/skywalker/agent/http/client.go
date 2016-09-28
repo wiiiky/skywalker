@@ -19,7 +19,7 @@ package http
 
 import (
 	"net"
-	"skywalker/agent/base"
+	. "skywalker/agent/base"
 	"skywalker/pkg"
 	"skywalker/util"
 	"strconv"
@@ -28,7 +28,7 @@ import (
 /* 每次代理的请求数据 */
 type (
 	HTTPClientAgent struct {
-		base.BaseAgent
+		BaseAgent
 		req  *httpRequest
 		host string
 		cfg  *httpCAConfig
@@ -121,7 +121,7 @@ func (a *HTTPClientAgent) ReadFromClient(data []byte) (interface{}, interface{},
 			return nil, nil, err
 		} else {
 			if !a.isAuthenticated() { /* 代理认证 */
-				return nil, PROXY_AUTHORIZATION_REQUIRED, util.NewError(ERROR_AUTH_REQUIRED, "Proxy Authorization Required")
+				return nil, PROXY_AUTHORIZATION_REQUIRED, Error(ERROR_AUTH_REQUIRED, "Proxy Authorization Required")
 			}
 			if req.Status == REQUEST_STATUS_FULL_REQUEST { /* 解析到有效的HTTP请求 */
 				host := req.getHost()

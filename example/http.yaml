@@ -4,6 +4,7 @@
 http:
   bindAddr: 127.0.0.1
   bindPort: 8888
+  autoStart: true
   clientAgent: http
   clientConfig:
     username: ""

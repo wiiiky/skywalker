@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
-	"skywalker/agent/base"
+	. "skywalker/agent/base"
 	"skywalker/cipher"
 	"skywalker/pkg"
 	"skywalker/util"
@@ -36,7 +36,7 @@ import (
  */
 type (
 	ShadowSocksServerAgent struct {
-		base.BaseAgent
+		BaseAgent
 		cipherInfo *cipher.CipherInfo
 		encrypter  cipher.Encrypter
 		decrypter  cipher.Decrypter
@@ -168,7 +168,7 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 		for _, e := range array {
 			m, ok := e.(map[string]interface{})
 			if m == nil || ok == false {
-				return util.NewError(ERROR_INVALID_CONFIG, "serverAddr[] must be an object array")
+				return Error(ERROR_INVALID_CONFIG, "serverAddr[] must be an object array")
 			}
 			addr := util.GetMapStringDefault(m, "serverAddr", serverAddr)
 			port := util.GetMapIntDefault(m, "serverPort", serverPort)
@@ -176,7 +176,7 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 			method := util.GetMapStringDefault(m, "method", method)
 
 			if len(addr) == 0 || port <= 0 || len(password) == 0 || len(method) == 0 {
-				return util.NewError(ERROR_INVALID_CONFIG, "invalid serverAddrs")
+				return Error(ERROR_INVALID_CONFIG, "invalid serverAddrs")
 			}
 			saddr := ssServerAddress{
 				serverAddr: addr,
@@ -188,7 +188,7 @@ func (a *ShadowSocksServerAgent) OnInit(name string, cfg map[string]interface{})
 			go util.GetHostAddress(addr)
 		}
 	} else if len(serverAddr) == 0 || serverPort <= 0 || len(password) == 0 || len(method) == 0 {
-		return util.NewError(ERROR_INVALID_CONFIG, "invalid server config")
+		return Error(ERROR_INVALID_CONFIG, "invalid server config")
 	}
 
 	gSAConfigs[name] = &ssSAConfig{
@@ -250,7 +250,7 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result int, host string, p int)
 func (a *ShadowSocksServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
 	if a.decrypter == nil {
 		if len(data) < a.cipherInfo.IvSize {
-			return nil, nil, util.NewError(ERROR_INVALID_PACKAGE, "invalid package")
+			return nil, nil, Error(ERROR_INVALID_PACKAGE, "invalid package")
 		}
 		iv := data[:a.cipherInfo.IvSize]
 		data = data[a.cipherInfo.IvSize:]

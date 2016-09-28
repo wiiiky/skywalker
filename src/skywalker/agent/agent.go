@@ -69,8 +69,9 @@ var (
 	}
 )
 
-/* 代理初始化 */
-
+/*
+ * 代理初始化init，全局调用一次
+ */
 func CAInit(ca string, name string, cfg map[string]interface{}) error {
 	if f := gCAMap[strings.ToLower(ca)]; f == nil {
 		return errors.New(fmt.Sprintf("Client Agent %s not found", ca))

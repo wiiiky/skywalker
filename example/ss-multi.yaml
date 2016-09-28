@@ -3,6 +3,7 @@
 ss-multi:
   bindAddr: 127.0.0.1
   bindPort: 12345
+  autoStart: true
   clientAgent: socks
   clientConfig:
     version: 5

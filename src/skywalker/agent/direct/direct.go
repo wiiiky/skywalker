@@ -18,14 +18,14 @@
 package direct
 
 import (
-	"skywalker/agent/base"
+	. "skywalker/agent/base"
 )
 
 /*
  * 直连代理只能用作ServerAgent
  */
 type DirectAgent struct {
-	base.BaseAgent
+	BaseAgent
 }
 
 func (a *DirectAgent) Name() string {

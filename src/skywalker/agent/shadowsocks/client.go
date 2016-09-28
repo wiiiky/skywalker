@@ -18,16 +18,15 @@
 package shadowsocks
 
 import (
-	"skywalker/agent/base"
+	. "skywalker/agent/base"
 	"skywalker/cipher"
 	"skywalker/pkg"
-	"skywalker/util"
 	"strings"
 )
 
 type (
 	ShadowSocksClientAgent struct {
-		base.BaseAgent
+		BaseAgent
 		encrypter cipher.Encrypter
 		decrypter cipher.Decrypter
 		key       []byte
@@ -63,11 +62,11 @@ func (a *ShadowSocksClientAgent) OnInit(name string, cfg map[string]interface{})
 	var ok bool
 	val, ok = cfg["password"]
 	if ok == false {
-		return util.NewError(ERROR_INVALID_CONFIG, "password not found")
+		return Error(ERROR_INVALID_CONFIG, "password not found")
 	}
 	password, ok = val.(string)
 	if ok == false {
-		return util.NewError(ERROR_INVALID_CONFIG, "password must be type of string")
+		return Error(ERROR_INVALID_CONFIG, "password must be type of string")
 	}
 	val, ok = cfg["method"]
 	if ok == false {
@@ -75,14 +74,14 @@ func (a *ShadowSocksClientAgent) OnInit(name string, cfg map[string]interface{})
 	} else {
 		method, ok = val.(string)
 		if ok == false {
-			util.NewError(ERROR_INVALID_CONFIG, "method must be type of string")
+			return Error(ERROR_INVALID_CONFIG, "method must be type of string")
 		}
 	}
 
 	/* 验证加密方式 */
 	info := cipher.GetCipherInfo(strings.ToLower(method))
 	if info == nil {
-		return util.NewError(ERROR_INVALID_CONFIG, "unknown cipher method")
+		return Error(ERROR_INVALID_CONFIG, "unknown cipher method")
 	}
 
 	gCAConfigs[name] = &ssCAConfig{
@@ -119,7 +118,7 @@ func (p *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, inter
 		/* 第一个数据包，应该包含IV和请求数据 */
 		ivSize := p.cfg.cipherInfo.IvSize
 		if len(data) < ivSize {
-			return nil, nil, util.NewError(ERROR_INVALID_PACKAGE, "invalid package")
+			return nil, nil, Error(ERROR_INVALID_PACKAGE, "invalid package")
 		}
 		iv := data[:ivSize]
 		p.decrypter = p.cfg.cipherInfo.DecrypterFunc(p.key, iv)

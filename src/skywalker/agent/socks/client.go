@@ -18,7 +18,7 @@
 package socks
 
 import (
-	"skywalker/agent/base"
+	. "skywalker/agent/base"
 	"skywalker/pkg"
 	"skywalker/util"
 	"strconv"
@@ -31,7 +31,7 @@ import (
 
 type (
 	SocksClientAgent struct {
-		base.BaseAgent
+		BaseAgent
 		version uint8
 
 		atype uint8
@@ -138,7 +138,7 @@ func (a *SocksClientAgent) init4(data []byte) (interface{}, interface{}, error) 
 	if err := req.parse(data); err != nil {
 		return nil, nil, err
 	} else if req.cd != CMD_CONNECT {
-		return nil, nil, util.NewError(ERROR_UNSUPPORTED_CMD, "unsupported socks4 command %d", req.cd)
+		return nil, nil, Error(ERROR_UNSUPPORTED_CMD, "unsupported socks4 command %d", req.cd)
 	}
 	a.version = req.vn
 	a.atype = ATYPE_IPV4 /* socks4 只支持IPv4 */
@@ -165,7 +165,7 @@ func (a *SocksClientAgent) init5(data []byte) (interface{}, interface{}, error) 
 		}
 	}
 	if method == METHOD_NO_ACCEPTABLE {
-		err = util.NewError(ERROR_UNSUPPORTED_METHOD, "unsupported method %v", req.methods)
+		err = Error(ERROR_UNSUPPORTED_METHOD, "unsupported method %v", req.methods)
 	} else if method == METHOD_NO_AUTH_REQUIRED {
 		a.state = STATE_CONNECT
 	} else if method == METHOD_USERNAME_PASSWORD { /* 等待客户端认证 */
@@ -190,7 +190,7 @@ func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}
 		} else if data[0] == SOCKS_VERSION_4 && (a.cfg.version == SOCKS_VERSION_4 || a.cfg.version == SOCKS_VERSION_COMPATIBLE) {
 			return a.init4(data)
 		}
-		return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported socks version %d", data[0])
+		return nil, nil, Error(ERROR_UNSUPPORTED_VERSION, "unsupported socks version %d", data[0])
 	case STATE_AUTH: /* 客户端认证 */
 		req := &socks5AuthRequest{}
 		if err := req.parse(data); err != nil {
@@ -199,7 +199,7 @@ func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}
 		rep := socks5AuthResponse{version: req.version}
 		if req.username != a.cfg.username && req.password != a.cfg.password {
 			rep.status = 1
-			return nil, rep.build(), util.NewError(ERROR_INVALID_USERNAME_PASSWORD, "invalid username & password")
+			return nil, rep.build(), Error(ERROR_INVALID_USERNAME_PASSWORD, "invalid username & password")
 		}
 		rep.status = 0
 		a.state = STATE_CONNECT
@@ -210,9 +210,9 @@ func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}
 		if err != nil {
 			return nil, nil, err
 		} else if req.version != a.version {
-			return nil, nil, util.NewError(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", req.version)
+			return nil, nil, Error(ERROR_UNSUPPORTED_VERSION, "unsupported protocol version %d", req.version)
 		} else if req.cmd != CMD_CONNECT {
-			return nil, nil, util.NewError(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", req.cmd)
+			return nil, nil, Error(ERROR_UNSUPPORTED_CMD, "unsupported protocol command %d", req.cmd)
 		}
 		a.atype = req.atype
 		a.addr = req.addr

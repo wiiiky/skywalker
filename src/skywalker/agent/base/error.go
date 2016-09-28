@@ -15,22 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package util
+package base
 
 import (
 	"fmt"
 )
 
-type CodeError struct {
+type AgentError struct {
 	code int
 	msg  string
 }
 
-func (e *CodeError) Error() string {
+func (e *AgentError) Error() string {
 	return fmt.Sprintf("[%d] %s", e.code, e.msg)
 }
 
-func NewError(code int, format string, params ...interface{}) *CodeError {
+func Error(code int, format string, params ...interface{}) *AgentError {
 	msg := fmt.Sprintf(format, params...)
-	return &CodeError{code: code, msg: msg}
+	return &AgentError{code: code, msg: msg}
 }
