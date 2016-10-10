@@ -169,5 +169,5 @@ func disconnected(err error) {
 func init() {
 	b64 := "ICAgIF9fX18gICAgICAgICAgICAgICAgX18gIF9fCiAgIC8gX18vX19fICBfX19fX19fX19fLyAvXy8gLwogIC8gL18vIF9fIFwvIF9fXy8gX19fLyBfXy8gLyAKIC8gX18vIC9fLyAvIC8gIC8gL19fLyAvXy8gLyAgCi9fLyAgXF9fX18vXy8gICBcX19fL1xfXy9fLyAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICA="
 	logo, _ := base64.StdEncoding.DecodeString(b64)
-	fmt.Printf("%s\n", logo)
+	fmt.Printf("%s\n\n", logo)
 }
