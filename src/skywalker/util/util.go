@@ -27,6 +27,13 @@ import (
 	"path"
 )
 
+func IfString(b bool, s1, s2 string) string {
+	if b {
+		return s1
+	}
+	return s2
+}
+
 func GetMapString(m map[string]interface{}, name string) string {
 	val, ok := m[name]
 	if !ok {
