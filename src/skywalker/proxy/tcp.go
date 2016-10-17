@@ -93,7 +93,7 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.ERROR(p.Name, "Unknown Package From Server Agent! This is a BUG!")
+				log.ERROR(p.Name, "Unknown Package From Server Agent! THIS IS A BUG!")
 			}
 		}
 	}
