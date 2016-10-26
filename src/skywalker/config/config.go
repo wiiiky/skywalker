@@ -125,8 +125,8 @@ var (
 )
 
 const (
-	DEFAULT_USER_CONFIG   = "~/.config/skywalker.yaml"
-	DEFAULT_GLOBAL_CONFIG = "/etc/skywalker.yaml"
+	DEFAULT_USER_CONFIG   = "~/.config/skywalker.yml"
+	DEFAULT_GLOBAL_CONFIG = "/etc/skywalker.yml"
 )
 
 /* 获取所有配置列表 */

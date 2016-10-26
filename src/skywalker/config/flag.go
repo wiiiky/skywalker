@@ -38,7 +38,7 @@ func printVersion() {
 }
 
 func parseCommandLine() *clFlag {
-	cfile := flag.String("c", "", "the config file. if not specialed, skywalker will try ~/.local/skywalker.json & /etc/skywalker.json")
+	cfile := flag.String("c", "", "config file. if not specialed, ~/.local/skywalker.yml or /etc/skywalker.yml will be used")
 	help := flag.Bool("help", false, "show help message")
 	version := flag.Bool("version", false, "show skywalker version")
 	flag.Parse()
