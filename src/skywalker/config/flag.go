@@ -21,24 +21,40 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 )
 
 const (
 	SKYWALKER_VERSION = "1.3.0"
 )
 
+var (
+	gFlag *Flag
+)
+
 /* 命令行参数 */
-type clFlag struct {
-	cfile string
-	help  bool
+type Flag struct {
+	CFile string
+	Args  []string
+}
+
+func (f *Flag) GetArguments() string {
+	return strings.Join(f.Args, " ")
 }
 
 func printVersion() {
 	fmt.Printf("skywalker version %s\n\n", SKYWALKER_VERSION)
 }
 
-func parseCommandLine() *clFlag {
-	cfile := flag.String("c", "", "config file. if not specialed, ~/.local/skywalker.yml or /etc/skywalker.yml will be used")
+func GetFlag() *Flag {
+	if gFlag == nil {
+		gFlag = getFlag()
+	}
+	return gFlag
+}
+
+func getFlag() *Flag {
+	cfile := flag.String("c", "", "config file. if not specialed, ~/.config/skywalker.yml or /etc/skywalker.yml will be used")
 	help := flag.Bool("help", false, "show help message")
 	version := flag.Bool("version", false, "show skywalker version")
 	flag.Parse()
@@ -48,7 +64,7 @@ func parseCommandLine() *clFlag {
 	} else if *version {
 		printVersion()
 	} else {
-		return &clFlag{cfile: *cfile, help: *help}
+		return &Flag{CFile: *cfile, Args: flag.Args()}
 	}
 
 	os.Exit(0)

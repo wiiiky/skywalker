@@ -61,12 +61,12 @@ func New(ccfg *config.CoreConfig, rcfg []*config.ProxyConfig) (*Reader, error) {
 	return &Reader{rl: rl}, nil
 }
 
-type Input struct {
+type Line struct {
 	Cmd  *Command
 	Args []string
 }
 
-func NewInput(buf string) *Input {
+func NewLine(buf string) *Line {
 	var seps []string
 	var cmd *Command
 
@@ -90,17 +90,17 @@ func NewInput(buf string) *Input {
 		return nil
 	}
 
-	return &Input{
+	return &Line{
 		Cmd:  cmd,
 		Args: seps[1:],
 	}
 }
 
 /* 读取一行命令，去除首尾空格 */
-func (r *Reader) Read() (*Input, error) {
+func (r *Reader) Read() (*Line, error) {
 	var buf string
 	var err error
-	var ipt *Input
+	var line *Line
 	for {
 		buf, err = r.rl.Readline()
 		if err != nil {
@@ -108,11 +108,11 @@ func (r *Reader) Read() (*Input, error) {
 		}
 		if buf = strings.Trim(buf, " "); len(buf) == 0 {
 			continue
-		} else if ipt = NewInput(buf); ipt != nil {
+		} else if line = NewLine(buf); line != nil {
 			break
 		}
 	}
-	return ipt, nil
+	return line, nil
 }
 
 func (r *Reader) Close() {

@@ -165,9 +165,9 @@ func GetCoreConfig() *CoreConfig {
  * 否则使用/etc/skywalker.json
  */
 func findConfigFile() string {
-	flags := parseCommandLine()
-	if len(flags.cfile) > 0 {
-		return flags.cfile
+	flag := GetFlag()
+	if flag.CFile != "" {
+		return flag.CFile
 	}
 	/* 检查普通文件是否存在 */
 	checkRegularFile := func(filepath string) string {

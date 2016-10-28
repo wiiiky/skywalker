@@ -36,10 +36,7 @@ import (
 func main() {
 	var err error
 	var rl *reader.Reader
-	var ipt *reader.Input
-	var conn *message.Conn
-	var req *message.Request
-	var rep *message.Response
+	var line *reader.Line
 
 	if rl, err = reader.New(config.GetCoreConfig(), config.GetProxyConfigs()); err != nil {
 		io.Print("%v\n", err)
@@ -49,33 +46,53 @@ func main() {
 
 	/* 初始化链接 */
 	getConnection()
-	for {
-		if ipt, err = rl.Read(); err != nil || ipt == nil { /* 当Read返回则要么是nil要么是一个有效的命令 */
-			break
+
+	args := config.GetFlag().GetArguments()
+	if args != "" {
+		if line = reader.NewLine(args); line == nil {
+			return
 		}
-		cmd := ipt.Cmd
-		if req = cmd.BuildRequest(cmd, ipt.Args...); req == nil {
-			continue
+		handleLine(line)
+		return
+	} else {
+		printLogo()
+		for {
+			if line, err = rl.Read(); err != nil || line == nil { /* 当Read返回则要么是nil要么是一个有效的命令 */
+				break
+			}
+			handleLine(line)
 		}
-		if conn = getConnection(); conn == nil {
-			continue
-		}
-		if err = conn.WriteRequest(req); err != nil {
-			disconnected(err)
-			continue
-		}
-		if rep = conn.ReadResponse(); rep == nil {
-			disconnected(nil)
-			continue
-		}
-		if e := rep.GetErr(); e != nil {
-			io.PrintError("%s\n", e.GetMsg())
-			continue
-		}
-		v := reflect.ValueOf(rep).MethodByName(cmd.ResponseField).Call([]reflect.Value{})[0].Interface()
-		if err = cmd.ProcessResponse(v); err != nil {
-			io.PrintError("%s\n", err)
-		}
+	}
+}
+
+func handleLine(line *reader.Line) {
+	var conn *message.Conn
+	var req *message.Request
+	var rep *message.Response
+	var err error
+
+	cmd := line.Cmd
+	if req = cmd.BuildRequest(cmd, line.Args...); req == nil {
+		return
+	}
+	if conn = getConnection(); conn == nil {
+		return
+	}
+	if err = conn.WriteRequest(req); err != nil {
+		disconnected(err)
+		return
+	}
+	if rep = conn.ReadResponse(); rep == nil {
+		disconnected(nil)
+		return
+	}
+	if e := rep.GetErr(); e != nil {
+		io.PrintError("%s\n", e.GetMsg())
+		return
+	}
+	v := reflect.ValueOf(rep).MethodByName(cmd.ResponseField).Call([]reflect.Value{})[0].Interface()
+	if err = cmd.ProcessResponse(v); err != nil {
+		io.PrintError("%s\n", err)
 	}
 }
 
@@ -166,7 +183,7 @@ func disconnected(err error) {
 }
 
 /* 在终端打印logo字符 */
-func init() {
+func printLogo() {
 	b64 := "ICAgIF9fX18gICAgICAgICAgICAgICAgX18gIF9fCiAgIC8gX18vX19fICBfX19fX19fX19fLyAvXy8gLwogIC8gL18vIF9fIFwvIF9fXy8gX19fLyBfXy8gLyAKIC8gX18vIC9fLyAvIC8gIC8gL19fLyAvXy8gLyAgCi9fLyAgXF9fX18vXy8gICBcX19fL1xfXy9fLyAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICA="
 	logo, _ := base64.StdEncoding.DecodeString(b64)
 	fmt.Printf("%s\n\n", logo)
