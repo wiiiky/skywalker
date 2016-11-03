@@ -3,49 +3,73 @@ SkyWalker
 
 ### Introduce
 
-SkyWalker(以下简称SW)是一个代理转发程序，可以配置传入和传出协议。
+SkyWalker is a proxy program, which supports to transform certain-protocol network flow into another one.
 
-比如一个典型的Shadowsocks代理可以通过两个不同配置的SW来实现。
+For example, if you have a client that only supports HTTP-PROXY protocol, but a proxy server that only supports SOCKS5 protocol.
 
-第一个SW配置成接受SOCKS5协议的数据，传出Shadowsocks协议的数据，
+Then you can use SkyWalker to transform HTTP-PROXY flow into SOCKS5 flow. like below
 
-第二个SW配置成接受Shadowsocks协议的数据，传出纯数据。
+```
++--------+                +-----------+            +---------------+
+| CLIENT | <=HTTP-PROXY=> | SKYWALKER | <=SOCKS5=> | SOCKS5 SERVER | <=>
++--------+                +-----------+            +---------------+
+```
 
-同样的，如果你想通过Shadowsocks使用HTTP代理，那么只要把第一个SW配置成接受HTTP代理数据就可以。
+To do this, SkyWalker should be configured to accept HTTP-PROXY data but output SOCKS5 data.
+
+
+### Definition
+
+There are two main parts in SkyWalker, Client Agent and Server Agent.
+
+*    Client Agent works as a proxy server, to accept specified proxy data from client and transfer to SA.
+
+*    Server Agent works as a proxy client, to generate specified proxy data from server and transfer to CA.
+
 
 ### Protocol
 
-目前支持的协议有
+For now
 
-*   sock4/5
-*   shadowsocks
-*   http
+CA supports
 
-关于如何配置代理，请参考example目录下的示例。
+    * HTTP PROXY
+    * SOCKS4
+    * SOCKS5
+    * SHADOWSOCKS
+
+SA supports
+
+    * SOCKS4
+    * SOCKS5
+    * SHADOWSOCKS
+    * DIRECT
+
+
+
+DIRECT is a special protocol, actually it's not a protocol, it directly outputs the data from CA.
+
+If SA is configured to DIRECT, then SkyWalker just works like a normal proxy.
 
 ### Configuration
 
-可以同时配置多个代理服务，每个代理相对独立，但是可以统一管理。  
-配置文件使用yaml格式，请参考[Yaml1.2](http://www.yaml.org/spec/1.2/spec.html)。
+SkyWalker uses [Yaml1.2](http://www.yaml.org/spec/1.2/spec.html) as configuration format.
+
+Check ***example*** directory for configuration examples.
 
 ### Build
 
-编译直接在代码目录下执行
+To build SkyWalker, you need a [GO language](http://golang.org/) compile environment.
+
+Go to the source code directory and execute:
 
 *    make
 
-会在bin目录下生成skywalker和forctl两个可执行文件，skywalker是代理程序，forctl是管理程序。
-
-如果你修改了protobuf结构(*src/skywalker/message/&#42;.proto*)；  
-那么需要重新生成相应的go文件(*src/skywalker/message/&#42;.go*)，使用如下命令
-
-*    make proto
-
 ### Screenshot
 
-![启动服务](https://raw.githubusercontent.com/hitoshii/skywalker/master/screenshot/screenshot1.png?raw=true)
-![服务控制](https://raw.githubusercontent.com/hitoshii/skywalker/master/screenshot/screenshot2.png?raw=true)
+![start](https://raw.githubusercontent.com/hitoshii/skywalker/master/screenshot/screenshot1.png?raw=true)
+![control](https://raw.githubusercontent.com/hitoshii/skywalker/master/screenshot/screenshot2.png?raw=true)
 
-### Development
+### Help
 
-项目还在开发中，后续会增加支持的协议，以及完善现有的协议。
+Please fix my English
