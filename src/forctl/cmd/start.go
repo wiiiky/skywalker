@@ -19,22 +19,22 @@ package cmd
 
 import (
 	. "forctl/io"
-	"skywalker/message"
+	"skywalker/rpc"
 )
 
 /* 处理start命令的结果 */
 func processStartResponse(v interface{}) error {
-	rep := v.(*message.StartResponse)
+	rep := v.(*rpc.StartResponse)
 	for _, data := range rep.GetData() {
 		name := data.GetName()
 		status := data.GetStatus()
 		err := data.GetErr()
 		switch status {
-		case message.StartResponse_STARTED:
+		case rpc.StartResponse_STARTED:
 			Print("%s started\n", name)
-		case message.StartResponse_RUNNING:
+		case rpc.StartResponse_RUNNING:
 			Print("%s: ERROR (already started)\n", name)
-		case message.StartResponse_ERROR:
+		case rpc.StartResponse_ERROR:
 			PrintError("%s: ERROR (%s)\n", name, err)
 		}
 	}

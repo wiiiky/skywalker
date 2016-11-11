@@ -21,12 +21,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"skywalker/message"
 	"skywalker/proxy"
+	"skywalker/rpc"
 )
 
 type (
-	HandleRequest func(f *Force, v interface{}) (*message.Response, error)
+	HandleRequest func(f *Force, v interface{}) (*rpc.Response, error)
 
 	Command struct {
 		Handle       HandleRequest
@@ -35,28 +35,28 @@ type (
 )
 
 var (
-	gCommandMap map[message.RequestType]*Command
+	gCommandMap map[rpc.RequestType]*Command
 )
 
 func init() {
-	gCommandMap = map[message.RequestType]*Command{
-		message.RequestType_STATUS: &Command{
+	gCommandMap = map[rpc.RequestType]*Command{
+		rpc.RequestType_STATUS: &Command{
 			Handle:       handleStatus,
 			RequestField: "GetCommon",
 		},
-		message.RequestType_START: &Command{
+		rpc.RequestType_START: &Command{
 			Handle:       handleStart,
 			RequestField: "GetCommon",
 		},
-		message.RequestType_STOP: &Command{
+		rpc.RequestType_STOP: &Command{
 			Handle:       handleStop,
 			RequestField: "GetCommon",
 		},
-		message.RequestType_RESTART: &Command{
+		rpc.RequestType_RESTART: &Command{
 			Handle:       handleRestart,
 			RequestField: "GetCommon",
 		},
-		message.RequestType_INFO: &Command{
+		rpc.RequestType_INFO: &Command{
 			Handle:       handleInfo,
 			RequestField: "GetCommon",
 		},
@@ -64,9 +64,9 @@ func init() {
 }
 
 /* 返回代理当前状态 */
-func proxyStatus(p *proxy.Proxy) *message.StatusResponse_Data {
-	status := message.StatusResponse_Status(p.Status)
-	return &message.StatusResponse_Data{
+func proxyStatus(p *proxy.Proxy) *rpc.StatusResponse_Data {
+	status := rpc.StatusResponse_Status(p.Status)
+	return &rpc.StatusResponse_Data{
 		Name:      proto.String(p.Name),
 		Cname:     proto.String(p.CAName),
 		Sname:     proto.String(p.SAName),
@@ -77,9 +77,9 @@ func proxyStatus(p *proxy.Proxy) *message.StatusResponse_Data {
 	}
 }
 
-func proxyStatusNotFound(name string) *message.StatusResponse_Data {
-	status := message.StatusResponse_STOPPED
-	return &message.StatusResponse_Data{
+func proxyStatusNotFound(name string) *rpc.StatusResponse_Data {
+	status := rpc.StatusResponse_STOPPED
+	return &rpc.StatusResponse_Data{
 		Name:   proto.String(name),
 		Status: &status,
 		Err:    proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
@@ -87,19 +87,19 @@ func proxyStatusNotFound(name string) *message.StatusResponse_Data {
 }
 
 /* 处理status命令 */
-func handleStatus(f *Force, v interface{}) (*message.Response, error) {
-	var result []*message.StatusResponse_Data
+func handleStatus(f *Force, v interface{}) (*rpc.Response, error) {
+	var result []*rpc.StatusResponse_Data
 
-	req := v.(*message.CommonRequest)
+	req := v.(*rpc.CommonRequest)
 
-	reqType := message.RequestType_STATUS
+	reqType := rpc.RequestType_STATUS
 	names := req.GetName()
 	if len(names) == 0 { /* 没有指定参数表示所有代理服务 */
 		for _, p := range f.orderedProxies {
 			result = append(result, proxyStatus(p))
 		}
 	} else {
-		var data *message.StatusResponse_Data
+		var data *rpc.StatusResponse_Data
 		for _, name := range names {
 			if p := f.proxies[name]; p == nil {
 				data = proxyStatusNotFound(name)
@@ -110,19 +110,19 @@ func handleStatus(f *Force, v interface{}) (*message.Response, error) {
 		}
 	}
 
-	return &message.Response{
+	return &rpc.Response{
 		Type:   &reqType,
-		Status: &message.StatusResponse{Data: result},
+		Status: &rpc.StatusResponse{Data: result},
 	}, nil
 }
 
 /* 处理start命令 */
-func handleStart(f *Force, v interface{}) (*message.Response, error) {
-	var result []*message.StartResponse_Data
+func handleStart(f *Force, v interface{}) (*rpc.Response, error) {
+	var result []*rpc.StartResponse_Data
 
-	req := v.(*message.CommonRequest)
+	req := v.(*rpc.CommonRequest)
 
-	reqType := message.RequestType_START
+	reqType := rpc.RequestType_START
 	names := req.GetName()
 	if len(names) == 0 {
 		return nil, errors.New("Invalid Argument For `start`")
@@ -131,33 +131,33 @@ func handleStart(f *Force, v interface{}) (*message.Response, error) {
 	}
 	for _, name := range names {
 		p := f.proxies[name]
-		status := message.StartResponse_RUNNING
+		status := rpc.StartResponse_RUNNING
 		errmsg := ""
 		if p == nil {
-			status = message.StartResponse_ERROR
+			status = rpc.StartResponse_ERROR
 			errmsg = fmt.Sprintf("no such proxy")
 		} else if p.Status != proxy.STATUS_RUNNING {
 			if e := p.Start(); e != nil {
-				status = message.StartResponse_ERROR
+				status = rpc.StartResponse_ERROR
 				errmsg = e.Error()
 			} else {
-				status = message.StartResponse_STARTED
+				status = rpc.StartResponse_STARTED
 			}
 		}
-		result = append(result, &message.StartResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
+		result = append(result, &rpc.StartResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
 	}
-	return &message.Response{
+	return &rpc.Response{
 		Type:  &reqType,
-		Start: &message.StartResponse{Data: result},
+		Start: &rpc.StartResponse{Data: result},
 	}, nil
 }
 
 /* 处理stop命令 */
-func handleStop(f *Force, v interface{}) (*message.Response, error) {
-	var result []*message.StopResponse_Data
+func handleStop(f *Force, v interface{}) (*rpc.Response, error) {
+	var result []*rpc.StopResponse_Data
 
-	req := v.(*message.CommonRequest)
-	reqType := message.RequestType_STOP
+	req := v.(*rpc.CommonRequest)
+	reqType := rpc.RequestType_STOP
 	names := req.GetName()
 	if len(names) == 0 {
 		return nil, errors.New("Invalid Argument For `stop`")
@@ -166,33 +166,33 @@ func handleStop(f *Force, v interface{}) (*message.Response, error) {
 	}
 	for _, name := range names {
 		p := f.proxies[name]
-		status := message.StopResponse_UNRUNNING
+		status := rpc.StopResponse_UNRUNNING
 		errmsg := ""
 		if p == nil {
-			status = message.StopResponse_ERROR
+			status = rpc.StopResponse_ERROR
 			errmsg = fmt.Sprintf("no such proxy")
 		} else if p.Status == proxy.STATUS_RUNNING {
 			if e := p.Stop(); e != nil {
-				status = message.StopResponse_ERROR
+				status = rpc.StopResponse_ERROR
 				errmsg = e.Error()
 			} else {
-				status = message.StopResponse_STOPPED
+				status = rpc.StopResponse_STOPPED
 			}
 		}
-		result = append(result, &message.StopResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
+		result = append(result, &rpc.StopResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
 	}
-	return &message.Response{
+	return &rpc.Response{
 		Type: &reqType,
-		Stop: &message.StopResponse{Data: result},
+		Stop: &rpc.StopResponse{Data: result},
 	}, nil
 }
 
 /* 处理restart命令 */
-func handleRestart(f *Force, v interface{}) (*message.Response, error) {
-	var result []*message.StartResponse_Data
+func handleRestart(f *Force, v interface{}) (*rpc.Response, error) {
+	var result []*rpc.StartResponse_Data
 
-	req := v.(*message.CommonRequest)
-	reqType := message.RequestType_RESTART
+	req := v.(*rpc.CommonRequest)
+	reqType := rpc.RequestType_RESTART
 	names := req.GetName()
 	if len(names) == 0 {
 		return nil, errors.New("Invalid Argument For `stop`")
@@ -201,45 +201,45 @@ func handleRestart(f *Force, v interface{}) (*message.Response, error) {
 	}
 	for _, name := range names {
 		p := f.proxies[name]
-		status := message.StartResponse_STARTED
+		status := rpc.StartResponse_STARTED
 		errmsg := ""
 		if p == nil {
-			status = message.StartResponse_ERROR
+			status = rpc.StartResponse_ERROR
 			errmsg = fmt.Sprintf("no such proxy")
 		} else if p.Status == proxy.STATUS_RUNNING {
 			if e := p.Stop(); e != nil {
-				status = message.StartResponse_ERROR
+				status = rpc.StartResponse_ERROR
 				errmsg = e.Error()
 			}
 		}
 		if len(errmsg) == 0 {
 			if e := p.Start(); e != nil {
-				status = message.StartResponse_ERROR
+				status = rpc.StartResponse_ERROR
 				errmsg = e.Error()
 			} else {
-				status = message.StartResponse_STARTED
+				status = rpc.StartResponse_STARTED
 			}
 		}
-		result = append(result, &message.StartResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
+		result = append(result, &rpc.StartResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
 	}
-	return &message.Response{
+	return &rpc.Response{
 		Type:  &reqType,
-		Start: &message.StartResponse{Data: result},
+		Start: &rpc.StartResponse{Data: result},
 	}, nil
 }
 
 /* 代理详情 */
-func proxyInfo(p *proxy.Proxy) *message.InfoResponse_Data {
-	var caInfo, saInfo []*message.InfoResponse_Info
-	status := message.InfoResponse_Status(p.Status)
+func proxyInfo(p *proxy.Proxy) *rpc.InfoResponse_Data {
+	var caInfo, saInfo []*rpc.InfoResponse_Info
+	status := rpc.InfoResponse_Status(p.Status)
 	ca, sa := p.GetAgents()
 	for _, info := range ca.GetInfo() {
-		caInfo = append(caInfo, &message.InfoResponse_Info{Key: proto.String(info["key"]), Value: proto.String(info["value"])})
+		caInfo = append(caInfo, &rpc.InfoResponse_Info{Key: proto.String(info["key"]), Value: proto.String(info["value"])})
 	}
 	for _, info := range sa.GetInfo() {
-		saInfo = append(saInfo, &message.InfoResponse_Info{Key: proto.String(info["key"]), Value: proto.String(info["value"])})
+		saInfo = append(saInfo, &rpc.InfoResponse_Info{Key: proto.String(info["key"]), Value: proto.String(info["value"])})
 	}
-	return &message.InfoResponse_Data{
+	return &rpc.InfoResponse_Data{
 		Name:         proto.String(p.Name),
 		Cname:        proto.String(p.CAName),
 		Sname:        proto.String(p.SAName),
@@ -257,9 +257,9 @@ func proxyInfo(p *proxy.Proxy) *message.InfoResponse_Data {
 }
 
 /* 未找的代理详情 */
-func proxyInfoNotFound(name string) *message.InfoResponse_Data {
-	status := message.InfoResponse_STOPPED
-	return &message.InfoResponse_Data{
+func proxyInfoNotFound(name string) *rpc.InfoResponse_Data {
+	status := rpc.InfoResponse_STOPPED
+	return &rpc.InfoResponse_Data{
 		Name:   proto.String(name),
 		Status: &status,
 		Err:    proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
@@ -267,16 +267,16 @@ func proxyInfoNotFound(name string) *message.InfoResponse_Data {
 }
 
 /* info命令，代理详情 */
-func handleInfo(f *Force, v interface{}) (*message.Response, error) {
-	var result []*message.InfoResponse_Data
+func handleInfo(f *Force, v interface{}) (*rpc.Response, error) {
+	var result []*rpc.InfoResponse_Data
 
-	req := v.(*message.CommonRequest)
-	reqType := message.RequestType_INFO
+	req := v.(*rpc.CommonRequest)
+	reqType := rpc.RequestType_INFO
 	names := req.GetName()
 	if len(names) == 0 {
 		return nil, errors.New("Invalid Argument For `info`")
 	} else {
-		var data *message.InfoResponse_Data
+		var data *rpc.InfoResponse_Data
 		for _, name := range names {
 			if p := f.proxies[name]; p == nil {
 				data = proxyInfoNotFound(name)
@@ -286,8 +286,8 @@ func handleInfo(f *Force, v interface{}) (*message.Response, error) {
 			result = append(result, data)
 		}
 	}
-	return &message.Response{
+	return &rpc.Response{
 		Type: &reqType,
-		Info: &message.InfoResponse{Data: result},
+		Info: &rpc.InfoResponse{Data: result},
 	}, nil
 }

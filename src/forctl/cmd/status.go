@@ -20,20 +20,20 @@ package cmd
 import (
 	"fmt"
 	. "forctl/io"
-	"skywalker/message"
+	"skywalker/rpc"
 	"time"
 )
 
 /* 处理status命令 */
 func processStatusResponse(v interface{}) error {
-	rep := v.(*message.StatusResponse)
+	rep := v.(*rpc.StatusResponse)
 	var maxlen = []int{10, 16, 12, 7, 5}
 	var rows [][]string
 	for _, data := range rep.GetData() {
 		var row []string
 		if err := data.GetErr(); len(err) == 0 {
 			uptime := ""
-			if data.GetStatus() == message.StatusResponse_RUNNING {
+			if data.GetStatus() == rpc.StatusResponse_RUNNING {
 				d := time.Now().Unix() - data.GetStartTime()
 				uptime = fmt.Sprintf("uptime %s", formatDuration(d))
 			}

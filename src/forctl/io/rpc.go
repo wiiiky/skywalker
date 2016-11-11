@@ -19,26 +19,26 @@ package io
 
 import (
 	"net"
-	"skywalker/message"
+	"skywalker/rpc"
 	"strconv"
 	"time"
 )
 
 /* 连接TCP服务 */
-func TCPConnect(ip string, port int) (*message.Conn, error) {
+func TCPConnect(ip string, port int) (*rpc.Conn, error) {
 	addr := net.JoinHostPort(ip, strconv.Itoa(port))
 	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err != nil {
 		return nil, err
 	} else {
-		return message.NewConn(conn), nil
+		return rpc.NewConn(conn), nil
 	}
 }
 
 /* 连接Unix套接字服务 */
-func UnixConnect(filepath string) (*message.Conn, error) {
+func UnixConnect(filepath string) (*rpc.Conn, error) {
 	if conn, err := net.DialTimeout("unix", filepath, 10*time.Second); err != nil {
 		return nil, err
 	} else {
-		return message.NewConn(conn), nil
+		return rpc.NewConn(conn), nil
 	}
 }

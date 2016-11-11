@@ -26,7 +26,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"reflect"
 	"skywalker/config"
-	"skywalker/message"
+	"skywalker/rpc"
 )
 
 /*
@@ -66,9 +66,9 @@ func main() {
 }
 
 func handleLine(line *reader.Line) {
-	var conn *message.Conn
-	var req *message.Request
-	var rep *message.Response
+	var conn *rpc.Conn
+	var req *rpc.Request
+	var rep *rpc.Response
 	var err error
 
 	cmd := line.Cmd
@@ -100,9 +100,9 @@ func handleLine(line *reader.Line) {
  * 通过tcp或者unix套接字连接skywalker
  * 连接成功后发送认证信息
  */
-func connectSkywalker(inet *config.InetConfig, unix *config.UnixConfig) (*message.Conn, error) {
+func connectSkywalker(inet *config.InetConfig, unix *config.UnixConfig) (*rpc.Conn, error) {
 	/* 优先通过TCP连接，不存在或者不成功再使用Unix套接字连接 */
-	var c *message.Conn
+	var c *rpc.Conn
 	var err error
 	var username, password string
 	if inet != nil {
@@ -119,11 +119,11 @@ func connectSkywalker(inet *config.InetConfig, unix *config.UnixConfig) (*messag
 	}
 
 	/* 发起认证 */
-	t := message.RequestType_AUTH
-	req := &message.Request{
+	t := rpc.RequestType_AUTH
+	req := &rpc.Request{
 		Type:    &t,
-		Version: proto.Int32(message.VERSION),
-		Auth: &message.AuthRequest{
+		Version: proto.Int32(rpc.VERSION),
+		Auth: &rpc.AuthRequest{
 			Username: proto.String(username),
 			Password: proto.String(password),
 		},
@@ -134,10 +134,10 @@ func connectSkywalker(inet *config.InetConfig, unix *config.UnixConfig) (*messag
 	}
 	/* 接收认证结果 */
 	rep := c.ReadResponse()
-	if rep == nil || rep.GetType() != message.RequestType_AUTH {
+	if rep == nil || rep.GetType() != rpc.RequestType_AUTH {
 		c.Close()
 		return nil, errors.New("Unknown Error")
-	} else if rep.GetAuth().GetStatus() != message.AuthResponse_SUCCESS {
+	} else if rep.GetAuth().GetStatus() != rpc.AuthResponse_SUCCESS {
 		c.Close()
 		return nil, errors.New("Invalid Username/Password")
 	}
@@ -146,12 +146,12 @@ func connectSkywalker(inet *config.InetConfig, unix *config.UnixConfig) (*messag
 }
 
 var (
-	gConn         *message.Conn
+	gConn         *rpc.Conn
 	gDisconnected bool
 )
 
 /* 返回与skywalker建立的链接，全局唯一 */
-func getConnection() *message.Conn {
+func getConnection() *rpc.Conn {
 	if gConn != nil && gDisconnected == false {
 		return gConn
 	}

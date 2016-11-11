@@ -15,7 +15,7 @@ fmt:
 	find ./src/forctl ./src/skywalker -name '*.go'|xargs gofmt -w
 
 proto: proto-gen
-	PATH="$(PATH):./bin" GOPATH=`pwd` protoc --go_out=./ ./src/skywalker/message/*.proto
+	PATH="$(PATH):./bin" GOPATH=`pwd` protoc --go_out=./ ./src/skywalker/rpc/*.proto
 
 proto-gen:
 	GOPATH=`pwd` go get github.com/golang/protobuf/protoc-gen-go

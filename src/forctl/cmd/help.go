@@ -19,11 +19,11 @@ package cmd
 
 import (
 	. "forctl/io"
-	"skywalker/message"
+	"skywalker/rpc"
 )
 
 /* 打印帮助信息 */
-func help(help *Command, args ...string) *message.Request {
+func help(help *Command, args ...string) *rpc.Request {
 	if len(args) == 0 {
 		Print("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s\n",
 			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_RESTART, COMMAND_INFO)

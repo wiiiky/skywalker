@@ -19,16 +19,16 @@ package cmd
 
 import (
 	. "forctl/io"
-	"skywalker/message"
+	"skywalker/rpc"
 	"strings"
 	"time"
 )
 
 /* 处理info命令的返回值 */
 func processInfoResponse(v interface{}) error {
-	rep := v.(*message.InfoResponse)
+	rep := v.(*rpc.InfoResponse)
 
-	printInfo := func(name string, info []*message.InfoResponse_Info) {
+	printInfo := func(name string, info []*rpc.InfoResponse_Info) {
 		if info != nil { /* ca信息 */
 			Print("    %s:\n", name)
 			for _, i := range info {
@@ -46,7 +46,7 @@ func processInfoResponse(v interface{}) error {
 			Print("\n")
 
 			Print("    listen on %s:%d %s\n", data.GetBindAddr(), data.GetBindPort(), data.GetStatus())
-			if data.GetStatus() == message.InfoResponse_RUNNING {
+			if data.GetStatus() == rpc.InfoResponse_RUNNING {
 				d := time.Now().Unix() - data.GetStartTime()
 				Print("    start  at %s uptime %s\n", formatDatetime(data.GetStartTime()), formatDuration(d))
 			}

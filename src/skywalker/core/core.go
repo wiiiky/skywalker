@@ -26,8 +26,8 @@ import (
 	"os"
 	"reflect"
 	"skywalker/config"
-	"skywalker/message"
 	"skywalker/proxy"
+	"skywalker/rpc"
 	"skywalker/util"
 	"sort"
 	"sync"
@@ -136,7 +136,7 @@ func (f *Force) listen(cfg *config.CoreConfig) {
 	listenFunc := func(listener net.Listener, username, password string) {
 		for {
 			if conn, err := listener.Accept(); err == nil {
-				go f.handleConn(message.NewConn(conn), username, password)
+				go f.handleConn(rpc.NewConn(conn), username, password)
 			} else {
 				log.W("%v", err)
 			}
@@ -156,31 +156,31 @@ func (f *Force) listen(cfg *config.CoreConfig) {
  * 每次连接都需要有认证过程；
  * 如果，没有设置用户名、密码则认证的用户名、密码为空
  */
-func authenticate(c *message.Conn, username, password string) bool {
+func authenticate(c *rpc.Conn, username, password string) bool {
 	req := c.ReadRequest()
-	if req == nil || req.GetType() != message.RequestType_AUTH {
+	if req == nil || req.GetType() != rpc.RequestType_AUTH {
 		return false
 	}
 	auth := req.GetAuth()
 
-	authStatus := message.AuthResponse_SUCCESS
+	authStatus := rpc.AuthResponse_SUCCESS
 	if auth.GetUsername() != username && auth.GetPassword() != password {
 		/* 用户名或密码错误 */
-		authStatus = message.AuthResponse_FAILURE
+		authStatus = rpc.AuthResponse_FAILURE
 	}
-	e := c.WriteResponse(&message.Response{
+	e := c.WriteResponse(&rpc.Response{
 		Type: req.Type,
-		Auth: &message.AuthResponse{Status: &authStatus},
+		Auth: &rpc.AuthResponse{Status: &authStatus},
 	})
-	return e == nil && authStatus == message.AuthResponse_SUCCESS
+	return e == nil && authStatus == rpc.AuthResponse_SUCCESS
 }
 
 /*
  * 处理客户端链接
  * 判断命令是否存在，判断命令版本号，执行命令
  */
-func (f *Force) handleConn(c *message.Conn, username, password string) {
-	var rep *message.Response
+func (f *Force) handleConn(c *rpc.Conn, username, password string) {
+	var rep *rpc.Response
 	var err error
 	defer c.Close()
 
@@ -197,8 +197,8 @@ func (f *Force) handleConn(c *message.Conn, username, password string) {
 		cmd := gCommandMap[req.GetType()]
 		if cmd == nil {
 			err = errors.New(fmt.Sprintf("Unimplement Command '%s'", req.GetType()))
-		} else if req.GetVersion() != message.VERSION {
-			err = errors.New(fmt.Sprintf("Unmatched Version %d <> %d", req.GetVersion(), message.VERSION))
+		} else if req.GetVersion() != rpc.VERSION {
+			err = errors.New(fmt.Sprintf("Unmatched Version %d <> %d", req.GetVersion(), rpc.VERSION))
 		} else {
 			v := reflect.ValueOf(req).MethodByName(cmd.RequestField).Call([]reflect.Value{})[0].Interface()
 			if v != nil {
@@ -208,9 +208,9 @@ func (f *Force) handleConn(c *message.Conn, username, password string) {
 			}
 		}
 		if err != nil {
-			c.WriteResponse(&message.Response{
+			c.WriteResponse(&rpc.Response{
 				Type: req.Type,
-				Err:  &message.Error{Msg: proto.String(err.Error())},
+				Err:  &rpc.Error{Msg: proto.String(err.Error())},
 			})
 		} else if rep != nil {
 			if e := c.WriteResponse(rep); e != nil {

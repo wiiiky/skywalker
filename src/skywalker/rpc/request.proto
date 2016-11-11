@@ -1,5 +1,5 @@
 syntax = "proto2";
-package message;
+package rpc;
 
 enum RequestType {
     AUTH = 1;      /* 认证 */

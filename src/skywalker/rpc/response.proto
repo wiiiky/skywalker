@@ -1,7 +1,7 @@
 syntax = "proto2";
-package message;
+package rpc;
 
-import "src/skywalker/message/request.proto";
+import "src/skywalker/rpc/request.proto";
 
 
 /* 出错 */

@@ -20,7 +20,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"skywalker/message"
+	"skywalker/rpc"
 	"time"
 )
 
@@ -34,14 +34,14 @@ const (
 )
 
 type (
-	BuildRequestFunc    func(cmd *Command, args ...string) *message.Request
+	BuildRequestFunc    func(cmd *Command, args ...string) *rpc.Request
 	ProcessResponseFunc func(resp interface{}) error
 
 	Command struct {
 		Optional        int                 /* 可选的参数数量，-1表示无限制 */
 		Required        int                 /* 必须的参数数量 */
 		Help            string              /* 帮助说明 */
-		ReqType         message.RequestType /* 请求类型 */
+		ReqType         rpc.RequestType     /* 请求类型 */
 		BuildRequest    BuildRequestFunc    /* 构建请求数据包的函数，如果为空则不发送请求 */
 		ProcessResponse ProcessResponseFunc /* 处理返回结果的函数 */
 		ResponseField   string              /* 返回结果的字段 */
@@ -58,7 +58,7 @@ func init() {
 			Optional:        1,
 			Required:        0,
 			Help:            "help <topic>",
-			ReqType:         message.RequestType_STATUS,
+			ReqType:         rpc.RequestType_STATUS,
 			ResponseField:   "",
 			BuildRequest:    help,
 			ProcessResponse: nil,
@@ -67,7 +67,7 @@ func init() {
 			Optional:        -1,
 			Required:        0,
 			Help:            fmt.Sprintf("\tstatus %-15sGet status for one or multiple proxy\n\tstatus %-15sGet status for all proxies\n", "<name>...", " "),
-			ReqType:         message.RequestType_STATUS,
+			ReqType:         rpc.RequestType_STATUS,
 			ResponseField:   "GetStatus",
 			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processStatusResponse,
@@ -76,7 +76,7 @@ func init() {
 			Optional:        -1,
 			Required:        1,
 			Help:            fmt.Sprintf("\tstart %-15sStart one or multiple proxy", "<name>..."),
-			ReqType:         message.RequestType_START,
+			ReqType:         rpc.RequestType_START,
 			ResponseField:   "GetStart",
 			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processStartResponse,
@@ -85,7 +85,7 @@ func init() {
 			Optional:        -1,
 			Required:        1,
 			Help:            fmt.Sprintf("\tstop %-15sStop one or multiple proxy", "<name>..."),
-			ReqType:         message.RequestType_STOP,
+			ReqType:         rpc.RequestType_STOP,
 			ResponseField:   "GetStop",
 			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processStopResponse,
@@ -94,7 +94,7 @@ func init() {
 			Optional:        -1,
 			Required:        1,
 			Help:            fmt.Sprintf("\trestart %-15sRestart one or multiple proxy", "<name>..."),
-			ReqType:         message.RequestType_RESTART,
+			ReqType:         rpc.RequestType_RESTART,
 			ResponseField:   "GetStart",
 			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processStartResponse,
@@ -103,7 +103,7 @@ func init() {
 			Optional:        -1,
 			Required:        1,
 			Help:            fmt.Sprintf("\tinfo %-15sGet details for one or multiple proxy", "<name>..."),
-			ReqType:         message.RequestType_INFO,
+			ReqType:         rpc.RequestType_INFO,
 			ResponseField:   "GetInfo",
 			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processInfoResponse,
@@ -147,11 +147,11 @@ func formatDatetime(timestamp int64) string {
  * 构建通用形式的请求
  * 如start,stop,restart,info等命令
  */
-func buildCommonRequest(cmd *Command, names ...string) *message.Request {
-	return &message.Request{
-		Version: proto.Int32(message.VERSION),
+func buildCommonRequest(cmd *Command, names ...string) *rpc.Request {
+	return &rpc.Request{
+		Version: proto.Int32(rpc.VERSION),
 		Type:    &cmd.ReqType,
-		Common: &message.CommonRequest{
+		Common: &rpc.CommonRequest{
 			Name: names,
 		},
 	}
