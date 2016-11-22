@@ -51,7 +51,7 @@ func (a *BaseAgent) OnClose(bool) {
 }
 
 /* UDP代理相关方法 */
-func (a *BaseAgent) UdpSupported() bool {
+func (a *BaseAgent) UDPSupported() bool {
 	return false
 }
 

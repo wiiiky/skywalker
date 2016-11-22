@@ -54,7 +54,7 @@ type (
 		/* 从SA接收到数据 */
 		ReadFromSA([]byte) (interface{}, interface{}, error)
 
-		UdpSupported() bool
+		UDPSupported() bool
 		RecvFromClient([]byte) (interface{}, interface{}, error)
 		RecvFromSA([]byte) (interface{}, interface{}, error)
 
@@ -100,7 +100,7 @@ type (
 		/* 从CA接收到数据 */
 		ReadFromCA([]byte) (interface{}, interface{}, error)
 
-		UdpSupported() bool
+		UDPSupported() bool
 		RecvFromServer([]byte) (interface{}, interface{}, error)
 		RecvFromCA([]byte) (interface{}, interface{}, error)
 
