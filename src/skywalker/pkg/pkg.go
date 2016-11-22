@@ -24,15 +24,20 @@ type (
 	}
 
 	/* 连接服务器的数据 */
-	connectData struct {
+	connectRequest struct {
 		host string
 		port int
 	}
 
 	/* 连接服务器结果的数据 */
 	connectResult struct {
-		connectData
+		connectRequest
 		code int
+	}
+
+	udpData struct {
+		connectRequest
+		data interface{}
 	}
 )
 
@@ -46,20 +51,22 @@ const (
 
 const (
 	PKG_CONNECT        = 0
-	PKG_DATA           = 1
-	PKG_CONNECT_RESULT = 2
+	PKG_CONNECT_RESULT = 1
+	PKG_DATA           = 2
+	PKG_UDP_DATA       = 3
 )
 
 func (c *Package) Type() int {
 	return c.cmd
 }
 
-func (c *Package) GetConnectData() (string, int) {
-	data := c.data.(connectData)
+func (c *Package) GetConnectRequest() (string, int) {
+	data := c.data.(connectRequest)
 	return data.host, data.port
 }
 
-func (c *Package) GetTransferData() [][]byte {
+/* 获取转发数据 */
+func (c *Package) GetData() [][]byte {
 	switch d := c.data.(type) {
 	case string:
 		return [][]byte{[]byte(d)}
@@ -71,16 +78,43 @@ func (c *Package) GetTransferData() [][]byte {
 	return nil
 }
 
+/* 获取UDP转发数据 */
+func (c *Package) GetUDPData() (string, int, [][]byte) {
+	udata := c.data.(udpData)
+	data := [][]byte{}
+	switch d := udata.data.(type) {
+	case string:
+		data = [][]byte{[]byte(d)}
+	case []byte:
+		data = [][]byte{d}
+	case [][]byte:
+		data = d
+	}
+	return udata.connectRequest.host, udata.connectRequest.port, data
+}
+
 /* 获取链接结果 */
 func (c *Package) GetConnectResult() (int, string, int) {
 	result := c.data.(connectResult)
-	return result.code, result.connectData.host, result.connectData.port
+	return result.code, result.connectRequest.host, result.connectRequest.port
 }
 
 /* 连接请求 */
 func NewConnectPackage(host string, port int) *Package {
-	data := connectData{host: host, port: port}
+	data := connectRequest{host: host, port: port}
 	return &Package{cmd: PKG_CONNECT, data: data}
+}
+
+/* 连接结果 */
+func NewConnectResultPackage(code int, host string, port int) *Package {
+	data := connectResult{
+		connectRequest: connectRequest{
+			host: host,
+			port: port,
+		},
+		code: code,
+	}
+	return &Package{cmd: PKG_CONNECT_RESULT, data: data}
 }
 
 /* 转发数据包 */
@@ -88,8 +122,14 @@ func NewDataPackage(data interface{}) *Package {
 	return &Package{cmd: PKG_DATA, data: data}
 }
 
-/* 连接结果 */
-func NewConnectResultPackage(code int, host string, port int) *Package {
-	data := connectResult{connectData: connectData{host: host, port: port}, code: code}
-	return &Package{cmd: PKG_CONNECT_RESULT, data: data}
+/* 转发UDP数据包 */
+func NewUDPDataPackage(host string, port int, data interface{}) *Package {
+	udata := udpData{
+		connectRequest: connectRequest{
+			host: host,
+			port: port,
+		},
+		data: data,
+	}
+	return &Package{cmd: PKG_UDP_DATA, data: udata}
 }

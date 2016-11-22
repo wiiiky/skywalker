@@ -71,7 +71,7 @@ RUNNING:
 				closed_by_client = false
 				break RUNNING
 			} else if cmd.Type() == pkg.PKG_DATA {
-				for _, data := range cmd.GetTransferData() {
+				for _, data := range cmd.GetData() {
 					cmd, rdata, err := ca.ReadFromSA(data)
 					if err := p.transferData(c2s, cConn, cmd, rdata, err, true); err != nil {
 						closed_by_client = false
@@ -158,7 +158,7 @@ func (p *Proxy) saGoroutine(sa agent.ServerAgent,
 	if ok == false || cmd.Type() != pkg.PKG_CONNECT {
 		return
 	}
-	host, port := cmd.GetConnectData()
+	host, port := cmd.GetConnectRequest()
 	sConn, sChan, _, _ := p.connectRemote(host, port, sa, s2c)
 	if sConn == nil {
 		return
@@ -187,7 +187,7 @@ RUNNING:
 				break RUNNING
 			}
 			if cmd.Type() == pkg.PKG_DATA {
-				for _, data := range cmd.GetTransferData() {
+				for _, data := range cmd.GetData() {
 					cmd, rdata, err := sa.ReadFromCA(data)
 					if _err := p.transferData(s2c, sConn, cmd, rdata, err, false); _err != nil {
 						log.WARN(p.Name, "Read From CA Error: %s %s", sConn.RemoteAddr(),
@@ -198,7 +198,7 @@ RUNNING:
 			} else if cmd.Type() == pkg.PKG_CONNECT {
 				/* 需要重新链接服务器 */
 				sConn.Close()
-				host, port := cmd.GetConnectData()
+				host, port := cmd.GetConnectRequest()
 				if sConn, sChan, _, _ = p.connectRemote(host, port, sa, s2c); sConn == nil {
 					break RUNNING
 				}
