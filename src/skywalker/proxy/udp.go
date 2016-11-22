@@ -17,6 +17,11 @@
 
 package proxy
 
-func (p *Proxy) handleUdp(buf []byte) {
+import (
+	"github.com/hitoshii/golib/src/log"
+)
 
+func (p *Proxy) handleUDP(upkg *udpPackage) {
+	log.D("%v", upkg)
+	p.udpListener.WriteTo(upkg.data, upkg.addr)
 }

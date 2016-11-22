@@ -27,6 +27,12 @@ import (
 	"path"
 )
 
+func CopyBytes(src []byte, size int) []byte {
+	dst := make([]byte, size)
+	copy(dst, src[0:size])
+	return dst
+}
+
 func IfString(b bool, s1, s2 string) string {
 	if b {
 		return s1

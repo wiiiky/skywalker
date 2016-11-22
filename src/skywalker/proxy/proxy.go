@@ -100,12 +100,14 @@ func (p *Proxy) Start() error {
 	return nil
 }
 
+/* 停止服务 */
 func (p *Proxy) Stop() error {
 	defer p.Unlock()
 	p.Lock()
 	p.Closing = true
 
 	p.tcpListener.Close()
+	p.udpListener.Close()
 	waitTime := time.Duration(10)
 	for p.Closing {
 		time.Sleep(time.Millisecond * waitTime)
@@ -115,7 +117,7 @@ func (p *Proxy) Stop() error {
 }
 
 /* 将TCP监听套接字转化为channel的监听 */
-func (p *Proxy) getTcpListener() chan net.Conn {
+func (p *Proxy) getTCPListener() chan net.Conn {
 	c := make(chan net.Conn)
 	go func(l net.Listener, c chan net.Conn) {
 		defer close(c)
@@ -130,20 +132,30 @@ func (p *Proxy) getTcpListener() chan net.Conn {
 	return c
 }
 
+type (
+	udpPackage struct {
+		addr net.Addr
+		data []byte
+	}
+)
+
 /* 将UDP套接字的监听转化为channel的监听 */
-func (p *Proxy) getUdpListener() chan []byte {
-	c := make(chan []byte)
-	go func(l *net.UDPConn, c chan []byte) {
-		defer close(c)
-		for {
+func (p *Proxy) getUDPListener() chan *udpPackage {
+	c := make(chan *udpPackage)
+
+	if p.udpListener != nil {
+		go func(l *net.UDPConn, c chan *udpPackage) {
+			defer close(c)
 			buf := make([]byte, 1<<16)
-			if _, _, err := l.ReadFrom(buf); err == nil {
-				c <- buf
-			} else {
-				break
+			for {
+				if n, addr, err := l.ReadFromUDP(buf); err == nil {
+					c <- &udpPackage{addr: addr, data: util.CopyBytes(buf, n)}
+				} else {
+					break
+				}
 			}
-		}
-	}(p.udpListener, c)
+		}(p.udpListener, c)
+	}
 	return c
 }
 
@@ -151,26 +163,25 @@ func (p *Proxy) getUdpListener() chan []byte {
 func (p *Proxy) Run() {
 	defer p.Close()
 	var conn net.Conn
-	var buf []byte
+	var upkg *udpPackage
 	var ok bool
 
-	tcpListener := p.getTcpListener()
-	udpListener := p.getUdpListener()
+	tcpListener := p.getTCPListener()
+	udpListener := p.getUDPListener()
 
 	for p.Closing == false {
 		p.Status = STATUS_RUNNING
 		select {
 		case conn, ok = <-tcpListener:
-		case buf, ok = <-udpListener:
+			if ok {
+				go p.handleTCP(conn)
+			}
+		case upkg, ok = <-udpListener:
+			if ok {
+				go p.handleUDP(upkg)
+			}
 		}
-		if ok {
-			if conn != nil {
-				go p.handleTcp(conn)
-			}
-			if len(buf) > 0 {
-				go p.handleUdp(buf)
-			}
-		} else {
+		if !ok {
 			p.Closing = true
 		}
 	}
