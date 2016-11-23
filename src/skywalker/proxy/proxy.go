@@ -20,7 +20,6 @@ package proxy
 import (
 	"github.com/hitoshii/golib/src/log"
 	"net"
-	"skywalker/agent"
 	"skywalker/config"
 	"skywalker/util"
 	"time"
@@ -138,7 +137,7 @@ func (p *Proxy) getTCPListener() chan net.Conn {
 
 type (
 	udpPackage struct {
-		addr net.Addr
+		addr *net.UDPAddr
 		data []byte
 	}
 )
@@ -190,11 +189,4 @@ func (p *Proxy) Run() {
 		}
 	}
 	p.Closing = false
-}
-
-/* 返回CA和SA实例 */
-func (p *Proxy) GetAgents() (agent.ClientAgent, agent.ServerAgent) {
-	ca := agent.GetClientAgent(p.CAName, p.Name)
-	sa := agent.GetServerAgent(p.SAName, p.Name)
-	return ca, sa
 }

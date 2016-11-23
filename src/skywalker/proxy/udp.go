@@ -19,19 +19,77 @@ package proxy
 
 import (
 	"github.com/hitoshii/golib/src/log"
+	"net"
+	"skywalker/agent"
+	"skywalker/util"
 )
+
+type (
+	udpContext struct {
+		caddr *net.UDPAddr
+		saddr *net.UDPAddr
+		conn  *net.UDPConn
+		ca    agent.ClientAgent
+		sa    agent.ServerAgent
+	}
+)
+
+func newUDPContext(caddr, saddr *net.UDPAddr, ca agent.ClientAgent, sa agent.ServerAgent) (*udpContext, error) {
+	conn, err := net.DialUDP("udp", nil, saddr)
+	if err != nil {
+		return nil, err
+	}
+	return &udpContext{
+		caddr: caddr,
+		saddr: saddr,
+		conn:  conn,
+		ca:    ca,
+		sa:    sa,
+	}, nil
+}
+
+var (
+	gContextMap map[string]*udpContext = make(map[string]*udpContext)
+)
+
+func findUDPContext(caddr *net.UDPAddr, host string, port int, ca agent.ClientAgent, sa agent.ServerAgent) (*udpContext, error) {
+	var saddr *net.UDPAddr
+	var err error
+	var ctx *udpContext
+	var ip string
+	if ip, err = util.ResolveHost(host); err != nil {
+		return nil, err
+	} else {
+		saddr, err = net.ResolveUDPAddr("udp", util.JoinHostPort(ip, port))
+	}
+	if err != nil {
+		return nil, err
+	}
+	ctx = gContextMap[caddr.String()+"|"+saddr.String()]
+	if ctx == nil {
+		ctx, err = newUDPContext(caddr, saddr, ca, sa)
+	}
+	return ctx, err
+}
 
 func (p *Proxy) handleUDP(upkg *udpPackage) {
 	log.D("%v", upkg)
-	ca, _ := p.GetAgents()
-	rdata, tdata, _, _, err := ca.RecvFromClient(upkg.data)
+	ca, sa := p.GetAgents()
+	rdata, tdata, host, port, err := ca.RecvFromClient(upkg.data)
 	if err != nil {
 		return
 	}
-	if rdata != nil {
-		p.udpListener.WriteTo(rdata.([]byte), upkg.addr)
+	for _, b := range p.clarifyBytes(rdata) {
+		p.udpListener.WriteTo(b, upkg.addr)
 	}
-	if tdata == nil {
-		return
+	for _, b := range p.clarifyBytes(tdata) {
+		_, tdata, host_, port_, _ := sa.RecvFromCA(b, host, port)
+		ctx, err := findUDPContext(upkg.addr, host_, port_, ca, sa)
+		if err != nil {
+			continue
+		}
+		for _, b := range p.clarifyBytes(tdata) {
+			ctx.conn.Write(b)
+		}
 	}
 }

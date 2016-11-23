@@ -19,6 +19,7 @@ package proxy
 
 import (
 	"net"
+	"skywalker/agent"
 	"skywalker/pkg"
 	"skywalker/util"
 	"sync"
@@ -126,4 +127,11 @@ func (p *Proxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interfac
 		return err
 	}
 	return e
+}
+
+/* 返回CA和SA实例 */
+func (p *Proxy) GetAgents() (agent.ClientAgent, agent.ServerAgent) {
+	ca := agent.GetClientAgent(p.CAName, p.Name)
+	sa := agent.GetServerAgent(p.SAName, p.Name)
+	return ca, sa
 }

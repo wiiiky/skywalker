@@ -18,6 +18,7 @@
 package util
 
 import (
+	"errors"
 	"net"
 	"skywalker/pkg"
 	"strconv"
@@ -35,28 +36,32 @@ var (
 )
 
 /* 从缓存中获取DNS结果，如果没找到则发起解析 */
-func GetHostAddress(host string) string {
+func ResolveHost(host string) (string, error) {
 	ip := gDNSCache.GetString(host)
 	if len(ip) == 0 {
 		ips, err := net.LookupIP(host)
 		if err != nil || len(ips) == 0 {
-			return ""
+			return "", errors.New("Invalid Host")
 		}
 		ip = ips[0].String()
 		gDNSCache.Set(host, ip)
 	}
-	return ip
+	return ip, nil
+}
+
+func JoinHostPort(ip string, port int) string {
+	return net.JoinHostPort(ip, strconv.Itoa(port))
 }
 
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
 func TCPConnect(host string, port int) (net.Conn, int) {
-	ip := GetHostAddress(host)
-	if len(ip) == 0 {
+	ip, err := ResolveHost(host)
+	if err != nil {
 		return nil, pkg.CONNECT_RESULT_UNKNOWN_HOST
 	}
-	addr := net.JoinHostPort(ip, strconv.Itoa(port))
+	addr := JoinHostPort(ip, port)
 	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err == nil {
 		return conn, pkg.CONNECT_RESULT_OK
 	}
