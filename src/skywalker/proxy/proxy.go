@@ -81,10 +81,14 @@ func (p *Proxy) Start() error {
 		p.Status = STATUS_ERROR
 		return err
 	}
-	if udpListener, err = util.UDPListen(p.BindAddr, p.BindPort); err != nil {
-		tcpListener.Close()
-		p.Status = STATUS_ERROR
-		return err
+
+	if ca, sa := p.GetAgents(); ca.UDPSupported() && sa.UDPSupported() {
+		/* 是否支持UDP转发 */
+		if udpListener, err = util.UDPListen(p.BindAddr, p.BindPort); err != nil {
+			tcpListener.Close()
+			p.Status = STATUS_ERROR
+			return err
+		}
 	}
 	log.INFO(p.Name, "Listen %s:%d", p.BindAddr, p.BindPort)
 	p.tcpListener = tcpListener
