@@ -83,7 +83,7 @@ func (p *Proxy) Start() error {
 	}
 
 	if ca, sa := p.GetAgents(); ca.UDPSupported() && sa.UDPSupported() {
-		/* 是否支持UDP转发 */
+		/* 支持UDP转发 */
 		if udpListener, err = util.UDPListen(p.BindAddr, p.BindPort); err != nil {
 			tcpListener.Close()
 			p.Status = STATUS_ERROR

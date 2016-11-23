@@ -23,5 +23,15 @@ import (
 
 func (p *Proxy) handleUDP(upkg *udpPackage) {
 	log.D("%v", upkg)
-	p.udpListener.WriteTo(upkg.data, upkg.addr)
+	ca, _ := p.GetAgents()
+	rdata, tdata, _, _, err := ca.RecvFromClient(upkg.data)
+	if err != nil {
+		return
+	}
+	if rdata != nil {
+		p.udpListener.WriteTo(rdata.([]byte), upkg.addr)
+	}
+	if tdata == nil {
+		return
+	}
 }

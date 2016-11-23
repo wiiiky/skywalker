@@ -229,7 +229,8 @@ func (a *SocksClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, er
 	return nil, data, nil
 }
 
-func (a *SocksClientAgent) OnClose(bool) {
+func (a *SocksClientAgent) UDPSupported() bool {
+	return true
 }
 
 func (a *SocksClientAgent) GetInfo() []map[string]string {

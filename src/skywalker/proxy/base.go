@@ -59,6 +59,32 @@ type (
 	}
 )
 
+func (p *Proxy) clarifyPackage(data interface{}) []*pkg.Package {
+	switch d := data.(type) {
+	case *pkg.Package:
+		return []*pkg.Package{d}
+	case []byte:
+		return []*pkg.Package{pkg.NewDataPackage(d)}
+	case string:
+		return []*pkg.Package{pkg.NewDataPackage(d)}
+	case []*pkg.Package:
+		return d
+	}
+	return nil
+}
+
+func (p *Proxy) clarifyBytes(data interface{}) [][]byte {
+	switch d := data.(type) {
+	case string:
+		return [][]byte{[]byte(d)}
+	case []byte:
+		return [][]byte{d}
+	case [][]byte:
+		return d
+	}
+	return nil
+}
+
 /*
  * 发送数据
  * @ic 转发数据的channel
@@ -68,41 +94,16 @@ type (
  */
 func (p *Proxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interface{},
 	rdata interface{}, err error, isClient bool) error {
-	/* 转发数据 */
-	switch data := tdata.(type) {
-	case *pkg.Package:
-		ic <- data
-	case []byte:
-		ic <- pkg.NewDataPackage(data)
-	case string:
-		ic <- pkg.NewDataPackage(data)
-	case []*pkg.Package:
-		for _, cmd := range data {
-			ic <- cmd
-		}
+	for _, p := range p.clarifyPackage(tdata) { /* 转发数据 */
+		ic <- p
 	}
 	/* 发送到远端连接 */
 	var size int64 = 0
-	switch data := rdata.(type) {
-	case string:
-		if n, e := conn.Write([]byte(data)); e != nil {
+	for _, d := range p.clarifyBytes(rdata) {
+		if n, e := conn.Write(d); e != nil {
 			return e
 		} else {
 			size += int64(n)
-		}
-	case []byte:
-		if n, e := conn.Write(data); e != nil {
-			return e
-		} else {
-			size += int64(n)
-		}
-	case [][]byte:
-		for _, d := range data {
-			if n, e := conn.Write(d); e != nil {
-				return e
-			} else {
-				size += int64(n)
-			}
 		}
 	}
 

@@ -55,8 +55,8 @@ func (a *BaseAgent) UDPSupported() bool {
 	return false
 }
 
-func (a *BaseAgent) RecvFromClient([]byte) (interface{}, interface{}, error) {
-	return nil, nil, nil
+func (a *BaseAgent) RecvFromClient([]byte) (interface{}, interface{}, string, int, error) {
+	return nil, nil, "", 0, nil
 }
 
 func (a *BaseAgent) RecvFromSA([]byte) (interface{}, interface{}, error) {
@@ -67,6 +67,6 @@ func (a *BaseAgent) RecvFromServer([]byte) (interface{}, interface{}, error) {
 	return nil, nil, nil
 }
 
-func (a *BaseAgent) RecvFromCA([]byte) (interface{}, interface{}, error) {
-	return nil, nil, nil
+func (a *BaseAgent) RecvFromCA(data []byte, host string, port int) (interface{}, interface{}, string, int, error) {
+	return nil, data, host, port, nil
 }

@@ -271,6 +271,10 @@ func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
 	}
 }
 
+func (a *ShadowSocksServerAgent) UDPSupported() bool {
+	return true
+}
+
 func (a *ShadowSocksServerAgent) GetInfo() []map[string]string {
 	formatServerAddrs := func(addrs []ssServerAddress) string {
 		var s []string
