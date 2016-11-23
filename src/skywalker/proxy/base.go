@@ -99,9 +99,11 @@ func (p *Proxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interfac
 	}
 	/* 发送到远端连接 */
 	var size int64 = 0
+	var n int
+	var e error
 	for _, d := range p.clarifyBytes(rdata) {
-		if n, e := conn.Write(d); e != nil {
-			return e
+		if n, e = conn.Write(d); e != nil {
+			break
 		} else {
 			size += int64(n)
 		}
@@ -119,5 +121,9 @@ func (p *Proxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interfac
 		}
 		p.Unlock()
 	}
-	return err
+
+	if err != nil {
+		return err
+	}
+	return e
 }
