@@ -27,6 +27,7 @@ import (
 
 type (
 	udpContext struct {
+		key   string
 		caddr *net.UDPAddr
 		saddr *net.UDPAddr
 		conn  *net.UDPConn
@@ -35,12 +36,13 @@ type (
 	}
 )
 
-func (p *Proxy) newUDPContext(caddr, saddr *net.UDPAddr, ca agent.ClientAgent, sa agent.ServerAgent) (*udpContext, error) {
+func (p *Proxy) newUDPContext(key string, caddr, saddr *net.UDPAddr, ca agent.ClientAgent, sa agent.ServerAgent) (*udpContext, error) {
 	conn, err := net.DialUDP("udp", nil, saddr)
 	if err != nil {
 		return nil, err
 	}
 	return &udpContext{
+		key: key,
 		caddr: caddr,
 		saddr: saddr,
 		conn:  conn,
@@ -71,7 +73,7 @@ func (p *Proxy) findUDPContext(caddr *net.UDPAddr, host string, port int, ca age
 	gMutex.Lock()
 	ctx = gContextMap[key]
 	if ctx == nil {
-		ctx, err = p.newUDPContext(caddr, saddr, ca, sa)
+		ctx, err = p.newUDPContext(key, caddr, saddr, ca, sa)
 		if ctx != nil {
 			gContextMap[key] = ctx
 		}
