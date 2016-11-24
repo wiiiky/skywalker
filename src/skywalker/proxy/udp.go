@@ -22,6 +22,7 @@ import (
 	"net"
 	"skywalker/agent"
 	"skywalker/util"
+	"sync"
 )
 
 type (
@@ -34,7 +35,7 @@ type (
 	}
 )
 
-func newUDPContext(caddr, saddr *net.UDPAddr, ca agent.ClientAgent, sa agent.ServerAgent) (*udpContext, error) {
+func (p *Proxy) newUDPContext(caddr, saddr *net.UDPAddr, ca agent.ClientAgent, sa agent.ServerAgent) (*udpContext, error) {
 	conn, err := net.DialUDP("udp", nil, saddr)
 	if err != nil {
 		return nil, err
@@ -50,9 +51,10 @@ func newUDPContext(caddr, saddr *net.UDPAddr, ca agent.ClientAgent, sa agent.Ser
 
 var (
 	gContextMap map[string]*udpContext = make(map[string]*udpContext)
+	gMutex      *sync.Mutex            = &sync.Mutex{}
 )
 
-func findUDPContext(caddr *net.UDPAddr, host string, port int, ca agent.ClientAgent, sa agent.ServerAgent) (*udpContext, error) {
+func (p *Proxy) findUDPContext(caddr *net.UDPAddr, host string, port int, ca agent.ClientAgent, sa agent.ServerAgent) (*udpContext, error) {
 	var saddr *net.UDPAddr
 	var err error
 	var ctx *udpContext
@@ -65,31 +67,66 @@ func findUDPContext(caddr *net.UDPAddr, host string, port int, ca agent.ClientAg
 	if err != nil {
 		return nil, err
 	}
-	ctx = gContextMap[caddr.String()+"|"+saddr.String()]
+	key := caddr.String() + "|" + saddr.String()
+	gMutex.Lock()
+	ctx = gContextMap[key]
 	if ctx == nil {
-		ctx, err = newUDPContext(caddr, saddr, ca, sa)
+		ctx, err = p.newUDPContext(caddr, saddr, ca, sa)
+		if ctx != nil {
+			gContextMap[key] = ctx
+		}
 	}
+	gMutex.Unlock()
 	return ctx, err
 }
 
+func (p *Proxy) sendTo(ca agent.ClientAgent, sa agent.ServerAgent, data []byte,
+	caddr *net.UDPAddr, host string, port int) error {
+	rdata, tdata, shost, sport, err := sa.RecvFromCA(data, host, port)
+	if err != nil {
+		log.WARN(p.Name, "Server Agent RecvFromCA Error, %s", err.Error())
+		return err
+	}
+	ctx, err := p.findUDPContext(caddr, shost, sport, ca, sa)
+	if err != nil {
+		log.WARN(p.Name, "findUDPContext Error, %s", err.Error())
+		return err
+	}
+	for _, b := range p.clarifyBytes(tdata) {
+		ctx.conn.Write(b)
+	}
+	for _, b := range p.clarifyBytes(rdata) {
+		rdata, tdata, host, port, err = ca.RecvFromClient(b)
+		for _, b := range p.clarifyBytes(tdata) {
+			if err := p.sendTo(ca, sa, b, caddr, host, port); err != nil {
+				return err
+			}
+		}
+		for _, b := range p.clarifyBytes(rdata) {
+			p.udpListener.WriteTo(b, caddr)
+		}
+	}
+	return nil
+}
+
 func (p *Proxy) handleUDP(upkg *udpPackage) {
+	var rdata, tdata interface{}
+	var host string
+	var port int
+	var err error
+
 	log.D("%v", upkg)
 	ca, sa := p.GetAgents()
-	rdata, tdata, host, port, err := ca.RecvFromClient(upkg.data)
+
+	rdata, tdata, host, port, err = ca.RecvFromClient(upkg.data)
 	if err != nil {
+		log.WARN(p.Name, "Client Agent RecvFromClient Error, %s", err.Error())
 		return
 	}
 	for _, b := range p.clarifyBytes(rdata) {
 		p.udpListener.WriteTo(b, upkg.addr)
 	}
 	for _, b := range p.clarifyBytes(tdata) {
-		_, tdata, host_, port_, _ := sa.RecvFromCA(b, host, port)
-		ctx, err := findUDPContext(upkg.addr, host_, port_, ca, sa)
-		if err != nil {
-			continue
-		}
-		for _, b := range p.clarifyBytes(tdata) {
-			ctx.conn.Write(b)
-		}
+		p.sendTo(ca, sa, b, upkg.addr, host, port)
 	}
 }
