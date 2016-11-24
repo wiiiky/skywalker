@@ -67,7 +67,7 @@ func (a *SocksClientAgent) Name() string {
 func (a *SocksClientAgent) OnInit(name string, cfg map[string]interface{}) error {
 	username := util.GetMapStringDefault(cfg, "username", "")
 	password := util.GetMapStringDefault(cfg, "password", "")
-	version := uint8(util.GetMapIntDefault(cfg, "version", SOCKS_VERSION_COMPATIBLE))
+	version := uint8(util.GetMapIntDefault(cfg, "version", SOCKS_VERSION_COMPAT))
 	method := METHOD_NO_AUTH_REQUIRED
 	if len(username) > 0 && len(password) > 0 {
 		method = METHOD_USERNAME_PASSWORD
@@ -185,9 +185,9 @@ func (a *SocksClientAgent) init5(data []byte) (interface{}, interface{}, error) 
 func (a *SocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
 	switch a.state {
 	case STATE_INIT: /* 接收客户端的握手请求并返回响应 */
-		if data[0] == SOCKS_VERSION_5 && (a.cfg.version == SOCKS_VERSION_5 || a.cfg.version == SOCKS_VERSION_COMPATIBLE) {
+		if data[0] == SOCKS_VERSION_5 && (a.cfg.version == SOCKS_VERSION_5 || a.cfg.version == SOCKS_VERSION_COMPAT) {
 			return a.init5(data)
-		} else if data[0] == SOCKS_VERSION_4 && (a.cfg.version == SOCKS_VERSION_4 || a.cfg.version == SOCKS_VERSION_COMPATIBLE) {
+		} else if data[0] == SOCKS_VERSION_4 && (a.cfg.version == SOCKS_VERSION_4 || a.cfg.version == SOCKS_VERSION_COMPAT) {
 			return a.init4(data)
 		}
 		return nil, nil, Error(ERROR_UNSUPPORTED_VERSION, "unsupported socks version %d", data[0])

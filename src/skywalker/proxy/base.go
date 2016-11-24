@@ -135,3 +135,9 @@ func (p *Proxy) GetAgents() (agent.ClientAgent, agent.ServerAgent) {
 	sa := agent.GetServerAgent(p.SAName, p.Name)
 	return ca, sa
 }
+
+func (p *Proxy) writeTo(data interface{}, addr *net.UDPAddr) {
+	for _, b := range p.clarifyBytes(data) {
+		p.udpListener.WriteTo(b, addr)
+	}
+}

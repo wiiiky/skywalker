@@ -26,7 +26,7 @@ import (
 const (
 	SOCKS_VERSION_4          = 4
 	SOCKS_VERSION_5          = 5
-	SOCKS_VERSION_COMPATIBLE = 0 /* 同时支持版本4和版本5 */
+	SOCKS_VERSION_COMPAT     = 0 /* 同时支持版本4和版本5 */
 )
 
 /* 错误码 */
@@ -490,5 +490,26 @@ func (rep *socks5Response) parse(data []byte) error {
 	rep.atype = atype
 	rep.addr = addr
 	rep.port = port
+	return nil
+}
+
+/*
+ * +----+------+------+----------+----------+----------+
+ * |RSV | FRAG | ATYP | DST.ADDR | DST.PORT |   DATA   |
+ * +----+------+------+----------+----------+----------+
+ * | 2  |  1   |  1   | Variable |    2     | Variable |
+ * +----+------+------+----------+----------+----------+
+ */
+
+type socks5UDPRequest struct {
+	frag  uint8
+	atype uint8
+	daddr string
+	dport uint16
+	data  []byte
+}
+
+/* 解析socks5的UDP请求 */
+func (req *socks5UDPRequest) parse(data []byte) error {
 	return nil
 }

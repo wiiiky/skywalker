@@ -42,7 +42,7 @@ func (p *Proxy) newUDPContext(key string, caddr, saddr *net.UDPAddr, ca agent.Cl
 		return nil, err
 	}
 	return &udpContext{
-		key: key,
+		key:   key,
 		caddr: caddr,
 		saddr: saddr,
 		conn:  conn,
@@ -104,9 +104,7 @@ func (p *Proxy) sendTo(ca agent.ClientAgent, sa agent.ServerAgent, data []byte,
 				return err
 			}
 		}
-		for _, b := range p.clarifyBytes(rdata) {
-			p.udpListener.WriteTo(b, caddr)
-		}
+		p.writeTo(rdata, caddr)
 	}
 	return nil
 }
@@ -125,9 +123,7 @@ func (p *Proxy) handleUDP(upkg *udpPackage) {
 		log.WARN(p.Name, "Client Agent RecvFromClient Error, %s", err.Error())
 		return
 	}
-	for _, b := range p.clarifyBytes(rdata) {
-		p.udpListener.WriteTo(b, upkg.addr)
-	}
+	p.writeTo(rdata, upkg.addr)
 	for _, b := range p.clarifyBytes(tdata) {
 		p.sendTo(ca, sa, b, upkg.addr, host, port)
 	}
