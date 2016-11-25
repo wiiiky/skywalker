@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	SOCKS_VERSION_4          = 4
-	SOCKS_VERSION_5          = 5
-	SOCKS_VERSION_COMPAT     = 0 /* 同时支持版本4和版本5 */
+	SOCKS_VERSION_4      = 4
+	SOCKS_VERSION_5      = 5
+	SOCKS_VERSION_COMPAT = 0 /* 同时支持版本4和版本5 */
 )
 
 /* 错误码 */
@@ -455,7 +455,7 @@ func (rep *socks5Response) build() []byte {
 
 func (rep *socks5Response) parse(data []byte) error {
 	if len(data) < 10 {
-		return Error(ERROR_INVALID_MESSAGE_SIZE, "address reply message size is too short")
+		return Error(ERROR_INVALID_MESSAGE_SIZE, "address reply message is too short")
 	}
 	version := data[0]
 	reply := data[1]
@@ -504,12 +504,49 @@ func (rep *socks5Response) parse(data []byte) error {
 type socks5UDPRequest struct {
 	frag  uint8
 	atype uint8
-	daddr string
-	dport uint16
+	addr  string
+	port  uint16
 	data  []byte
 }
 
 /* 解析socks5的UDP请求 */
 func (req *socks5UDPRequest) parse(data []byte) error {
+	if len(data) < 7 {
+		return Error(ERROR_INVALID_MESSAGE_SIZE, "udp request message is too short")
+	}
+	frag := data[2]
+	atype := data[3]
+
+	var addr string
+	var port uint16
+	var left []byte
+
+	if atype == ATYPE_IPV4 {
+		if len(data) < 10 {
+			return Error(ERROR_INVALID_MESSAGE_SIZE, "udp request message is too short")
+		}
+		addr = net.IP(data[4:8]).String()
+		left = data[8:]
+	} else if atype == ATYPE_IPV6 {
+		if len(data) < 22 {
+			return Error(ERROR_INVALID_MESSAGE_SIZE, "udp request message is too short")
+		}
+		addr = net.IP(data[4:20]).String()
+		left = data[20:]
+	} else {
+		length := data[4]
+		if len(data) <= int(length+7) {
+			return Error(ERROR_INVALID_MESSAGE_SIZE, "udp request message is too short")
+		}
+		addr = string(data[5:(5 + length)])
+		left = data[(5 + length):]
+	}
+	binary.Read(bytes.NewReader(left), binary.BigEndian, &port)
+
+	req.frag = frag
+	req.atype = atype
+	req.addr = addr
+	req.port = port
+	req.data = left[2:]
 	return nil
 }
