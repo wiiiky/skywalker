@@ -64,7 +64,9 @@ func New(cfg *config.ProxyConfig) *Proxy {
 func (p *Proxy) Close() {
 	log.INFO(p.Name, "Listener %s:%d Closed", p.BindAddr, p.BindPort)
 	p.tcpListener.Close()
-	p.udpListener.Close()
+	if p.udpListener != nil {
+		p.udpListener.Close()
+	}
 	p.Status = STATUS_STOPPED
 }
 
@@ -110,7 +112,9 @@ func (p *Proxy) Stop() error {
 	p.Closing = true
 
 	p.tcpListener.Close()
-	p.udpListener.Close()
+	if p.udpListener != nil {
+		p.udpListener.Close()
+	}
 	waitTime := time.Duration(10)
 	for p.Closing {
 		time.Sleep(time.Millisecond * waitTime)
