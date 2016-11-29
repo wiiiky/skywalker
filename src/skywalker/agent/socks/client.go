@@ -241,3 +241,11 @@ func (a *SocksClientAgent) GetInfo() []map[string]string {
 		},
 	}
 }
+
+func (a *SocksClientAgent) RecvFromClient(data []byte) (interface{}, interface{}, string, int, error) {
+	var req socks5UDPRequest
+	if err := req.parse(data); err != nil {
+		return nil, nil, "", 0, err
+	}
+	return nil, req.data, req.addr, int(req.port), nil
+}

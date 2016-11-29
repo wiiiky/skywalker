@@ -118,8 +118,7 @@ func (p *Proxy) handleUDP(upkg *udpPackage) {
 	log.D("%v", upkg)
 	ca, sa := p.GetAgents()
 
-	rdata, tdata, host, port, err = ca.RecvFromClient(upkg.data)
-	if err != nil {
+	if rdata, tdata, host, port, err = ca.RecvFromClient(upkg.data); err != nil {
 		log.WARN(p.Name, "Client Agent RecvFromClient Error, %s", err.Error())
 		return
 	}
