@@ -23,6 +23,7 @@ import (
 	"skywalker/agent"
 	"skywalker/util"
 	"sync"
+	"time"
 )
 
 type (
@@ -36,25 +37,63 @@ type (
 	}
 )
 
+var (
+	gUDPCtxs     map[string]*udpContext = make(map[string]*udpContext)
+	gUDPCtxMutex *sync.Mutex            = &sync.Mutex{}
+)
+
+func (p *Proxy) sendToClient(ca agent.ClientAgent, sa agent.ServerAgent, data []byte, caddr *net.UDPAddr) error {
+	var rdata, tdata interface{}
+	var err, e error
+	_, tdata, err = sa.RecvFromServer(data)
+	for _, b := range p.clarifyBytes(tdata) {
+		if rdata, _, e = ca.RecvFromSA(b); e == nil {
+			p.writeTo(rdata, caddr)
+		} else {
+			err = e
+			break
+		}
+	}
+	return err
+}
+
+func (p *Proxy) runUDPContext(ctx *udpContext) {
+	buf := make([]byte, 1<<16)
+	for {
+		if err := ctx.conn.SetReadDeadline(time.Now().Add(300 * time.Second)); err != nil {
+			log.WARN(p.Name, "SetReadDeadline Error: %s", err)
+			break
+		}
+		if n, addr, err := ctx.conn.ReadFromUDP(buf); err != nil {
+			break
+		} else if addr.String() == ctx.saddr.String() {
+			if err := p.sendToClient(ctx.ca, ctx.sa, buf[:n], ctx.caddr); err != nil {
+				log.WARN(p.Name, "sendToClient Error: %s", err)
+			}
+		}
+	}
+	log.DEBUG(p.Name, "UDP %s Closed", ctx.conn.LocalAddr())
+	gUDPCtxMutex.Lock()
+	delete(gUDPCtxs, ctx.key)
+	gUDPCtxMutex.Unlock()
+}
+
 func (p *Proxy) newUDPContext(key string, caddr, saddr *net.UDPAddr, ca agent.ClientAgent, sa agent.ServerAgent) (*udpContext, error) {
 	conn, err := net.DialUDP("udp", nil, saddr)
 	if err != nil {
 		return nil, err
 	}
-	return &udpContext{
+	ctx := &udpContext{
 		key:   key,
 		caddr: caddr,
 		saddr: saddr,
 		conn:  conn,
 		ca:    ca,
 		sa:    sa,
-	}, nil
+	}
+	go p.runUDPContext(ctx)
+	return ctx, nil
 }
-
-var (
-	gContextMap map[string]*udpContext = make(map[string]*udpContext)
-	gMutex      *sync.Mutex            = &sync.Mutex{}
-)
 
 func (p *Proxy) findUDPContext(caddr *net.UDPAddr, host string, port int, ca agent.ClientAgent, sa agent.ServerAgent) (*udpContext, error) {
 	var saddr *net.UDPAddr
@@ -70,19 +109,19 @@ func (p *Proxy) findUDPContext(caddr *net.UDPAddr, host string, port int, ca age
 		return nil, err
 	}
 	key := caddr.String() + "|" + saddr.String()
-	gMutex.Lock()
-	ctx = gContextMap[key]
+	gUDPCtxMutex.Lock()
+	ctx = gUDPCtxs[key]
 	if ctx == nil {
 		ctx, err = p.newUDPContext(key, caddr, saddr, ca, sa)
 		if ctx != nil {
-			gContextMap[key] = ctx
+			gUDPCtxs[key] = ctx
 		}
 	}
-	gMutex.Unlock()
+	gUDPCtxMutex.Unlock()
 	return ctx, err
 }
 
-func (p *Proxy) sendTo(ca agent.ClientAgent, sa agent.ServerAgent, data []byte,
+func (p *Proxy) sendToServer(ca agent.ClientAgent, sa agent.ServerAgent, data []byte,
 	caddr *net.UDPAddr, host string, port int) error {
 	rdata, tdata, shost, sport, err := sa.RecvFromCA(data, host, port)
 	if err != nil {
@@ -100,7 +139,7 @@ func (p *Proxy) sendTo(ca agent.ClientAgent, sa agent.ServerAgent, data []byte,
 	for _, b := range p.clarifyBytes(rdata) {
 		rdata, tdata, host, port, err = ca.RecvFromClient(b)
 		for _, b := range p.clarifyBytes(tdata) {
-			if err := p.sendTo(ca, sa, b, caddr, host, port); err != nil {
+			if err := p.sendToServer(ca, sa, b, caddr, host, port); err != nil {
 				return err
 			}
 		}
@@ -124,6 +163,6 @@ func (p *Proxy) handleUDP(upkg *udpPackage) {
 	}
 	p.writeTo(rdata, upkg.addr)
 	for _, b := range p.clarifyBytes(tdata) {
-		p.sendTo(ca, sa, b, upkg.addr, host, port)
+		p.sendToServer(ca, sa, b, upkg.addr, host, port)
 	}
 }
