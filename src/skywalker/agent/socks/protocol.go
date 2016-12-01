@@ -550,3 +550,19 @@ func (req *socks5UDPRequest) parse(data []byte) error {
 	req.data = left[2:]
 	return nil
 }
+
+func (req *socks5UDPRequest) build() []byte {
+	buf := bytes.Buffer{}
+	binary.Write(&buf, binary.BigEndian, uint16(0))
+	binary.Write(&buf, binary.BigEndian, req.frag)
+	binary.Write(&buf, binary.BigEndian, req.atype)
+	if req.atype == ATYPE_IPV4 || req.atype == ATYPE_IPV6 {
+		binary.Write(&buf, binary.BigEndian, []byte(net.ParseIP(req.addr)))
+	} else {
+		binary.Write(&buf, binary.BigEndian, uint8(len(req.addr)))
+		binary.Write(&buf, binary.BigEndian, []byte(req.addr))
+	}
+	binary.Write(&buf, binary.BigEndian, req.port)
+	binary.Write(&buf, binary.BigEndian, req.data)
+	return buf.Bytes()
+}

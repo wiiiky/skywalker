@@ -270,3 +270,7 @@ func (a *SocksServerAgent) OnClose(bool) {
 func (a *SocksServerAgent) GetInfo() []map[string]string {
 	return nil
 }
+
+func (a *SocksServerAgent) UDPSupported() bool {
+	return true
+}

@@ -55,3 +55,7 @@ func (a *DirectAgent) ReadFromServer(data []byte) (interface{}, interface{}, err
 func (a *DirectAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
 	return nil, data, nil
 }
+
+func (a *DirectAgent) UDPSupported() bool {
+	return true
+}
