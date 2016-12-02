@@ -116,7 +116,7 @@ func (a *SocksServerAgent) GetRemoteAddress(addr string, port int) (string, int)
 	a.port = uint16(port)
 	ip := net.ParseIP(addr)
 	if ip == nil {
-		a.atype = ATYPE_DOMAINNAME
+		a.atype = ATYPE_DOMAIN
 	} else if len(ip) == 4 {
 		a.atype = ATYPE_IPV4
 	} else {
@@ -276,21 +276,10 @@ func (a *SocksServerAgent) UDPSupported() bool {
 }
 
 func (a *SocksServerAgent) RecvFromCA(data []byte, host string, port int) (interface{}, interface{}, string, int, error) {
-	ip := net.ParseIP(host)
-	atype := uint8(ATYPE_DOMAINNAME)
-	if ip != nil {
-		if len(ip) == 4 {
-			atype = ATYPE_IPV4
-		} else {
-			atype = ATYPE_IPV6
-		}
-	}
 	req := socks5UDPRequest{
-		frag:  0,
-		atype: atype,
-		addr:  host,
-		port:  uint16(port),
-		data:  data,
+		addr: host,
+		port: uint16(port),
+		data: data,
 	}
 	return nil, req.build(), host, port, nil
 }

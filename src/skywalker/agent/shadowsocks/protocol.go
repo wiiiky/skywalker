@@ -34,6 +34,12 @@ const (
 	ERROR_INVALID_ADDRESS_TYPE = 5
 )
 
+const (
+	ATYPE_IPV4   = uint8(1)
+	ATYPE_DOMAIN = uint8(3)
+	ATYPE_IPV6   = uint8(4)
+)
+
 /* 根据密码生成KEY */
 func generateKey(password []byte, klen int) []byte {
 	var last []byte = nil
@@ -56,65 +62,80 @@ func generateIV(ilen int) []byte {
 	return iv
 }
 
-/* 生成连接请求 */
-func buildAddressRequest(addr string, port uint16) []byte {
-	buf := bytes.Buffer{}
+type ssAddressRequest struct {
+	atype uint8
+	addr  string
+	port  uint16
+	left  []byte
+}
 
-	ip := net.ParseIP(addr)
-	if ip == nil { /* 域名 */
-		binary.Write(&buf, binary.BigEndian, uint8(3))
-		binary.Write(&buf, binary.BigEndian, uint8(len(addr)))
-		binary.Write(&buf, binary.BigEndian, []byte(addr))
-	} else {
+func (req *ssAddressRequest) build() []byte {
+	ip := net.ParseIP(req.addr)
+	atype := ATYPE_DOMAIN
+	if ip != nil {
 		if len(ip) == 4 {
-			binary.Write(&buf, binary.BigEndian, uint8(1))
+			atype = ATYPE_IPV4
 		} else {
-			binary.Write(&buf, binary.BigEndian, uint8(4))
+			atype = ATYPE_IPV6
 		}
+	}
+	req.atype = atype
+
+	buf := bytes.Buffer{}
+	binary.Write(&buf, binary.BigEndian, atype)
+	if atype == ATYPE_DOMAIN {
+		binary.Write(&buf, binary.BigEndian, uint8(len(req.addr)))
+		binary.Write(&buf, binary.BigEndian, []byte(req.addr))
+	} else {
 		binary.Write(&buf, binary.BigEndian, []byte(ip))
 	}
-	binary.Write(&buf, binary.BigEndian, port)
+	binary.Write(&buf, binary.BigEndian, req.port)
 	return buf.Bytes()
 }
 
 /* 解析连接请求 */
-func parseAddressRequest(data []byte) (string, uint16, []byte, error) {
+func (req *ssAddressRequest) parse(data []byte) error {
 	if data == nil || len(data) < 7 {
-		return "", 0, nil, Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
+		return Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
 	}
+
 	atype := data[0]
 	var addr string
 	var port uint16
 
-	if atype == byte(3) { /* 域名 */
+	if atype == ATYPE_DOMAIN { /* 域名 */
 		length := int(data[1])
 		if len(data) < length+4 {
-			return "", 0, nil, Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
+			return Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
 		}
 		addr = string(data[2 : 2+length])
 		data = data[2+length:]
-	} else if atype == byte(1) { /* IPv4 */
+	} else if atype == ATYPE_IPV4 { /* IPv4 */
 		ip := net.ParseIP(string(data[1:5]))
 		if ip == nil {
-			return "", 0, nil, Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
+			return Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
 		}
 		addr = ip.String()
 		data = data[5:]
-	} else if atype == byte(4) { /* IPv6 */
+	} else if atype == ATYPE_IPV6 { /* IPv6 */
 		if len(data) < 19 {
-			return "", 0, nil, Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
+			return Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
 		}
 		ip := net.ParseIP(string(data[1:17]))
 		if ip == nil {
-			return "", 0, nil, Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
+			return Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
 		}
 		addr = ip.String()
 		data = data[17:]
 	} else {
-		return "", 0, nil, Error(ERROR_INVALID_ADDRESS_TYPE, "invalid address type %d", atype)
+		return Error(ERROR_INVALID_ADDRESS_TYPE, "invalid address type %d", atype)
 	}
 	buf := bytes.NewReader(data)
 	binary.Read(buf, binary.BigEndian, &port)
 
-	return addr, port, data[2:], nil
+	req.atype = atype
+	req.addr = addr
+	req.port = port
+	req.left = data[2:]
+	return nil
 }

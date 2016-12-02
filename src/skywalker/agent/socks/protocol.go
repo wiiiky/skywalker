@@ -51,9 +51,9 @@ const (
 
 /* 地址类型 */
 const (
-	ATYPE_IPV4       = 1
-	ATYPE_DOMAINNAME = 3
-	ATYPE_IPV6       = 4
+	ATYPE_IPV4   = uint8(1)
+	ATYPE_DOMAIN = uint8(3)
+	ATYPE_IPV6   = uint8(4)
 )
 
 /* socks5返回结果 */
@@ -364,7 +364,7 @@ func (req *socks5Request) build() []byte {
 	binary.Write(&buf, binary.BigEndian, req.cmd)
 	binary.Write(&buf, binary.BigEndian, uint8(0))
 	binary.Write(&buf, binary.BigEndian, req.atype)
-	if req.atype == ATYPE_DOMAINNAME {
+	if req.atype == ATYPE_DOMAIN {
 		binary.Write(&buf, binary.BigEndian, uint8(len(req.addr)))
 		binary.Write(&buf, binary.BigEndian, []byte(req.addr))
 	} else {
@@ -552,12 +552,23 @@ func (req *socks5UDPRequest) parse(data []byte) error {
 }
 
 func (req *socks5UDPRequest) build() []byte {
+	ip := net.ParseIP(req.addr)
+	atype := ATYPE_DOMAIN
+	if ip != nil {
+		if len(ip) == 4 {
+			atype = ATYPE_IPV4
+		} else {
+			atype = ATYPE_IPV6
+		}
+	}
+	req.atype = atype
+
 	buf := bytes.Buffer{}
 	binary.Write(&buf, binary.BigEndian, uint16(0))
 	binary.Write(&buf, binary.BigEndian, req.frag)
 	binary.Write(&buf, binary.BigEndian, req.atype)
 	if req.atype == ATYPE_IPV4 || req.atype == ATYPE_IPV6 {
-		binary.Write(&buf, binary.BigEndian, []byte(net.ParseIP(req.addr)))
+		binary.Write(&buf, binary.BigEndian, []byte(ip))
 	} else {
 		binary.Write(&buf, binary.BigEndian, uint8(len(req.addr)))
 		binary.Write(&buf, binary.BigEndian, []byte(req.addr))

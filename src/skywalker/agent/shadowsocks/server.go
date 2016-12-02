@@ -236,7 +236,8 @@ func (a *ShadowSocksServerAgent) GetRemoteAddress(addr string, port int) (string
 
 func (a *ShadowSocksServerAgent) OnConnectResult(result int, host string, p int) (interface{}, interface{}, error) {
 	if result == pkg.CONNECT_RESULT_OK {
-		plain := buildAddressRequest(a.targetAddr, uint16(a.targetPort))
+		req := &ssAddressRequest{addr: a.targetAddr, port: uint16(a.targetPort)}
+		plain := req.build()
 		buf := bytes.Buffer{}
 		buf.Write(a.iv)
 		buf.Write(a.encrypter.Encrypt(plain))

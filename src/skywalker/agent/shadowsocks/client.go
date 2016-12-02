@@ -129,13 +129,13 @@ func (p *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, inter
 	data = p.decrypter.Decrypt(data)
 	if data != nil && p.connected == false {
 		/* 还没有收到客户端的连接请求包，解析 */
-		addr, port, left, err := parseAddressRequest(data)
-		if err != nil {
+		req := &ssAddressRequest{}
+		if err := req.parse(data); err != nil {
 			return nil, nil, err
 		}
 		p.connected = true
-		tdata = append(tdata, pkg.NewConnectPackage(addr, int(port)))
-		data = left
+		tdata = append(tdata, pkg.NewConnectPackage(req.addr, int(req.port)))
+		data = req.left
 	}
 	if len(data) > 0 {
 		tdata = append(tdata, pkg.NewDataPackage(data))
