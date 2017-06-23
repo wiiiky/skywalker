@@ -60,6 +60,10 @@ func init() {
 			Handle:       handleInfo,
 			RequestField: "GetCommon",
 		},
+		rpc.RequestType_RELOAD: &Command{
+			Handle:       handleReload,
+			RequestField: "GetCommon",
+		},
 	}
 }
 
@@ -289,5 +293,24 @@ func handleInfo(f *Force, v interface{}) (*rpc.Response, error) {
 	return &rpc.Response{
 		Type: &reqType,
 		Info: &rpc.InfoResponse{Data: result},
+	}, nil
+}
+
+func handleReload(f *Force, v interface{}) (*rpc.Response, error) {
+	unchanged := []string{"a"}
+	added := []string{"b"}
+	deleted := []string{"c"}
+	updated := []string{"d"}
+
+	result := &rpc.ReloadResponse{
+		Unchanged: unchanged,
+		Added:     added,
+		Deleted:   deleted,
+		Updated:   updated,
+	}
+	reqType := rpc.RequestType_RELOAD
+	return &rpc.Response{
+		Type:   &reqType,
+		Reload: result,
 	}, nil
 }

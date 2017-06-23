@@ -31,6 +31,7 @@ const (
 	COMMAND_STOP    = "stop"
 	COMMAND_RESTART = "restart"
 	COMMAND_INFO    = "info"
+	COMMAND_RELOAD  = "reload"
 )
 
 type (
@@ -107,6 +108,15 @@ func init() {
 			ResponseField:   "GetInfo",
 			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processInfoResponse,
+		},
+		COMMAND_RELOAD: &Command{
+			Optional:        1,
+			Required:        1,
+			Help:            fmt.Sprintf("\treload %-15sReload config file and update proxies", "-y"),
+			ReqType:         rpc.RequestType_RELOAD,
+			ResponseField:   "GetReload",
+			BuildRequest:    buildCommonRequest,
+			ProcessResponse: processReloadResponse,
 		},
 	}
 }

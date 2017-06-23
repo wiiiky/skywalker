@@ -49,6 +49,7 @@ func New(ccfg *config.CoreConfig, rcfg []*config.ProxyConfig) (*Reader, error) {
 		readline.PcItem(COMMAND_RESTART, proxies...),
 		readline.PcItem(COMMAND_INFO, proxies...),
 		readline.PcItem(COMMAND_HELP, cmds...),
+		readline.PcItem(COMMAND_RELOAD),
 	)
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:       "\x1B[36mforce>>\x1B[0m ",
