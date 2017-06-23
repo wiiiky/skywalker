@@ -219,3 +219,12 @@ func (f *Force) handleConn(c *rpc.Conn, username, password string) {
 		}
 	}
 }
+
+func (f *Force) Reload() ([]string, []string, []string, []string, error) {
+	unchanged := []string{"a"}
+	added := []string{"b"}
+	deleted := []string{"c"}
+	updated := []string{"d"}
+
+	return unchanged, added, deleted, updated, nil
+}

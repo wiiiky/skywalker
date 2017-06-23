@@ -297,10 +297,7 @@ func handleInfo(f *Force, v interface{}) (*rpc.Response, error) {
 }
 
 func handleReload(f *Force, v interface{}) (*rpc.Response, error) {
-	unchanged := []string{"a"}
-	added := []string{"b"}
-	deleted := []string{"c"}
-	updated := []string{"d"}
+	unchanged, added, deleted, updated, _ := f.Reload()
 
 	result := &rpc.ReloadResponse{
 		Unchanged: unchanged,
