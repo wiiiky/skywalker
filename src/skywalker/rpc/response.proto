@@ -95,6 +95,13 @@ message InfoResponse {
     repeated Data data = 1;
 }
 
+message ReloadResponse {
+    repeated string unchanged = 1;
+    repeated string added = 2;
+    repeated string deleted= 3;
+    repeated string updated = 4;
+}
+
 message Response {
     required RequestType type = 1;
     optional Error err = 2;
@@ -103,4 +110,5 @@ message Response {
     optional StartResponse start = 5;
     optional StopResponse stop = 6;
     optional InfoResponse info = 7;
+    optional ReloadResponse reload = 8;
 }

@@ -83,7 +83,14 @@ func (p *Proxy) Start() error {
 		return err
 	}
 
-	if ca, sa := p.GetAgents(); ca.UDPSupported() && sa.UDPSupported() {
+	ca, sa := p.GetAgents()
+	if !ca.UDPSupported() && sa.UDPSupported() {
+		log.WARN(p.Name, "%s doesn't support UDP", ca.Name())
+	} else if ca.UDPSupported() && !sa.UDPSupported() {
+		log.WARN(p.Name, "%s doesn't support UDP", sa.Name())
+	} else if !ca.UDPSupported() && !sa.UDPSupported() {
+		log.WARN(p.Name, "%s & %s don't support UDP", ca.Name(), sa.Name())
+	} else {
 		/* 支持UDP转发 */
 		if udpListener, err = util.UDPListen(p.BindAddr, p.BindPort); err != nil {
 			tcpListener.Close()
@@ -91,6 +98,7 @@ func (p *Proxy) Start() error {
 			return err
 		}
 	}
+
 	log.INFO(p.Name, "Listen %s:%d", p.BindAddr, p.BindPort)
 	p.tcpListener = tcpListener
 	p.udpListener = udpListener
