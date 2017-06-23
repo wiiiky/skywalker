@@ -129,23 +129,22 @@ const (
 	DEFAULT_GLOBAL_CONFIG = "/etc/skywalker.yml"
 )
 
-/* 获取所有配置列表 */
-func GetProxyConfigs() []*ProxyConfig {
+func (cConfig *CoreConfig) GetProxyConfigs(pConfig map[string]*ProxyConfig) []*ProxyConfig {
 	var configs []*ProxyConfig
 
-	for name, cfg := range gConfigs {
+	for name, cfg := range pConfig {
 		/* 忽略~开头的配置 */
 		if strings.HasPrefix(name, "~") {
 			continue
 		}
 		if cfg.Log == nil { /* 如果没有配置日志，则使用全局配置 */
 			cfg.Log = &log.Config{
-				ShowName: gCore.Log.ShowName,
-				Loggers:  gCore.Log.Loggers,
+				ShowName: cConfig.Log.ShowName,
+				Loggers:  cConfig.Log.Loggers,
 			}
 		}
 		if cfg.Log.Loggers == nil {
-			cfg.Log.Loggers = gCore.Log.Loggers
+			cfg.Log.Loggers = cConfig.Log.Loggers
 		}
 		cfg.Name = name
 		cfg.Log.Name = name
@@ -155,8 +154,23 @@ func GetProxyConfigs() []*ProxyConfig {
 	return configs
 }
 
+/* 获取所有配置列表 */
+func GetProxyConfigs() []*ProxyConfig {
+	return gCore.GetProxyConfigs(gConfigs)
+}
+
 func GetCoreConfig() *CoreConfig {
 	return gCore
+}
+
+/* 检查普通文件是否存在 */
+func checkRegularFile(filepath string) string {
+	path := util.ResolveHomePath(filepath)
+	info, err := os.Stat(path)
+	if err == nil && info.Mode().IsRegular() {
+		return path
+	}
+	return ""
 }
 
 /*
@@ -164,51 +178,59 @@ func GetCoreConfig() *CoreConfig {
  * 否则使用~/.config/skywalker.json
  * 否则使用/etc/skywalker.json
  */
-func findConfigFile() string {
+var gConfigFilePath = ""
+
+func GetConfigFilePath() string {
+	if gConfigFilePath != "" {
+		return gConfigFilePath
+	}
 	flag := GetFlag()
 	if flag.CFile != "" {
-		return flag.CFile
-	}
-	/* 检查普通文件是否存在 */
-	checkRegularFile := func(filepath string) string {
-		path := util.ResolveHomePath(filepath)
-		info, err := os.Stat(path)
-		if err == nil && info.Mode().IsRegular() {
-			return path
+		gConfigFilePath = flag.CFile
+	} else {
+		if path := checkRegularFile(DEFAULT_USER_CONFIG); len(path) > 0 {
+			gConfigFilePath = path
+		} else if path := checkRegularFile(DEFAULT_GLOBAL_CONFIG); len(path) > 0 {
+			gConfigFilePath = path
 		}
-		return ""
 	}
-	if path := checkRegularFile(DEFAULT_USER_CONFIG); len(path) > 0 {
-		return path
-	} else if path := checkRegularFile(DEFAULT_GLOBAL_CONFIG); len(path) > 0 {
-		return path
-	}
-	return ""
+	return gConfigFilePath
 }
 
 func init() {
+	cfile := GetConfigFilePath()
+	if len(cfile) == 0 {
+		util.FatalError("No Config Found!")
+	}
+	var err error
+	if gCore, gConfigs, err = LoadConfigFromPath(cfile); err != nil {
+		util.FatalError("%s: %s", cfile, err)
+	}
+}
+
+func LoadConfigFromPath(path string) (*CoreConfig, map[string]*ProxyConfig, error) {
 	var yamlMap map[string]interface{}
 	var data []byte
 
-	cfile := findConfigFile()
-	if len(cfile) == 0 {
-		util.FatalError("No Config Found!")
-	} else if err := util.LoadYamlFile(cfile, &yamlMap); err != nil { /* 读取配置文件 */
-		util.FatalError("%s: %s", cfile, err)
+	if err := util.LoadYamlFile(path, &yamlMap); err != nil { /* 读取配置文件 */
+		return nil, nil, err
 	}
 
 	/*
 	 * 将yaml数据读取到一个通用的map[string]interface{}中
 	 * 然后分离log和代理，分别读取
 	 */
-
+	cConfig := CoreConfig{}
+	pConfig := make(map[string]*ProxyConfig)
 	if yamlMap["core"] != nil { /* 读取log并从map中删除 */
 		data = util.YamlMarshal(yamlMap["core"])
-		util.YamlUnmarshal(data, gCore)
+		util.YamlUnmarshal(data, &cConfig)
 		delete(yamlMap, "core")
 	}
-	gCore.init()
+	cConfig.init()
 
 	data = util.YamlMarshal(yamlMap)
-	util.YamlUnmarshal(data, &gConfigs)
+	util.YamlUnmarshal(data, &pConfig)
+
+	return &cConfig, pConfig, nil
 }

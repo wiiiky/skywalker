@@ -52,13 +52,12 @@ func (f *Force) GetProxyNames() []string {
 	return names
 }
 
-/* 载入所有服务，不启动 */
-func (f *Force) loadProxies() error {
+func (f *Force) loadProxiesFromConfig(pConfigs []*config.ProxyConfig) error {
 	defer f.Unlock()
 	f.Lock()
 
 	names := []string{}
-	for _, cfg := range config.GetProxyConfigs() {
+	for _, cfg := range pConfigs {
 		if err := cfg.Init(); err != nil {
 			return err
 		}
@@ -72,6 +71,11 @@ func (f *Force) loadProxies() error {
 		f.orderedProxies = append(f.orderedProxies, f.proxies[name])
 	}
 	return nil
+}
+
+/* 载入所有服务，不启动 */
+func (f *Force) loadProxies() error {
+	return f.loadProxiesFromConfig(config.GetProxyConfigs())
 }
 
 /* 自动启动服务 */
@@ -221,10 +225,37 @@ func (f *Force) handleConn(c *rpc.Conn, username, password string) {
 }
 
 func (f *Force) Reload() ([]string, []string, []string, []string, error) {
-	unchanged := []string{"a"}
-	added := []string{"b"}
-	deleted := []string{"c"}
-	updated := []string{"d"}
+	cfile := config.GetConfigFilePath()
+	cConfig, pConfig, err := config.LoadConfigFromPath(cfile)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	return f.reload(cConfig.GetProxyConfigs(pConfig))
+}
 
+func (f *Force) reload(pConfigs []*config.ProxyConfig) ([]string, []string, []string, []string, error) {
+	defer f.Unlock()
+	f.Lock()
+
+	var unchanged, added, deleted, updated []string
+
+	for _, p := range f.proxies {
+		p.Flag = 0
+	}
+
+	names := []string{}
+	for _, cfg := range pConfigs {
+		if err := cfg.Init(); err != nil {
+			return nil, nil, nil, nil, err
+		}
+		f.proxies[cfg.Name] = proxy.New(cfg)
+		names = append(names, cfg.Name)
+		log.D("load proxy %s %s/%s %s\n", cfg.Name, cfg.ClientAgent, cfg.ServerAgent,
+			util.IfString(cfg.AutoStart, "autoStart", ""))
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		f.orderedProxies = append(f.orderedProxies, f.proxies[name])
+	}
 	return unchanged, added, deleted, updated, nil
 }

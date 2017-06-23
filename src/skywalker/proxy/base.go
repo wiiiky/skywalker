@@ -57,6 +57,8 @@ type (
 		Closing     bool
 		tcpListener net.Listener
 		udpListener *net.UDPConn
+
+		Flag int
 	}
 )
 
