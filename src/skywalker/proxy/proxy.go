@@ -61,8 +61,37 @@ func New(cfg *config.ProxyConfig) *Proxy {
 	}
 }
 
+func (p *Proxy) Update(cfg *config.ProxyConfig) bool {
+	defer p.Unlock()
+	p.Lock()
+
+	p.Flag = FLAG_NONE
+	p.Name = cfg.Name
+	if p.CAName != cfg.ClientAgent {
+		p.CAName = cfg.ClientAgent
+		p.Flag = FLAG_AGENT_CHANGED
+	}
+	if p.SAName != cfg.ServerAgent {
+		p.SAName = cfg.ServerAgent
+		p.Flag = FLAG_AGENT_CHANGED
+	}
+	if p.BindAddr != cfg.BindAddr {
+		p.BindAddr = cfg.BindAddr
+		p.Flag = FLAG_ADDR_CHANGED
+	}
+	if p.BindPort != int(cfg.BindPort) {
+		p.BindPort = int(cfg.BindPort)
+		p.Flag = FLAG_ADDR_CHANGED
+	}
+
+	p.AutoStart = cfg.AutoStart
+	p.Closing = false
+
+	return p.Flag != FLAG_NONE
+}
+
 func (p *Proxy) Close() {
-	log.INFO(p.Name, "Listener %s:%d Closed", p.BindAddr, p.BindPort)
+	log.INFO(p.Name, "%s (%s:%d) Stopped", p.Name, p.BindAddr, p.BindPort)
 	p.tcpListener.Close()
 	if p.udpListener != nil {
 		p.udpListener.Close()
@@ -99,7 +128,7 @@ func (p *Proxy) Start() error {
 		}
 	}
 
-	log.INFO(p.Name, "Listen %s:%d", p.BindAddr, p.BindPort)
+	log.INFO(p.Name, "%s (%s:%d) started", p.Name, p.BindAddr, p.BindPort)
 	p.tcpListener = tcpListener
 	p.udpListener = udpListener
 	p.Status = STATUS_STOPPED

@@ -29,6 +29,11 @@ const (
 	STATUS_STOPPED = 1
 	STATUS_RUNNING = 2
 	STATUS_ERROR   = 3
+
+	FLAG_UNSET         = -1
+	FLAG_NONE          = 0
+	FLAG_AGENT_CHANGED = 1
+	FLAG_ADDR_CHANGED  = 2
 )
 
 type (

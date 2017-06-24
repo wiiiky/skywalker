@@ -239,8 +239,13 @@ func (f *Force) reload(pConfigs []*config.ProxyConfig) ([]string, []string, []st
 
 	var unchanged, added, deleted, updated []string
 
+	unchangedProxies := make([]*proxy.Proxy, 0)
+	addedProxies := make([]*proxy.Proxy, 0)
+	deletedProxies := make([]*proxy.Proxy, 0)
+	updatedProxies := make([]*proxy.Proxy, 0)
+
 	for _, p := range f.proxies {
-		p.Flag = 0
+		p.Flag = proxy.FLAG_UNSET
 	}
 
 	names := []string{}
@@ -248,14 +253,71 @@ func (f *Force) reload(pConfigs []*config.ProxyConfig) ([]string, []string, []st
 		if err := cfg.Init(); err != nil {
 			return nil, nil, nil, nil, err
 		}
-		f.proxies[cfg.Name] = proxy.New(cfg)
+		p, ok := f.proxies[cfg.Name]
+		if !ok { /* */
+			addedProxies = append(addedProxies, proxy.New(cfg))
+			added = append(added, cfg.Name)
+		} else if p.Update(cfg) {
+			updatedProxies = append(updatedProxies, p)
+			updated = append(updated, p.Name)
+		} else {
+			unchangedProxies = append(unchangedProxies, p)
+			unchanged = append(unchanged, p.Name)
+		}
+
 		names = append(names, cfg.Name)
 		log.D("load proxy %s %s/%s %s\n", cfg.Name, cfg.ClientAgent, cfg.ServerAgent,
 			util.IfString(cfg.AutoStart, "autoStart", ""))
 	}
+	for _, p := range f.proxies {
+		if p.Flag == proxy.FLAG_UNSET {
+			deletedProxies = append(deletedProxies, p)
+			deleted = append(deleted, p.Name)
+		}
+	}
+
+	f.addProxies(addedProxies)
+	f.deleteProxies(deletedProxies)
+	f.updateProxies(updatedProxies)
+
+	/* */
+	f.orderedProxies = make([]*proxy.Proxy, 0)
 	sort.Strings(names)
 	for _, name := range names {
 		f.orderedProxies = append(f.orderedProxies, f.proxies[name])
 	}
 	return unchanged, added, deleted, updated, nil
+}
+
+func (f *Force) addProxies(proxies []*proxy.Proxy) {
+	for _, p := range proxies {
+		f.proxies[p.Name] = p
+		log.I("%s added", p.Name)
+		if p.AutoStart && p.Status != proxy.STATUS_RUNNING {
+			if err := p.Start(); err != nil {
+				log.W("Fail To Auto Start %s", p.Name)
+			}
+		}
+	}
+}
+
+func (f *Force) deleteProxies(proxies []*proxy.Proxy) {
+	for _, p := range proxies {
+		delete(f.proxies, p.Name)
+		log.I("%s deleted", p.Name)
+		p.Stop()
+	}
+}
+
+func (f *Force) updateProxies(proxies []*proxy.Proxy) {
+	for _, p := range proxies {
+		if p.Flag == proxy.FLAG_AGENT_CHANGED {
+			log.I("%s changed to %s/%s", p.Name, p.CAName, p.SAName)
+		} else if p.Flag == proxy.FLAG_ADDR_CHANGED {
+			if p.Status == proxy.STATUS_RUNNING {
+				p.Stop()
+			}
+			p.Start()
+		}
+	}
 }
