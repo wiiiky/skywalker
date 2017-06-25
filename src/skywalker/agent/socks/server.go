@@ -281,5 +281,5 @@ func (a *SocksServerAgent) RecvFromCA(data []byte, host string, port int) (inter
 		port: uint16(port),
 		data: data,
 	}
-	return nil, req.build(), host, port, nil
+	return nil, req.build(), a.cfg.serverAddr, a.cfg.serverPort, nil
 }

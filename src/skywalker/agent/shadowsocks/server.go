@@ -314,5 +314,5 @@ func (a *ShadowSocksServerAgent) RecvFromCA(data []byte, host string, port int) 
 	if err != nil {
 		return nil, nil, "", 0, err
 	}
-	return nil, a.encrypter.Encrypt(reqData), host, port, nil
+	return nil, a.encrypter.Encrypt(reqData), a.cfg.serverAddr, a.cfg.serverPort, nil
 }

@@ -193,8 +193,10 @@ func (p *Proxy) getUDPListener() chan *udpPackage {
 			buf := make([]byte, 1<<16)
 			for {
 				if n, addr, err := l.ReadFromUDP(buf); err == nil {
+					log.D("ReadFromUDP %d", n)
 					c <- &udpPackage{addr: addr, data: util.CopyBytes(buf, n)}
 				} else {
+					log.ERROR("ReadFromUDP error: %s", err.Error())
 					break
 				}
 			}
