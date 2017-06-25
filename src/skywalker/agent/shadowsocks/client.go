@@ -159,6 +159,14 @@ func (a *ShadowSocksClientAgent) UDPSupported() bool {
 }
 
 func (a *ShadowSocksClientAgent) RecvFromClient(data []byte) (interface{}, interface{}, string, int, error) {
+	ivSize := a.cfg.cipherInfo.IvSize
+	if len(data) < ivSize {
+		return nil, nil, "", 0, Error(ERROR_INVALID_PACKAGE, "invalid package")
+	}
+	iv := data[:ivSize]
+	a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, iv)
+	data = data[ivSize:]
+
 	if data = a.decrypter.Decrypt(data); data == nil {
 		return nil, nil, "", 0, Error(ERROR_DECRYPT_FAILURE, "decrypt failure")
 	}
