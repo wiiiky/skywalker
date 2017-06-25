@@ -112,20 +112,14 @@ func (req *ssAddressRequest) parse(data []byte) error {
 		addr = string(data[2 : 2+length])
 		data = data[2+length:]
 	} else if atype == ATYPE_IPV4 { /* IPv4 */
-		ip := net.ParseIP(string(data[1:5]))
-		if ip == nil {
-			return Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
-		}
+		ip := net.IP(data[1:5])
 		addr = ip.String()
 		data = data[5:]
 	} else if atype == ATYPE_IPV6 { /* IPv6 */
 		if len(data) < 19 {
 			return Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
 		}
-		ip := net.ParseIP(string(data[1:17]))
-		if ip == nil {
-			return Error(ERROR_INVALID_PACKAGE_SIZE, "address request size is too short")
-		}
+		ip := net.IP(data[1:17])
 		addr = ip.String()
 		data = data[17:]
 	} else {

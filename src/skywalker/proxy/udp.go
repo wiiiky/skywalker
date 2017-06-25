@@ -131,7 +131,7 @@ func (p *Proxy) sendToServer(ca agent.ClientAgent, sa agent.ServerAgent, data []
 	}
 	ctx, err := p.findUDPContext(caddr, shost, sport, ca, sa)
 	if err != nil {
-		log.WARN(p.Name, "findUDPContext Error, %s", err.Error())
+		log.WARN(p.Name, "findUDPContext Error, %s:%d - %s", shost, sport, err.Error())
 		return err
 	}
 	for _, b := range p.clarifyBytes(tdata) {
@@ -156,7 +156,6 @@ func (p *Proxy) handleUDP(upkg *udpPackage) {
 	var port int
 	var err error
 
-	log.D("%v", upkg)
 	ca, sa := p.GetAgents()
 
 	if rdata, tdata, host, port, err = ca.RecvFromClient(upkg.data); err != nil {

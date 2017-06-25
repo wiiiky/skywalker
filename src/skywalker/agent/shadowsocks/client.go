@@ -165,9 +165,8 @@ func (a *ShadowSocksClientAgent) RecvFromClient(data []byte) (interface{}, inter
 	}
 	iv := data[:ivSize]
 	a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, iv)
-	data = data[ivSize:]
 
-	if data = a.decrypter.Decrypt(data); data == nil {
+	if data = a.decrypter.Decrypt(data[ivSize:]); data == nil {
 		return nil, nil, "", 0, Error(ERROR_DECRYPT_FAILURE, "decrypt failure")
 	}
 	req, err := socks.ParseSocks5UDPRequest(data)
