@@ -18,6 +18,7 @@
 package proxy
 
 import (
+	"github.com/hitoshii/golib/src/log"
 	"net"
 	"skywalker/agent"
 	"skywalker/pkg"
@@ -145,6 +146,7 @@ func (p *Proxy) GetAgents() (agent.ClientAgent, agent.ServerAgent) {
 
 func (p *Proxy) writeTo(data interface{}, addr *net.UDPAddr) {
 	for _, b := range p.clarifyBytes(data) {
+		log.DEBUG(p.Name, "send UDP to %s - %d", addr.String(), len(b))
 		p.udpListener.WriteTo(b, addr)
 	}
 }

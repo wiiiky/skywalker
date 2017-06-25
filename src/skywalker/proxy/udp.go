@@ -60,6 +60,7 @@ func (p *Proxy) sendToClient(ca agent.ClientAgent, sa agent.ServerAgent, data []
 func (p *Proxy) runUDPContext(ctx *udpContext) {
 	buf := make([]byte, 1<<16)
 	for {
+		/* UDP 链接维持300秒 */
 		if err := ctx.conn.SetReadDeadline(time.Now().Add(300 * time.Second)); err != nil {
 			log.WARN(p.Name, "SetReadDeadline Error: %s", err)
 			break
@@ -134,6 +135,7 @@ func (p *Proxy) sendToServer(ca agent.ClientAgent, sa agent.ServerAgent, data []
 		return err
 	}
 	for _, b := range p.clarifyBytes(tdata) {
+		log.D("send UDP to %s - %d", ctx.conn.RemoteAddr(), len(b))
 		ctx.conn.Write(b)
 	}
 	for _, b := range p.clarifyBytes(rdata) {
