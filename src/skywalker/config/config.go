@@ -59,6 +59,9 @@ func (cfg *CoreConfig) init() {
 			Loggers: nil,
 		}
 	}
+	if cfg.Log.Name == "" {
+		cfg.Log.Name = "skywalker"
+	}
 	if cfg.Inet == nil && cfg.Unix == nil {
 		/* 如果没有配置监听端口，则使用默认配置 */
 		cfg.Inet = &InetConfig{
