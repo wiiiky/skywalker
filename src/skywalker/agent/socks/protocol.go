@@ -509,6 +509,33 @@ type socks5UDPRequest struct {
 	data  []byte
 }
 
+func ParseSocks5UDPRequest(data []byte) (*socks5UDPRequest, error) {
+	var req socks5UDPRequest
+	err := req.parse(data)
+	return &req, err
+}
+
+func CreateSocks5UDPRequest(host string, port int, data []byte) ([]byte, error) {
+	req := socks5UDPRequest{
+		addr: host,
+		port: uint16(port),
+		data: data,
+	}
+	return req.build(), nil
+}
+
+func (req *socks5UDPRequest) GetAddr() string {
+	return req.addr
+}
+
+func (req *socks5UDPRequest) GetPort() uint16 {
+	return req.port
+}
+
+func (req *socks5UDPRequest) GetData() []byte {
+	return req.data
+}
+
 /* 解析socks5的UDP请求 */
 func (req *socks5UDPRequest) parse(data []byte) error {
 	if len(data) < 7 {
