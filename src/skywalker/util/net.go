@@ -22,12 +22,14 @@ import (
 	"net"
 	"skywalker/pkg"
 	"strconv"
+	"syscall"
 	"time"
 )
 
 /* 默认缓存半个小时 */
 const (
-	DEFAULT_TIMEOUT = 1800
+	DEFAULT_TIMEOUT int64 = 1800
+	TCP_FASTOPEN    int   = 23
 )
 
 /*  DNS缓存 */
@@ -62,19 +64,33 @@ func TCPConnect(host string, port int) (net.Conn, int) {
 		return nil, pkg.CONNECT_RESULT_UNKNOWN_HOST
 	}
 	addr := JoinHostPort(ip, port)
-	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err == nil {
-		return conn, pkg.CONNECT_RESULT_OK
+	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	if err != nil {
+		return nil, pkg.CONNECT_RESULT_UNREACHABLE
 	}
-	return nil, pkg.CONNECT_RESULT_UNREACHABLE
+	return conn, pkg.CONNECT_RESULT_OK
 }
 
 /* 监听TCP端口 */
-func TCPListen(ip string, port int) (*net.TCPListener, error) {
-	if addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(ip, strconv.Itoa(port))); err != nil {
+func TCPListen(ip string, port int, fastOpen bool) (*net.TCPListener, error) {
+	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(ip, strconv.Itoa(port)))
+	if err != nil {
 		return nil, err
-	} else {
-		return net.ListenTCP("tcp", addr)
 	}
+	listener, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	if fastOpen {
+		if file, err := listener.File(); err != nil {
+			listener.Close()
+			return nil, err
+		} else if err = syscall.SetsockoptInt(int(file.Fd()), syscall.SOL_TCP, TCP_FASTOPEN, 1); err != nil {
+			listener.Close()
+			return nil, err
+		}
+	}
+	return listener, nil
 }
 
 func UnixListen(filepath string) (*net.UnixListener, error) {

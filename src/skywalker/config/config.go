@@ -88,6 +88,7 @@ type ProxyConfig struct {
 
 	Log       *log.Config `yaml:"log"`
 	AutoStart bool        `yaml:"autoStart"`
+	FastOpen  bool        `yaml:"fastOpen"`
 }
 
 /*

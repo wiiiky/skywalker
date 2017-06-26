@@ -115,10 +115,10 @@ func (p *Proxy) connectRemote(originalHost string, originalPort int, sa agent.Se
 	/* 获取服务器地址，并链接 */
 	host, port := sa.GetRemoteAddress(originalHost, originalPort)
 	conn, result := util.TCPConnect(host, port)
-
 	/* 连接结果 */
 	var resultCMD *pkg.Package
 	if result != pkg.CONNECT_RESULT_OK {
+		log.DEBUG(p.Name, "tcp connect result %d", result)
 		resultCMD = pkg.NewConnectResultPackage(result, originalHost, originalPort)
 	} else {
 		resultCMD = pkg.NewConnectResultPackage(result, originalHost, originalPort)

@@ -57,6 +57,7 @@ func New(cfg *config.ProxyConfig) *Proxy {
 			ReceivedQueue: util.NewRateQueue(2),
 		},
 		AutoStart: cfg.AutoStart,
+		FastOpen:  cfg.FastOpen,
 		Closing:   false,
 	}
 }
@@ -104,11 +105,12 @@ func (p *Proxy) Start() error {
 	defer p.Unlock()
 	p.Lock()
 
-	var tcpListener net.Listener
+	var tcpListener *net.TCPListener
 	var udpListener *net.UDPConn
 	var err error
-	if tcpListener, err = util.TCPListen(p.BindAddr, p.BindPort); err != nil {
+	if tcpListener, err = util.TCPListen(p.BindAddr, p.BindPort, p.FastOpen); err != nil {
 		p.Status = STATUS_ERROR
+		log.ERROR(p.Name, "failed to listen tcp: %s", err)
 		return err
 	}
 

@@ -59,6 +59,7 @@ type (
 		Info *ProxyInfo
 
 		AutoStart bool /* 是否自动启动 */
+		FastOpen  bool
 
 		Closing     bool
 		tcpListener net.Listener

@@ -99,7 +99,7 @@ func Run() *Force {
 	cfg := config.GetCoreConfig()
 
 	if cfg.Inet != nil {
-		if inetListener, err = util.TCPListen(cfg.Inet.IP, cfg.Inet.Port); err != nil {
+		if inetListener, err = util.TCPListen(cfg.Inet.IP, cfg.Inet.Port, true); err != nil {
 			log.E("%v", err)
 			return nil
 		}
