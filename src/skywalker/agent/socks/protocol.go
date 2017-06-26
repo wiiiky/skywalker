@@ -476,8 +476,8 @@ func (rep *socks5Response) parse(data []byte) error {
 		addr = net.IP(data[4:20]).String()
 		left = data[20:]
 	} else {
-		length := data[4]
-		if len(data) != int(length+7) {
+		length := uint8(data[4])
+		if len(data) != int(length)+7 {
 			return Error(ERROR_INVALID_MESSAGE_SIZE, "unexpected address request message size")
 		}
 		addr = string(data[5:(5 + length)])
@@ -561,8 +561,8 @@ func (req *socks5UDPRequest) parse(data []byte) error {
 		addr = net.IP(data[4:20]).String()
 		left = data[20:]
 	} else {
-		length := data[4]
-		if len(data) <= int(length+7) {
+		length := uint8(data[4])
+		if len(data) <= int(length)+7 {
 			return Error(ERROR_INVALID_MESSAGE_SIZE, "udp request message is too short")
 		}
 		addr = string(data[5:(5 + length)])
