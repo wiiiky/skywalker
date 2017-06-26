@@ -75,19 +75,24 @@ func handleLine(line *reader.Line) {
 	if req = cmd.BuildRequest(cmd, line.Args...); req == nil {
 		return
 	}
-	if conn = getConnection(); conn == nil {
-		return
+	for i := 0; i < 2; i++ {
+		if conn = getConnection(); conn == nil {
+			return
+		}
+		if err = conn.WriteRequest(req); err != nil {
+			disconnected(err)
+			continue
+		}
+		if rep = conn.ReadResponse(); rep == nil {
+			disconnected(nil)
+			continue
+		}
+		break
 	}
-	if err = conn.WriteRequest(req); err != nil {
-		disconnected(err)
+	if rep == nil {
 		return
-	}
-	if rep = conn.ReadResponse(); rep == nil {
-		disconnected(nil)
-		return
-	}
-	if e := rep.GetErr(); e != nil {
-		io.PrintError("%s\n", e.GetMsg())
+	} else if err := rep.GetErr(); err != nil {
+		io.PrintError("%s\n", err.GetMsg())
 		return
 	}
 	v := reflect.ValueOf(rep).MethodByName(cmd.ResponseField).Call([]reflect.Value{})[0].Interface()

@@ -20,6 +20,7 @@ package io
 import (
 	"net"
 	"skywalker/rpc"
+	"skywalker/util"
 	"strconv"
 	"time"
 )
@@ -27,7 +28,7 @@ import (
 /* 连接TCP服务 */
 func TCPConnect(ip string, port int) (*rpc.Conn, error) {
 	addr := net.JoinHostPort(ip, strconv.Itoa(port))
-	if conn, err := net.DialTimeout("tcp", addr, 10*time.Second); err != nil {
+	if conn, err := util.TCPConnectTo(addr); err != nil {
 		return nil, err
 	} else {
 		return rpc.NewConn(conn), nil

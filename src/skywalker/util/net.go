@@ -28,13 +28,14 @@ import (
 
 /* 默认缓存半个小时 */
 const (
-	DEFAULT_TIMEOUT int64 = 1800
-	TCP_FASTOPEN    int   = 23
+	CACHE_DEFAULT_TIMEOUT int64 = 1800
+	TCP_FASTOPEN          int   = 23
+	TCP_CONNECT_TIMEOUT         = 10
 )
 
 /*  DNS缓存 */
 var (
-	gDNSCache Cache = NewDNSCache(DEFAULT_TIMEOUT)
+	gDNSCache Cache = NewDNSCache(CACHE_DEFAULT_TIMEOUT)
 )
 
 /* 从缓存中获取DNS结果，如果没找到则发起解析 */
@@ -55,6 +56,10 @@ func JoinHostPort(ip string, port int) string {
 	return net.JoinHostPort(ip, strconv.Itoa(port))
 }
 
+func TCPConnectTo(addr string) (net.Conn, error) {
+	return net.DialTimeout("tcp", addr, TCP_CONNECT_TIMEOUT*time.Second)
+}
+
 /*
  * 连接远程服务器，解析DNS会阻塞
  */
@@ -64,7 +69,7 @@ func TCPConnect(host string, port int) (net.Conn, int) {
 		return nil, pkg.CONNECT_RESULT_UNKNOWN_HOST
 	}
 	addr := JoinHostPort(ip, port)
-	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	conn, err := TCPConnectTo(addr)
 	if err != nil {
 		return nil, pkg.CONNECT_RESULT_UNREACHABLE
 	}
