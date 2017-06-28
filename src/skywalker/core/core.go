@@ -305,7 +305,9 @@ func (f *Force) deleteProxies(proxies []*proxy.Proxy) {
 	for _, p := range proxies {
 		delete(f.proxies, p.Name)
 		log.I("%s deleted", p.Name)
-		p.Stop()
+		if p.Status == proxy.STATUS_RUNNING {
+			p.Stop()
+		}
 	}
 }
 
