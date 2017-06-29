@@ -293,7 +293,7 @@ func (f *Force) addProxies(proxies []*proxy.Proxy) {
 	for _, p := range proxies {
 		f.proxies[p.Name] = p
 		log.I("%s added", p.Name)
-		if p.AutoStart && p.Status != proxy.STATUS_RUNNING {
+		if p.AutoStart {
 			if err := p.Start(); err != nil {
 				log.W("Fail To Auto Start %s", p.Name)
 			}
@@ -305,8 +305,8 @@ func (f *Force) deleteProxies(proxies []*proxy.Proxy) {
 	for _, p := range proxies {
 		delete(f.proxies, p.Name)
 		log.I("%s deleted", p.Name)
-		if p.Status == proxy.STATUS_RUNNING {
-			p.Stop()
+		if err := p.Stop(); err != nil {
+			log.W("stop %s error: %s", p.Name, err.Error())
 		}
 	}
 }
@@ -316,10 +316,9 @@ func (f *Force) updateProxies(proxies []*proxy.Proxy) {
 		if p.Flag == proxy.FLAG_AGENT_CHANGED {
 			log.I("%s changed to %s/%s", p.Name, p.CAName, p.SAName)
 		} else if p.Flag == proxy.FLAG_ADDR_CHANGED {
-			if p.Status == proxy.STATUS_RUNNING {
-				p.Stop()
+			if err := p.Restart(); err != nil {
+				log.W("restart %s error: %s", p.Name, err.Error())
 			}
-			p.Start()
 		}
 	}
 }

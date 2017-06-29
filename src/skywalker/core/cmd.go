@@ -204,26 +204,19 @@ func handleRestart(f *Force, v interface{}) (*rpc.Response, error) {
 		names = f.GetProxyNames()
 	}
 	for _, name := range names {
-		p := f.proxies[name]
+		p, _ := f.proxies[name]
 		status := rpc.StartResponse_STARTED
 		errmsg := ""
 		if p == nil {
 			status = rpc.StartResponse_ERROR
 			errmsg = fmt.Sprintf("no such proxy")
-		} else if p.Status == proxy.STATUS_RUNNING {
-			if e := p.Stop(); e != nil {
-				status = rpc.StartResponse_ERROR
-				errmsg = e.Error()
-			}
+		} else if err := p.Restart(); err != nil {
+			status = rpc.StartResponse_ERROR
+			errmsg = err.Error()
+		} else {
+			status = rpc.StartResponse_STARTED
 		}
-		if len(errmsg) == 0 {
-			if e := p.Start(); e != nil {
-				status = rpc.StartResponse_ERROR
-				errmsg = e.Error()
-			} else {
-				status = rpc.StartResponse_STARTED
-			}
-		}
+
 		result = append(result, &rpc.StartResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
 	}
 	return &rpc.Response{

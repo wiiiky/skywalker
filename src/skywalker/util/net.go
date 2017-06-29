@@ -93,6 +93,9 @@ func TCPListen(ip string, port int, fastOpen bool) (*net.TCPListener, error) {
 		} else if err = syscall.SetsockoptInt(int(file.Fd()), syscall.SOL_TCP, TCP_FASTOPEN, 1); err != nil {
 			listener.Close()
 			return nil, err
+		} else if err = syscall.SetNonblock(int(file.Fd()), true); err != nil {
+			listener.Close()
+			return nil, err
 		}
 	}
 	return listener, nil

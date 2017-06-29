@@ -92,7 +92,7 @@ func (p *Proxy) Update(cfg *config.ProxyConfig) bool {
 }
 
 func (p *Proxy) Close() {
-	log.INFO(p.Name, "%s (%s:%d) Stopped", p.Name, p.BindAddr, p.BindPort)
+	log.INFO(p.Name, "%s:%d stopped", p.BindAddr, p.BindPort)
 	p.tcpListener.Close()
 	if p.udpListener != nil {
 		p.udpListener.Close()
@@ -100,10 +100,10 @@ func (p *Proxy) Close() {
 	p.Status = STATUS_STOPPED
 }
 
-/* 启动代理服务，同时监听TCP和UDP端口 */
-func (p *Proxy) Start() error {
-	defer p.Unlock()
-	p.Lock()
+func (p *Proxy) start() error {
+	if p.Status == STATUS_RUNNING {
+		return nil
+	}
 
 	var tcpListener *net.TCPListener
 	var udpListener *net.UDPConn
@@ -130,7 +130,7 @@ func (p *Proxy) Start() error {
 		}
 	}
 
-	log.INFO(p.Name, "%s (%s:%d) started", p.Name, p.BindAddr, p.BindPort)
+	log.INFO(p.Name, "%s:%d started", p.BindAddr, p.BindPort)
 	p.tcpListener = tcpListener
 	p.udpListener = udpListener
 	p.Status = STATUS_STOPPED
@@ -144,10 +144,18 @@ func (p *Proxy) Start() error {
 	return nil
 }
 
-/* 停止服务 */
-func (p *Proxy) Stop() error {
+/* 启动代理服务，同时监听TCP和UDP端口 */
+func (p *Proxy) Start() error {
 	defer p.Unlock()
 	p.Lock()
+
+	return p.start()
+}
+
+func (p *Proxy) stop() error {
+	if p.Status != STATUS_RUNNING {
+		return nil
+	}
 	p.Closing = true
 
 	p.tcpListener.Close()
@@ -162,6 +170,24 @@ func (p *Proxy) Stop() error {
 	return nil
 }
 
+/* 停止服务 */
+func (p *Proxy) Stop() error {
+	defer p.Unlock()
+	p.Lock()
+
+	return p.stop()
+}
+
+func (p *Proxy) Restart() error {
+	defer p.Unlock()
+	p.Lock()
+
+	if err := p.stop(); err != nil {
+		return err
+	}
+	return p.start()
+}
+
 /* 将TCP监听套接字转化为channel的监听 */
 func (p *Proxy) getTCPListener() chan net.Conn {
 	c := make(chan net.Conn)
@@ -174,6 +200,7 @@ func (p *Proxy) getTCPListener() chan net.Conn {
 				break
 			}
 		}
+		log.DEBUG(p.Name, "TCP %s closed", l.Addr())
 	}(p.tcpListener, c)
 	return c
 }
@@ -197,10 +224,10 @@ func (p *Proxy) getUDPListener() chan *udpPackage {
 				if n, addr, err := l.ReadFromUDP(buf); err == nil {
 					c <- &udpPackage{addr: addr, data: util.CopyBytes(buf, n)}
 				} else {
-					log.ERROR(p.Name, "ReadFromUDP error: %s", err.Error())
 					break
 				}
 			}
+			log.DEBUG(p.Name, "UDP %s closed", l.LocalAddr())
 		}(p.udpListener, c)
 	}
 	return c
