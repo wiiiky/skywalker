@@ -1,13 +1,13 @@
 SkyWalker
 ==============
 
-### Introduce
+### 介绍
 
-SkyWalker is a proxy program, which supports to transform certain-protocol network flow into another one.
+SkyWalker 是一个代理程序，设计用来转换不同的数据格式。
 
-For example, if you have a client that only supports HTTP-PROXY protocol, but a proxy server that only supports SOCKS5 protocol.
+### 例子
 
-Then you can use SkyWalker to transform HTTP-PROXY flow into SOCKS5 flow. like below
+如果要把HTTP代理转化为SOCKS5代理输出，其数据流如下
 
 ```
 +--------+                +-----------+            +---------------+
@@ -15,57 +15,70 @@ Then you can use SkyWalker to transform HTTP-PROXY flow into SOCKS5 flow. like b
 +--------+                +-----------+            +---------------+
 ```
 
-To do this, SkyWalker should be configured to accept HTTP-PROXY data but output SOCKS5 data.
+一个典型的Shadowsocks的local服务如下
 
+```
++--------+                +-----------+                 +------------+
+| CLIENT |   <=SOCKS5=>   | SKYWALKER | <=SHADOWSOCKS=> | SS REMOTE  | <=>
++--------+                +-----------+                 +------------+
+```
 
-### Definition
+### 实现
 
-There are two main parts in SkyWalker, Client Agent and Server Agent.
+为了达到这种可配置的代理转化效果，Skywalker内部大致被分为两个部分。
 
-*    Client Agent works as a proxy server, to accept specified proxy data from client and transfer to SA.
+一部分用于接收并解析客户端数据，叫作ClientAgent（简称CA）。
 
-*    Server Agent works as a proxy client, to generate specified proxy data from server and transfer to CA.
+另一部分用于接受CA解析完的数据并打包成新的数据格式，并发送给服务器，叫做ServerAgent（简称SA）。
 
+通过实现不同的CA和SA协议，来达到可配置地转化数据协议地能力。
 
-### Protocol
+### 协议
 
-For now
+目前
 
-CA supports
+CA支持以下协议
 
     * HTTP PROXY
     * SOCKS4
     * SOCKS5
     * SHADOWSOCKS
 
-SA supports
+SA支持以下协议
 
     * SOCKS4
     * SOCKS5
     * SHADOWSOCKS
     * DIRECT
 
+**DIRECT** 表示无格式数据，不打包，直接把数据发送出去。
+
+**注意** 在协议转化的过程中，有一个转化方向，那就是从高层协议往低层协议转化。
+
+比如可以把HTTP代理转化为SOCKS5协议，但是无法把SOCKS5协议转化为HTTP代理协议，因此SA不能实现HTTP代理协议。
+
+类似的还有，DIRECT只能作为SA协议，而不能作为CA协议。
 
 
-DIRECT is a special protocol, actually it's not a protocol, it directly outputs the data from CA.
+### 配置
 
-If SA is configured to DIRECT, then SkyWalker just works like a normal proxy.
+Skywalker 使用 [Yaml1.2](http://www.yaml.org/spec/1.2/spec.html) 作为配置格式。
 
-### Configuration
+具体配置方案请参考 ***example*** 目录。
 
-SkyWalker uses [Yaml1.2](http://www.yaml.org/spec/1.2/spec.html) as configuration format.
+### 编译
 
-Check ***example*** directory for configuration examples.
-
-### Build
-
-To build SkyWalker, you need a [GO language](http://golang.org/) compile environment.
-
-Go to the source code directory and execute:
+在代码目录下执行
 
 *    make
 
-### Screenshot
+### 管理
+
+与Skywalker配套的一个管理程序叫做forctl，它既可以做作为命令行程序，也可以作为交互程序使用。
+
+可以用于开启和关闭代理、查看代理状态、刷新配置等。
+
+### 截图
 
 ![start](https://raw.githubusercontent.com/hitoshii/skywalker/master/screenshot/screenshot1.png?raw=true)
 ![control](https://raw.githubusercontent.com/hitoshii/skywalker/master/screenshot/screenshot2.png?raw=true)
