@@ -1,24 +1,29 @@
+ENV=GOPATH=`pwd`
 
-all: get skywalker forctl
+all: get skywalker forctl forgtl
 
 skywalker: src/skywalker/skywalker.go
-	GOPATH=`pwd` go build -o bin/skywalker $?
+	$(ENV) go build -o bin/skywalker $?
 
 forctl: src/forctl/forctl.go
-	GOPATH=`pwd` go build -o bin/forctl $?
+	$(ENV) go build -o bin/forctl $?
+
+forgtl: src/forgtl/forgtl.go
+	$(ENV) go build -o bin/forgtl $?
 
 get:
-	GOPATH=`pwd` go get --fix skywalker
-	GOPATH=`pwd` go get --fix forctl
+	$(ENV) go get --fix skywalker
+	$(ENV) go get --fix forctl
+	$(ENV) go get --fix forgtl
 
 fmt:
-	find ./src/forctl ./src/skywalker -name '*.go'|xargs gofmt -w
+	find ./src/forctl ./src/skywalker ./src/forgtl -name '*.go'|xargs gofmt -w
 
 proto: proto-gen
-	PATH="$(PATH):./bin" GOPATH=`pwd` protoc --go_out=./ ./src/skywalker/rpc/*.proto
+	PATH="$(PATH):./bin" $(ENV) protoc --go_out=./ ./src/skywalker/rpc/*.proto
 
 proto-gen:
 	GOPATH=`pwd` go get github.com/golang/protobuf/protoc-gen-go
 
-clean: bin/skywalker bin/forctl
+clean: bin/skywalker bin/forctl bin/forgtl
 	rm -rf $?
