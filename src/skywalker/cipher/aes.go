@@ -19,12 +19,12 @@ package cipher
 
 import (
 	"crypto/aes"
-	_cipher "crypto/cipher"
+	"crypto/cipher"
 )
 
 /* AES CFB模式 加密 */
 type aesCFBEncrypter struct {
-	stream _cipher.Stream
+	stream cipher.Stream
 }
 
 func (e *aesCFBEncrypter) Encrypt(plain []byte) []byte {
@@ -34,13 +34,13 @@ func (e *aesCFBEncrypter) Encrypt(plain []byte) []byte {
 func newAESCFBEncrypter(key, iv []byte) Encrypter {
 	block, _ := aes.NewCipher(key)
 
-	stream := _cipher.NewCFBEncrypter(block, iv)
+	stream := cipher.NewCFBEncrypter(block, iv)
 	return &aesCFBEncrypter{stream}
 }
 
 /* AES CFB模式 解密 */
 type aesCFBDecrypter struct {
-	stream _cipher.Stream
+	stream cipher.Stream
 }
 
 func (e *aesCFBDecrypter) Decrypt(encrypted []byte) []byte {
@@ -50,6 +50,6 @@ func (e *aesCFBDecrypter) Decrypt(encrypted []byte) []byte {
 func newAESCFBDecrypter(key, iv []byte) Decrypter {
 	block, _ := aes.NewCipher(key)
 
-	stream := _cipher.NewCFBDecrypter(block, iv)
+	stream := cipher.NewCFBDecrypter(block, iv)
 	return &aesCFBDecrypter{stream}
 }

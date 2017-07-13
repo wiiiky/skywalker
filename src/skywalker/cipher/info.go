@@ -36,6 +36,7 @@ var (
 		"rc4-md5":     &CipherInfo{16, 16, newRC4MD5Encrypter, newRC4MD5Decrypter},
 		"salsa20":     &CipherInfo{32, 8, newSalsa20Encrypter, newSalsa20Decrypter},
 		"chacha20":    &CipherInfo{32, 8, newChacha20Encrypter, newChacha20Decrypter},
+		"none":        &CipherInfo{32, 16, newNoneEncrypter, newNoneDecrypter},
 	}
 )
 

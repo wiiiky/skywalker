@@ -108,33 +108,33 @@ func (a *ShadowSocksClientAgent) OnStart() error {
 	return nil
 }
 
-func (p *ShadowSocksClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
+func (a *ShadowSocksClientAgent) OnConnectResult(result int, host string, port int) (interface{}, interface{}, error) {
 	return nil, nil, nil
 }
 
-func (p *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
+func (a *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
 	var tdata []*pkg.Package
 
-	if p.decrypter == nil {
+	if a.decrypter == nil {
 		/* 第一个数据包，应该包含IV和请求数据 */
-		ivSize := p.cfg.cipherInfo.IvSize
+		ivSize := a.cfg.cipherInfo.IvSize
 		if len(data) < ivSize {
 			return nil, nil, Error(ERROR_INVALID_PACKAGE, "invalid package")
 		}
 		iv := data[:ivSize]
-		p.decrypter = p.cfg.cipherInfo.DecrypterFunc(p.key, iv)
+		a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, iv)
 		data = data[ivSize:]
 	}
 
 	/* 解密数据 */
-	data = p.decrypter.Decrypt(data)
-	if data != nil && p.connected == false {
+	data = a.decrypter.Decrypt(data)
+	if data != nil && a.connected == false {
 		/* 还没有收到客户端的连接请求包，解析 */
 		req := &ssAddressRequest{}
 		if err := req.parse(data); err != nil {
 			return nil, nil, err
 		}
-		p.connected = true
+		a.connected = true
 		tdata = append(tdata, pkg.NewConnectPackage(req.addr, int(req.port)))
 		data = req.left
 	}

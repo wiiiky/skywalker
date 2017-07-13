@@ -43,6 +43,7 @@ CA支持以下协议
     * SOCKS4
     * SOCKS5
     * SHADOWSOCKS
+    * REDIRECT
 
 SA支持以下协议
 
