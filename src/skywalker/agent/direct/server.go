@@ -29,7 +29,7 @@ type DirectAgent struct {
 }
 
 func (a *DirectAgent) Name() string {
-	return "Direct"
+	return "direct"
 }
 
 func (a *DirectAgent) OnInit(name string, cfg map[string]interface{}) error {
