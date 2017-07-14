@@ -90,7 +90,7 @@ func (a *RedirectAgent) ReadFromClient(data []byte) (interface{}, interface{}, e
 
 /* 从SA接收到数据 */
 func (a *RedirectAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
-	return data, nil, nil
+	return nil, data, nil
 }
 
 func (a *RedirectAgent) UDPSupported() bool {

@@ -70,7 +70,7 @@ type RateQueue struct {
 
 func NewRateQueue(d int64) *RateQueue {
 	return &RateQueue{
-		queue:    NewLimitedQueue(10),
+		queue:    NewLimitedQueue(20),
 		duration: d * 1e9,
 	}
 }
