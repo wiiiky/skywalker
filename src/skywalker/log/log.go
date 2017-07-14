@@ -30,7 +30,7 @@ import (
 const (
 	STDOUT = "STDOUT"
 	STDERR = "STDERR"
-	
+
 	LEVEL_DEBUG = "DEBUG"
 	LEVEL_INFO  = "INFO"
 	LEVEL_WARN  = "WARN"
@@ -42,7 +42,7 @@ type (
 		/* 日志等级，可以用|连接多个，如DEBUG|INFO */
 		Level string `json:"level" yaml:"level"`
 		/* 日志记录文件，如果是标准输出，则是STDOUT，标准错误输出STDERR */
-		File   string   `json:"file" yaml:"file"`
+		File string `json:"file" yaml:"file"`
 		/* 如果target不为空，则忽略file使用target作为输出目标 */
 		Target *os.File `json:"-" yaml:"-"`
 	}
@@ -64,7 +64,6 @@ var (
 	}
 	gLoggers map[string]map[string]*log.Logger = make(map[string]map[string]*log.Logger)
 )
-
 
 /* 将文件路径转化为绝对路径 */
 func (c *Logger) absolutize() {

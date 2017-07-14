@@ -18,9 +18,9 @@
 package config
 
 import (
+	"os"
 	"skywalker/config"
 	"skywalker/log"
-	"os"
 )
 
 var (
@@ -29,22 +29,22 @@ var (
 
 func LoadProxyConfigs() []*config.ProxyConfig {
 	pConfigs = append(pConfigs, &config.ProxyConfig{
-		Name: "ss",
-		BindAddr: "127.0.0.1",
-		BindPort: 22212,
+		Name:        "ss",
+		BindAddr:    "127.0.0.1",
+		BindPort:    22212,
 		ClientAgent: "socks",
 		ClientConfig: map[string]interface{}{
 			"version": 5,
 		},
 		ServerAgent: "shadowsocks",
 		ServerConfig: map[string]interface{}{
-			"method": "aes-256-cfb",
-			"password": "CHE8FIYJ1ZcsGyvisEjO",
+			"method":     "aes-256-cfb",
+			"password":   "CHE8FIYJ1ZcsGyvisEjO",
 			"serverPort": 12345,
 			"serverAddr": "wikylyu.me",
 		},
 		Log: &log.Config{
-			Name: "ss",
+			Name:     "ss",
 			ShowName: true,
 			Loggers: []log.Logger{
 				log.Logger{log.LEVEL_DEBUG, "", os.Stdout},

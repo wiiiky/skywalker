@@ -38,6 +38,7 @@ func main() {
 	var rl *reader.Reader
 	var line *reader.Line
 
+	config.Init()
 	if rl, err = reader.New(config.GetCoreConfig(), config.GetProxyConfigs()); err != nil {
 		io.Print("%v\n", err)
 		return

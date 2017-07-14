@@ -129,8 +129,8 @@ var (
 )
 
 const (
-	DEFAULT_USER_CONFIG   = "~/.config/skywalker.yml"
-	DEFAULT_SYS_CONFIG = "/etc/skywalker.yml"
+	DEFAULT_USER_CONFIG = "~/.config/skywalker.yml"
+	DEFAULT_SYS_CONFIG  = "/etc/skywalker.yml"
 )
 
 func (cConfig *CoreConfig) GetProxyConfigs(pConfigs map[string]*ProxyConfig) []*ProxyConfig {

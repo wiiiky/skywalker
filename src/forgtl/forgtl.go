@@ -18,11 +18,11 @@
 package main
 
 import (
-	"github.com/gotk3/gotk3/gtk"
-	"skywalker/core"
+	"fmt"
 	"forgtl/config"
 	"forgtl/ui"
-	"fmt"
+	"github.com/gotk3/gotk3/gtk"
+	"skywalker/core"
 )
 
 func run() *core.Force {
@@ -41,7 +41,7 @@ func run() *core.Force {
 
 func main() {
 	gtk.Init(nil)
-	
+
 	force := run()
 	defer force.Finish()
 
