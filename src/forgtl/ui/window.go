@@ -15,37 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package main
+package ui
 
 import (
 	"github.com/gotk3/gotk3/gtk"
-	"skywalker/core"
-	"forgtl/config"
-	"forgtl/ui"
-	"fmt"
 )
 
-func run() *core.Force {
-	force := core.NewForce(nil, nil)
-
-	pConfigs := config.LoadProxyConfigs()
-	if err := force.LoadProxiesFromConfig(pConfigs); err != nil {
-		fmt.Println(err)
-		return nil
-	}
-
-	force.AutoStartProxies()
-
-	return force
+func quit() {
+	gtk.MainQuit()
 }
 
-func main() {
-	gtk.Init(nil)
-	
-	force := run()
-	defer force.Finish()
+func ShowWindow() {
+	win, _ := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
+	win.Connect("destroy", quit)
 
-	ui.ShowWindow()
+	headerBar, _ := gtk.HeaderBarNew()
+	headerBar.SetShowCloseButton(true)
+	headerBar.SetTitle("Skywalker")
+	win.SetTitlebar(headerBar)
+	win.SetDefaultSize(600, 400)
 
-	gtk.Main()
+	win.ShowAll()
 }

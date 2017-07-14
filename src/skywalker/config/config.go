@@ -201,7 +201,7 @@ func GetConfigFilePath() string {
 	return gConfigFilePath
 }
 
-func init() {
+func Init() {
 	cfile := GetConfigFilePath()
 	if len(cfile) == 0 {
 		util.FatalError("No Config Found!")

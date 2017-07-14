@@ -43,6 +43,14 @@ type Force struct {
 	orderedProxies []*proxy.Proxy
 }
 
+func NewForce(inetListener *net.TCPListener, unixListener *net.UnixListener) *Force {
+	return &Force{
+		InetListener: inetListener,
+		UnixListener: unixListener,
+		proxies:      make(map[string]*proxy.Proxy),
+	}
+}
+
 /* 获取所有服务名，按顺序返回 */
 func (f *Force) GetProxyNames() []string {
 	var names []string
@@ -52,7 +60,7 @@ func (f *Force) GetProxyNames() []string {
 	return names
 }
 
-func (f *Force) loadProxiesFromConfig(pConfigs []*config.ProxyConfig) error {
+func (f *Force) LoadProxiesFromConfig(pConfigs []*config.ProxyConfig) error {
 	defer f.Unlock()
 	f.Lock()
 
@@ -73,13 +81,8 @@ func (f *Force) loadProxiesFromConfig(pConfigs []*config.ProxyConfig) error {
 	return nil
 }
 
-/* 载入所有服务，不启动 */
-func (f *Force) loadProxies() error {
-	return f.loadProxiesFromConfig(config.GetProxyConfigs())
-}
-
 /* 自动启动服务 */
-func (f *Force) autoStartProxies() {
+func (f *Force) AutoStartProxies() {
 	defer f.Unlock()
 	f.Lock()
 	for _, p := range f.proxies {
@@ -96,35 +99,34 @@ func Run() *Force {
 	var inetListener *net.TCPListener
 	var unixListener *net.UnixListener
 	var err error
-	cfg := config.GetCoreConfig()
 
-	if cfg.Inet != nil {
-		if inetListener, err = util.TCPListen(cfg.Inet.IP, cfg.Inet.Port, false); err != nil {
+	config.Init()
+	cConfig := config.GetCoreConfig()
+	pConfigs := config.GetProxyConfigs()
+
+	if cConfig.Inet != nil {
+		if inetListener, err = util.TCPListen(cConfig.Inet.IP, cConfig.Inet.Port, false); err != nil {
 			log.E("%v", err)
 			return nil
 		}
 	}
-	if cfg.Unix != nil {
-		if unixListener, err = util.UnixListen(cfg.Unix.File); err != nil {
+	if cConfig.Unix != nil {
+		if unixListener, err = util.UnixListen(cConfig.Unix.File); err != nil {
 			log.E("%v", err)
 			return nil
 		}
-		os.Chmod(unixListener.Addr().String(), os.FileMode(cfg.Unix.Chmod))
+		os.Chmod(unixListener.Addr().String(), os.FileMode(cConfig.Unix.Chmod))
 	}
 
-	force := &Force{
-		InetListener: inetListener,
-		UnixListener: unixListener,
-		proxies:      make(map[string]*proxy.Proxy),
-	}
+	force := NewForce(inetListener, unixListener)
 
-	if err = force.loadProxies(); err != nil {
+	if err = force.LoadProxiesFromConfig(pConfigs); err != nil {
 		log.E("%v", err)
 		return nil
 	}
 
-	force.autoStartProxies()
-	force.listen(cfg)
+	force.AutoStartProxies()
+	force.Listen(cConfig)
 
 	return force
 }
@@ -136,7 +138,7 @@ func (f *Force) Finish() {
 }
 
 /* 监听命令请求 */
-func (f *Force) listen(cfg *config.CoreConfig) {
+func (f *Force) Listen(cfg *config.CoreConfig) {
 	listenFunc := func(listener net.Listener, username, password string) {
 		for {
 			if conn, err := listener.Accept(); err == nil {
@@ -230,10 +232,10 @@ func (f *Force) Reload() ([]string, []string, []string, []string, error) {
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	return f.reload(cConfig.GetProxyConfigs(pConfig))
+	return f.ReloadProxies(cConfig.GetProxyConfigs(pConfig))
 }
 
-func (f *Force) reload(pConfigs []*config.ProxyConfig) ([]string, []string, []string, []string, error) {
+func (f *Force) ReloadProxies(pConfigs []*config.ProxyConfig) ([]string, []string, []string, []string, error) {
 	defer f.Unlock()
 	f.Lock()
 
