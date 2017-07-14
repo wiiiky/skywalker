@@ -18,7 +18,7 @@
 package ui
 
 import (
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/wiiiky/gotk3/gtk"
 )
 
 type Stack struct {
@@ -27,11 +27,11 @@ type Stack struct {
 
 func SidebarStack() *Stack {
 	box, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
-	//sidebar, _ := gtk.StackSidebarNew()
+	sidebar, _ := gtk.StackSidebarNew()
 	separator, _ := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
 	stack, _ := gtk.StackNew()
 
-	//box.PackStart(sidebar, false, false, 0)
+	box.PackStart(sidebar, false, false, 0)
 	box.PackStart(separator, false, false, 0)
 	box.PackStart(stack, true, true, 0)
 	

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"forgtl/config"
 	"forgtl/ui"
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/wiiiky/gotk3/gtk"
 	"skywalker/core"
 )
 

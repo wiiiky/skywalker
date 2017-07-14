@@ -18,7 +18,7 @@
 package ui
 
 import (
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/wiiiky/gotk3/gtk"
 )
 
 func quit() {
@@ -34,6 +34,8 @@ func ShowWindow() {
 	headerBar.SetTitle("Skywalker")
 	win.SetTitlebar(headerBar)
 	win.SetDefaultSize(600, 400)
+
+	win.Add(SidebarStack())
 
 	win.ShowAll()
 }
