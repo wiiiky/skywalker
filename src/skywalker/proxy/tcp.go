@@ -113,6 +113,9 @@ func (p *Proxy) connectRemote(originalHost string, originalPort int, sa agent.Se
 	s2c chan *pkg.Package) (net.Conn, chan []byte, string, int) {
 	/* 获取服务器地址，并链接 */
 	host, port := sa.GetRemoteAddress(originalHost, originalPort)
+	if host == "" {
+		return nil, nil, "", 0
+	}
 	conn, result := util.TCPConnect(host, port)
 	/* 连接结果 */
 	var resultCMD *pkg.Package

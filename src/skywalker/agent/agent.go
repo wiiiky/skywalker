@@ -26,6 +26,7 @@ import (
 	"skywalker/agent/redirect"
 	"skywalker/agent/shadowsocks"
 	"skywalker/agent/socks"
+	"skywalker/agent/void"
 	"skywalker/log"
 	"strings"
 )
@@ -60,6 +61,14 @@ func NewRedirectAgent(name string) ClientAgent {
 	return &redirect.RedirectAgent{BaseAgent: base.BaseAgent{Name: name}}
 }
 
+func NewVoidClientAgent(name string) ClientAgent {
+	return &void.VoidClientAgent{BaseAgent: base.BaseAgent{Name: name}}
+}
+
+func NewVoidServerAgent(name string) ServerAgent {
+	return &void.VoidServerAgent{BaseAgent: base.BaseAgent{Name: name}}
+}
+
 /* 代理名和代理构造函数的映射 */
 var (
 	gCAMap = map[string]newClientAgentFunc{
@@ -67,11 +76,13 @@ var (
 		"socks":       NewSocksClientAgent,
 		"shadowsocks": NewShadowSocksClientAgent,
 		"redirect":    NewRedirectAgent,
+		"void":        NewVoidClientAgent,
 	}
 	gSAMap = map[string]newServerAgentFunc{
 		"socks":       NewSocksServerAgent,
 		"direct":      NewDirectAgent,
 		"shadowsocks": NewShadowSocksServerAgent,
+		"void":        NewVoidServerAgent,
 	}
 )
 
