@@ -18,7 +18,7 @@
 package base
 
 import (
-	"github.com/hitoshii/golib/src/log"
+	"skywalker/log"
 )
 
 type BaseAgent struct {

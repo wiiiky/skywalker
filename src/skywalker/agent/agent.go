@@ -20,13 +20,13 @@ package agent
 import (
 	"errors"
 	"fmt"
-	"github.com/hitoshii/golib/src/log"
 	"skywalker/agent/base"
 	"skywalker/agent/direct"
 	"skywalker/agent/http"
 	"skywalker/agent/redirect"
 	"skywalker/agent/shadowsocks"
 	"skywalker/agent/socks"
+	"skywalker/log"
 	"strings"
 )
 

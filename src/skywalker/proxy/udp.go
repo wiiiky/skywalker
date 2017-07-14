@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Wiky L
+ * Copyright (C) 2015 - 2017 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -18,7 +18,6 @@
 package proxy
 
 import (
-	"github.com/hitoshii/golib/src/log"
 	"net"
 	"skywalker/agent"
 	"skywalker/util"
@@ -62,18 +61,18 @@ func (p *Proxy) runUDPContext(ctx *udpContext) {
 	for {
 		/* UDP 链接维持300秒 */
 		if err := ctx.conn.SetReadDeadline(time.Now().Add(300 * time.Second)); err != nil {
-			log.WARN(p.Name, "SetReadDeadline Error: %s", err)
+			p.WARN("SetReadDeadline Error: %s", err)
 			break
 		}
 		if n, addr, err := ctx.conn.ReadFromUDP(buf); err != nil {
 			break
 		} else if addr.String() == ctx.saddr.String() {
 			if err := p.sendToClient(ctx.ca, ctx.sa, buf[:n], ctx.caddr); err != nil {
-				log.WARN(p.Name, "sendToClient Error: %s", err)
+				p.WARN("sendToClient Error: %s", err)
 			}
 		}
 	}
-	log.DEBUG(p.Name, "UDP %s Closed", ctx.conn.LocalAddr())
+	p.DEBUG("UDP %s Closed", ctx.conn.LocalAddr())
 	gUDPCtxMutex.Lock()
 	delete(gUDPCtxs, ctx.key)
 	gUDPCtxMutex.Unlock()
@@ -126,16 +125,16 @@ func (p *Proxy) sendToServer(ca agent.ClientAgent, sa agent.ServerAgent, data []
 	caddr *net.UDPAddr, host string, port int) error {
 	rdata, tdata, shost, sport, err := sa.RecvFromCA(data, host, port)
 	if err != nil {
-		log.WARN(p.Name, "Server Agent RecvFromCA Error, %s", err.Error())
+		p.WARN("Server Agent RecvFromCA Error, %s", err.Error())
 		return err
 	}
 	ctx, err := p.findUDPContext(caddr, shost, sport, ca, sa)
 	if err != nil {
-		log.WARN(p.Name, "findUDPContext Error, %s:%d - %s", shost, sport, err.Error())
+		p.WARN("findUDPContext Error, %s:%d - %s", shost, sport, err.Error())
 		return err
 	}
 	for _, b := range p.clarifyBytes(tdata) {
-		log.D("send UDP to %s - %d", ctx.conn.RemoteAddr(), len(b))
+		p.DEBUG("send UDP to %s - %d", ctx.conn.RemoteAddr(), len(b))
 		ctx.conn.Write(b)
 	}
 	for _, b := range p.clarifyBytes(rdata) {
@@ -159,7 +158,7 @@ func (p *Proxy) handleUDP(upkg *udpPackage) {
 	ca, sa := p.GetAgents()
 
 	if rdata, tdata, host, port, err = ca.RecvFromClient(upkg.data); err != nil {
-		log.WARN(p.Name, "Client Agent RecvFromClient Error, %s", err.Error())
+		p.WARN("Client Agent RecvFromClient Error, %s", err.Error())
 		return
 	}
 	p.writeTo(rdata, upkg.addr)

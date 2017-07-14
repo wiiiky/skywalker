@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2016 Wiky L
+ * Copyright (C) 2015 - 2017 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -19,9 +19,9 @@ package config
 
 import (
 	"errors"
-	"github.com/hitoshii/golib/src/log"
 	"os"
 	"skywalker/agent"
+	"skywalker/log"
 	"skywalker/util"
 	"strings"
 )
@@ -113,10 +113,10 @@ func (cfg *ProxyConfig) Init() error {
 var (
 	/* 默认配置 */
 	defaultLoggers = []log.Logger{
-		log.Logger{"DEBUG", "STDOUT"},
-		log.Logger{"INFO", "STDOUT"},
-		log.Logger{"WARN", "STDERR"},
-		log.Logger{"ERROR", "STDERR"},
+		log.Logger{log.LEVEL_DEBUG, log.STDOUT, nil},
+		log.Logger{log.LEVEL_INFO, log.STDOUT, nil},
+		log.Logger{log.LEVEL_WARN, log.STDERR, nil},
+		log.Logger{log.LEVEL_ERROR, log.STDERR, nil},
 	}
 	gCore = &CoreConfig{
 		Log: &log.Config{
@@ -130,13 +130,13 @@ var (
 
 const (
 	DEFAULT_USER_CONFIG   = "~/.config/skywalker.yml"
-	DEFAULT_GLOBAL_CONFIG = "/etc/skywalker.yml"
+	DEFAULT_SYS_CONFIG = "/etc/skywalker.yml"
 )
 
-func (cConfig *CoreConfig) GetProxyConfigs(pConfig map[string]*ProxyConfig) []*ProxyConfig {
+func (cConfig *CoreConfig) GetProxyConfigs(pConfigs map[string]*ProxyConfig) []*ProxyConfig {
 	var configs []*ProxyConfig
 
-	for name, cfg := range pConfig {
+	for name, cfg := range pConfigs {
 		/* 忽略~开头的配置 */
 		if strings.HasPrefix(name, "~") {
 			continue
@@ -194,7 +194,7 @@ func GetConfigFilePath() string {
 	} else {
 		if path := checkRegularFile(DEFAULT_USER_CONFIG); len(path) > 0 {
 			gConfigFilePath = path
-		} else if path := checkRegularFile(DEFAULT_GLOBAL_CONFIG); len(path) > 0 {
+		} else if path := checkRegularFile(DEFAULT_SYS_CONFIG); len(path) > 0 {
 			gConfigFilePath = path
 		}
 	}
@@ -225,7 +225,7 @@ func LoadConfigFromPath(path string) (*CoreConfig, map[string]*ProxyConfig, erro
 	 * 然后分离log和代理，分别读取
 	 */
 	cConfig := CoreConfig{}
-	pConfig := make(map[string]*ProxyConfig)
+	pConfigs := make(map[string]*ProxyConfig)
 	if yamlMap["core"] != nil { /* 读取log并从map中删除 */
 		data = util.YamlMarshal(yamlMap["core"])
 		util.YamlUnmarshal(data, &cConfig)
@@ -234,7 +234,7 @@ func LoadConfigFromPath(path string) (*CoreConfig, map[string]*ProxyConfig, erro
 	cConfig.init()
 
 	data = util.YamlMarshal(yamlMap)
-	util.YamlUnmarshal(data, &pConfig)
+	util.YamlUnmarshal(data, &pConfigs)
 
-	return &cConfig, pConfig, nil
+	return &cConfig, pConfigs, nil
 }

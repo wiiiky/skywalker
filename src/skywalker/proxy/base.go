@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Wiky L
+ * Copyright (C) 2015 - 2017 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -18,9 +18,9 @@
 package proxy
 
 import (
-	"github.com/hitoshii/golib/src/log"
 	"net"
 	"skywalker/agent"
+	"skywalker/log"
 	"skywalker/pkg"
 	"skywalker/util"
 	"sync"
@@ -147,7 +147,24 @@ func (p *Proxy) GetAgents() (agent.ClientAgent, agent.ServerAgent) {
 
 func (p *Proxy) writeTo(data interface{}, addr *net.UDPAddr) {
 	for _, b := range p.clarifyBytes(data) {
-		log.DEBUG(p.Name, "send UDP to %s - %d", addr.String(), len(b))
+		p.DEBUG("send UDP to %s - %d", addr.String(), len(b))
 		p.udpListener.WriteTo(b, addr)
 	}
+}
+
+/* 日志输出 */
+func (p *Proxy) DEBUG(fmt string, v ...interface{}) {
+	log.DEBUG(p.Name, fmt, v...)
+}
+
+func (p *Proxy) INFO(fmt string, v ...interface{}) {
+	log.INFO(p.Name, fmt, v...)
+}
+
+func (p *Proxy) WARN(fmt string, v ...interface{}) {
+	log.WARN(p.Name, fmt, v...)
+}
+
+func (p *Proxy) ERROR(fmt string, v ...interface{}) {
+	log.ERROR(p.Name, fmt, v...)
 }

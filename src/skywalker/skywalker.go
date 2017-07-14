@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Wiky L
+ * Copyright (C) 2015 - 2017 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -20,10 +20,10 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/hitoshii/golib/src/log"
 	"os"
 	"os/signal"
 	"skywalker/core"
+	"skywalker/log"
 )
 
 /* 生成ASCII图形 http://patorjk.com/software/taag */

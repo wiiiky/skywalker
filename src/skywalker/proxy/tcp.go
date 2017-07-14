@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Wiky L
+ * Copyright (C) 2015 - 2017 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -19,7 +19,6 @@ package proxy
 
 import (
 	"fmt"
-	"github.com/hitoshii/golib/src/log"
 	"net"
 	"skywalker/agent"
 	"skywalker/pkg"
@@ -61,7 +60,7 @@ RUNNING:
 			}
 			cmd, rdata, err := ca.ReadFromClient(data)
 			if err := p.transferData(c2s, cConn, cmd, rdata, err, true); err != nil {
-				log.WARN(p.Name, "Read From Client Error: %s %s", cConn.RemoteAddr(),
+				p.WARN("Read From Client Error: %s %s", cConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
 			}
@@ -75,7 +74,7 @@ RUNNING:
 					cmd, rdata, err := ca.ReadFromSA(data)
 					if err := p.transferData(c2s, cConn, cmd, rdata, err, true); err != nil {
 						closed_by_client = false
-						log.WARN(p.Name, "Read From SA Error: %s %s", cConn.RemoteAddr(),
+						p.WARN("Read From SA Error: %s %s", cConn.RemoteAddr(),
 							err.Error())
 						break RUNNING
 					}
@@ -84,7 +83,7 @@ RUNNING:
 				result, host, port := cmd.GetConnectResult()
 				if result == pkg.CONNECT_RESULT_OK {
 					chain = fmt.Sprintf("%s <==> %s:%v", cConn.RemoteAddr().String(), host, port)
-					log.INFO(p.Name, "%s Connected", chain)
+					p.INFO("%s Connected", chain)
 				}
 				cmd, rdata, err := ca.OnConnectResult(result, host, port)
 				err = p.transferData(c2s, cConn, cmd, rdata, err, true)
@@ -93,15 +92,15 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.ERROR(p.Name, "Unknown Package From Server Agent! THIS IS A BUG!")
+				p.ERROR("Unknown Package From Server Agent! THIS IS A BUG!")
 			}
 		}
 	}
 	ca.OnClose(closed_by_client)
 	if closed_by_client {
-		log.INFO(p.Name, "%s Closed By Client", chain)
+		p.INFO("%s Closed By Client", chain)
 	} else {
-		log.INFO(p.Name, "%s Closed By Server", chain)
+		p.INFO("%s Closed By Server", chain)
 	}
 }
 
@@ -118,7 +117,7 @@ func (p *Proxy) connectRemote(originalHost string, originalPort int, sa agent.Se
 	/* 连接结果 */
 	var resultCMD *pkg.Package
 	if result != pkg.CONNECT_RESULT_OK {
-		log.DEBUG(p.Name, "tcp connect result %d", result)
+		p.DEBUG("tcp connect result %d", result)
 		resultCMD = pkg.NewConnectResultPackage(result, originalHost, originalPort)
 	} else {
 		resultCMD = pkg.NewConnectResultPackage(result, originalHost, originalPort)
@@ -136,7 +135,7 @@ func (p *Proxy) connectRemote(originalHost string, originalPort int, sa agent.Se
 
 	/* 发送服务端代理的处理后数据 */
 	if err := p.transferData(s2c, conn, cmd, rdata, err, false); err != nil {
-		log.WARN(p.Name, "Server Agent OnConnectResult Error, %s", err.Error())
+		p.WARN("Server Agent OnConnectResult Error, %s", err.Error())
 		conn.Close()
 		return nil, nil, "", 0
 	}
@@ -177,7 +176,7 @@ RUNNING:
 			cmd, rdata, err := sa.ReadFromServer(data)
 			if err := p.transferData(s2c, sConn, cmd, rdata, err, false); err != nil {
 				closed_by_client = false
-				log.WARN(p.Name, "Read From Server Error: %s %s", sConn.RemoteAddr(),
+				p.WARN("Read From Server Error: %s %s", sConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
 			}
@@ -190,7 +189,7 @@ RUNNING:
 				for _, data := range cmd.GetData() {
 					cmd, rdata, err := sa.ReadFromCA(data)
 					if _err := p.transferData(s2c, sConn, cmd, rdata, err, false); _err != nil {
-						log.WARN(p.Name, "Read From CA Error: %s %s", sConn.RemoteAddr(),
+						p.WARN("Read From CA Error: %s %s", sConn.RemoteAddr(),
 							_err.Error())
 						break RUNNING
 					}
@@ -203,7 +202,7 @@ RUNNING:
 					break RUNNING
 				}
 			} else {
-				log.ERROR(p.Name, "Unknown Package From Client Agent! THIS IS A BUG!")
+				p.ERROR("Unknown Package From Client Agent! THIS IS A BUG!")
 			}
 		}
 	}

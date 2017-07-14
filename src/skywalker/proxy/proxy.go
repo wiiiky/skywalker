@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Wiky L
+ * Copyright (C) 2015 - 2017 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -18,7 +18,6 @@
 package proxy
 
 import (
-	"github.com/hitoshii/golib/src/log"
 	"net"
 	"skywalker/config"
 	"skywalker/util"
@@ -92,7 +91,7 @@ func (p *Proxy) Update(cfg *config.ProxyConfig) bool {
 }
 
 func (p *Proxy) Close() {
-	log.INFO(p.Name, "%s:%d stopped", p.BindAddr, p.BindPort)
+	p.INFO("%s:%d stopped", p.BindAddr, p.BindPort)
 	p.tcpListener.Close()
 	if p.udpListener != nil {
 		p.udpListener.Close()
@@ -110,17 +109,17 @@ func (p *Proxy) start() error {
 	var err error
 	if tcpListener, err = util.TCPListen(p.BindAddr, p.BindPort, p.FastOpen); err != nil {
 		p.Status = STATUS_ERROR
-		log.ERROR(p.Name, "failed to listen tcp: %s", err)
+		p.ERROR("failed to listen tcp: %s", err)
 		return err
 	}
 
 	ca, sa := p.GetAgents()
 	if !ca.UDPSupported() && sa.UDPSupported() {
-		log.WARN(p.Name, "%s doesn't support UDP", ca.Name())
+		p.WARN("%s doesn't support UDP", ca.Name())
 	} else if ca.UDPSupported() && !sa.UDPSupported() {
-		log.WARN(p.Name, "%s doesn't support UDP", sa.Name())
+		p.WARN("%s doesn't support UDP", sa.Name())
 	} else if !ca.UDPSupported() && !sa.UDPSupported() {
-		log.WARN(p.Name, "%s & %s don't support UDP", ca.Name(), sa.Name())
+		p.WARN("%s & %s don't support UDP", ca.Name(), sa.Name())
 	} else {
 		/* 支持UDP转发 */
 		if udpListener, err = util.UDPListen(p.BindAddr, p.BindPort); err != nil {
@@ -130,7 +129,7 @@ func (p *Proxy) start() error {
 		}
 	}
 
-	log.INFO(p.Name, "%s:%d started", p.BindAddr, p.BindPort)
+	p.INFO("%s:%d started", p.BindAddr, p.BindPort)
 	p.tcpListener = tcpListener
 	p.udpListener = udpListener
 	p.Status = STATUS_STOPPED
@@ -200,7 +199,7 @@ func (p *Proxy) getTCPListener() chan net.Conn {
 				break
 			}
 		}
-		log.DEBUG(p.Name, "TCP %s closed", l.Addr())
+		p.DEBUG("TCP %s closed", l.Addr())
 	}(p.tcpListener, c)
 	return c
 }
@@ -227,7 +226,7 @@ func (p *Proxy) getUDPListener() chan *udpPackage {
 					break
 				}
 			}
-			log.DEBUG(p.Name, "UDP %s closed", l.LocalAddr())
+			p.DEBUG("UDP %s closed", l.LocalAddr())
 		}(p.udpListener, c)
 	}
 	return c
