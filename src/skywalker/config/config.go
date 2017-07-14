@@ -79,6 +79,7 @@ type ProxyConfig struct {
 	Name     string `yaml:"name"`
 	BindAddr string `yaml:"bindAddr"`
 	BindPort uint16 `yaml:"bindPort"`
+	Timeout  int    `yaml:"timeout"`
 
 	ClientAgent  string                 `yaml:"clientAgent"`
 	ClientConfig map[string]interface{} `yaml:"clientConfig"`
@@ -131,12 +132,14 @@ var (
 const (
 	DEFAULT_USER_CONFIG = "~/.config/skywalker.yml"
 	DEFAULT_SYS_CONFIG  = "/etc/skywalker.yml"
+
+	DEFAULT_TIMEOUT = 30
 )
 
-func (cConfig *CoreConfig) GetProxyConfigs(pConfigs map[string]*ProxyConfig) []*ProxyConfig {
-	var configs []*ProxyConfig
+func (cConfig *CoreConfig) GetProxyConfigs(rawConfigs map[string]*ProxyConfig) []*ProxyConfig {
+	var pConfigs []*ProxyConfig
 
-	for name, cfg := range pConfigs {
+	for name, cfg := range rawConfigs {
 		/* 忽略~开头的配置 */
 		if strings.HasPrefix(name, "~") {
 			continue
@@ -150,12 +153,15 @@ func (cConfig *CoreConfig) GetProxyConfigs(pConfigs map[string]*ProxyConfig) []*
 		if cfg.Log.Loggers == nil {
 			cfg.Log.Loggers = cConfig.Log.Loggers
 		}
+		if cfg.Timeout == 0 {
+			cfg.Timeout = DEFAULT_TIMEOUT
+		}
 		cfg.Name = name
 		cfg.Log.Name = name
-		configs = append(configs, cfg)
+		pConfigs = append(pConfigs, cfg)
 	}
 
-	return configs
+	return pConfigs
 }
 
 /* 获取所有配置列表 */

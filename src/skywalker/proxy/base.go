@@ -51,6 +51,7 @@ type (
 		Name       string /* 代理名 */
 		CAName     string /* ca协议名 */
 		SAName     string /* sa协议名 */
+		Timeout    int    /* 客户端连接的超时时间 */
 		Status     int    /* 状态 */
 
 		BindAddr string

@@ -125,16 +125,20 @@ func UDPListen(addr string, port int) (*net.UDPConn, error) {
 /*
  * 启动一个goroutine来接收网络数据，并转发给一个channel
  * 将对网络链接的监听转化为对channel的监听
+ * timeout 单位为秒
  */
-func CreateConnChannel(conn net.Conn) chan []byte {
+func CreateConnChannel(conn net.Conn, timeout int) chan []byte {
 	channel := make(chan []byte)
 	go func(conn net.Conn, channel chan []byte) {
 		defer close(channel)
 		for {
+			if timeout > 0 {
+				conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(timeout)))
+			}
 			buf := make([]byte, 4096) /* channel会把buf的引用传递出去，因此buf需要每次创建 */
 			if n, err := conn.Read(buf); err != nil {
 				break
-			} else {
+			} else if n > 0 {
 				channel <- buf[:n]
 			}
 		}

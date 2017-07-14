@@ -48,6 +48,7 @@ func New(cfg *config.ProxyConfig) *Proxy {
 		Name:     name,
 		CAName:   cname,
 		SAName:   sname,
+		Timeout:  cfg.Timeout,
 		Status:   STATUS_STOPPED,
 		BindAddr: cfg.BindAddr,
 		BindPort: int(cfg.BindPort),

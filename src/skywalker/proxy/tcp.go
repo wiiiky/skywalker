@@ -46,7 +46,7 @@ func (p *Proxy) caGoroutine(ca agent.ClientAgent,
 	defer cConn.Close()
 	defer close(c2s)
 
-	cChan := util.CreateConnChannel(cConn)
+	cChan := util.CreateConnChannel(cConn, p.Timeout)
 
 	chain := cConn.RemoteAddr().String()
 	closed_by_client := true
@@ -143,7 +143,7 @@ func (p *Proxy) connectRemote(originalHost string, originalPort int, sa agent.Se
 		return nil, nil, "", 0
 	}
 
-	return conn, util.CreateConnChannel(conn), host, port
+	return conn, util.CreateConnChannel(conn, -1), host, port
 }
 
 /*
