@@ -37,8 +37,8 @@ func (*VoidServerAgent) OnStart() error {
 	return nil
 }
 
-func (*VoidServerAgent) GetRemoteAddress(string, int) (string, int) {
-	return "", 0
+func (*VoidServerAgent) GetRemoteAddress(host string, port int) (string, int) {
+	return host, port
 }
 
 func (*VoidServerAgent) OnConnectResult(int, string, int) (interface{}, interface{}, error) {
