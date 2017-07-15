@@ -1,6 +1,6 @@
 ENV=GOPATH=`pwd`
 
-all: get skywalker forctl forgtl
+all: get skywalker forctl 
 
 skywalker: src/skywalker/skywalker.go
 	$(ENV) go build -o bin/skywalker $?
