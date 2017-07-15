@@ -102,6 +102,15 @@ message ReloadResponse {
     repeated string updated = 4;
 }
 
+message QuitResponse {
+    enum Status {
+        QUITED = 1;
+        ERROR = 2;
+    }
+    required Status status = 1;
+    required uint32 pid = 2;
+}
+
 message Response {
     required RequestType type = 1;
     optional Error err = 2;
@@ -111,4 +120,5 @@ message Response {
     optional StopResponse stop = 6;
     optional InfoResponse info = 7;
     optional ReloadResponse reload = 8;
+    optional QuitResponse quit = 9;
 }

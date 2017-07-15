@@ -21,16 +21,20 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"os"
 	"skywalker/proxy"
 	"skywalker/rpc"
 )
 
 type (
-	HandleRequest func(f *Force, v interface{}) (*rpc.Response, error)
+	HandleRequest func(*Force, interface{}) (*rpc.Response, error)
+
+	PostHandleRequest func(*Force, *rpc.Response, error)
 
 	Command struct {
 		Handle       HandleRequest
 		RequestField string
+		PostHandle   PostHandleRequest
 	}
 )
 
@@ -43,26 +47,37 @@ func init() {
 		rpc.RequestType_STATUS: &Command{
 			Handle:       handleStatus,
 			RequestField: "GetCommon",
+			PostHandle:   nil,
 		},
 		rpc.RequestType_START: &Command{
 			Handle:       handleStart,
 			RequestField: "GetCommon",
+			PostHandle:   nil,
 		},
 		rpc.RequestType_STOP: &Command{
 			Handle:       handleStop,
 			RequestField: "GetCommon",
+			PostHandle:   nil,
 		},
 		rpc.RequestType_RESTART: &Command{
 			Handle:       handleRestart,
 			RequestField: "GetCommon",
+			PostHandle:   nil,
 		},
 		rpc.RequestType_INFO: &Command{
 			Handle:       handleInfo,
 			RequestField: "GetCommon",
+			PostHandle:   nil,
 		},
 		rpc.RequestType_RELOAD: &Command{
 			Handle:       handleReload,
 			RequestField: "GetCommon",
+			PostHandle:   nil,
+		},
+		rpc.RequestType_QUIT: &Command{
+			Handle:       handleQuit,
+			RequestField: "GetCommon",
+			PostHandle:   postHandleQuit,
 		},
 	}
 }
@@ -306,4 +321,26 @@ func handleReload(f *Force, v interface{}) (*rpc.Response, error) {
 		Type:   &reqType,
 		Reload: result,
 	}, nil
+}
+
+func handleQuit(f *Force, v interface{}) (*rpc.Response, error) {
+	reqType := rpc.RequestType_QUIT
+	status := rpc.QuitResponse_QUITED
+	pid := uint32(os.Getpid())
+	result := &rpc.QuitResponse{
+		Status: &status,
+		Pid:    &pid,
+	}
+	return &rpc.Response{
+		Type: &reqType,
+		Quit: result,
+	}, nil
+}
+
+func postHandleQuit(f *Force, rep *rpc.Response, err error) {
+	if rep == nil || rep.Quit == nil {
+		return
+	}
+	p, _ := os.FindProcess(int(*rep.Quit.Pid))
+	p.Signal(os.Interrupt)
 }

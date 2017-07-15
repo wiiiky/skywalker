@@ -15,25 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package ui
+package cmd
 
 import (
-	"github.com/wiiiky/gotk3/gtk"
+	. "forctl/io"
+	"skywalker/rpc"
 )
 
-type Stack struct {
-	*gtk.Box
-}
-
-func SidebarStack() *Stack {
-	box, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
-	sidebar, _ := gtk.StackSidebarNew()
-	separator, _ := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
-	stack, _ := gtk.StackNew()
-
-	box.PackStart(sidebar, false, false, 0)
-	box.PackStart(separator, false, false, 0)
-	box.PackStart(stack, true, true, 0)
-
-	return &Stack{box}
+/* 处理start命令的结果 */
+func processQuitResponse(v interface{}) error {
+	rep := v.(*rpc.QuitResponse)
+	if rep.GetStatus() == rpc.QuitResponse_QUITED {
+		Print("%d - QUITED\n", rep.GetPid())
+	} else {
+		PrintError("FAILURE\n")
+	}
+	return nil
 }

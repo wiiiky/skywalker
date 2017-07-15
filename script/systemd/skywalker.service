@@ -1,0 +1,13 @@
+[Unit]
+Description=Skywalker
+After=network.target
+ 
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/skywalker -c /etc/skywalker.yml
+ExecReload=/usr/local/bin/forctl -c /etc/skywalker.yml reload
+ExecStop=/usr/local/bin/forctl -c /etc/skywalker.yml quit
+PrivateTmp=false
+ 
+[Install]
+WantedBy=multi-user.target

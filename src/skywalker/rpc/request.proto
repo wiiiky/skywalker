@@ -8,7 +8,8 @@ enum RequestType {
     STOP = 4;     /* 停止服务 */
     RESTART = 5;  /* 重启服务 */
     INFO = 6;     /* 服务详细信息 */
-    RELOAD = 7;
+    RELOAD = 7;   /* reload配置 */
+    QUIT = 8;     /* 关闭服务 */
 }
 
 message CommonRequest {

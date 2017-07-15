@@ -32,6 +32,7 @@ const (
 	COMMAND_RESTART = "restart"
 	COMMAND_INFO    = "info"
 	COMMAND_RELOAD  = "reload"
+	COMMAND_QUIT    = "quit"
 )
 
 type (
@@ -117,6 +118,15 @@ func init() {
 			ResponseField:   "GetReload",
 			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processReloadResponse,
+		},
+		COMMAND_QUIT: &Command{
+			Optional:        1,
+			Required:        1,
+			Help:            fmt.Sprintf("\tquit %-15sstop skywalker process", "-y"),
+			ReqType:         rpc.RequestType_QUIT,
+			ResponseField:   "GetQuit",
+			BuildRequest:    buildCommonRequest,
+			ProcessResponse: processQuitResponse,
 		},
 	}
 }

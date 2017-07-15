@@ -223,6 +223,9 @@ func (f *Force) handleConn(c *rpc.Conn, username, password string) {
 				log.E("%v\n", e)
 			}
 		}
+		if cmd.PostHandle != nil {
+			cmd.PostHandle(f, rep, err)
+		}
 	}
 }
 
