@@ -52,11 +52,36 @@ type (
 	}
 )
 
+var (
+	/* 默认配置 */
+	defaultLoggers = []log.Logger{
+		log.Logger{log.LEVEL_DEBUG, log.STDOUT, nil},
+		log.Logger{log.LEVEL_INFO, log.STDOUT, nil},
+		log.Logger{log.LEVEL_WARN, log.STDERR, nil},
+		log.Logger{log.LEVEL_ERROR, log.STDERR, nil},
+	}
+	gCore = &CoreConfig{
+		Log: &log.Config{
+			Name:    "skywalker",
+			Loggers: defaultLoggers,
+		},
+		HistoryFile: util.ResolveHomePath("~/.forctl_history"),
+	}
+	gConfigs = map[string]*ProxyConfig{}
+)
+
+const (
+	DEFAULT_USER_CONFIG = "~/.config/skywalker.yml"
+	DEFAULT_SYS_CONFIG  = "/etc/skywalker.yml"
+
+	DEFAULT_TIMEOUT = 30
+)
+
 func (cfg *CoreConfig) init() {
 	if cfg.Log == nil {
 		cfg.Log = &log.Config{
 			Name:    "skywalker",
-			Loggers: nil,
+			Loggers: defaultLoggers,
 		}
 	}
 	if cfg.Log.Name == "" {
@@ -110,31 +135,6 @@ func (cfg *ProxyConfig) Init() error {
 	}
 	return nil
 }
-
-var (
-	/* 默认配置 */
-	defaultLoggers = []log.Logger{
-		log.Logger{log.LEVEL_DEBUG, log.STDOUT, nil},
-		log.Logger{log.LEVEL_INFO, log.STDOUT, nil},
-		log.Logger{log.LEVEL_WARN, log.STDERR, nil},
-		log.Logger{log.LEVEL_ERROR, log.STDERR, nil},
-	}
-	gCore = &CoreConfig{
-		Log: &log.Config{
-			Name:    "skywalker",
-			Loggers: defaultLoggers,
-		},
-		HistoryFile: util.ResolveHomePath("~/.forctl_history"),
-	}
-	gConfigs = map[string]*ProxyConfig{}
-)
-
-const (
-	DEFAULT_USER_CONFIG = "~/.config/skywalker.yml"
-	DEFAULT_SYS_CONFIG  = "/etc/skywalker.yml"
-
-	DEFAULT_TIMEOUT = 30
-)
 
 func (cConfig *CoreConfig) GetProxyConfigs(rawConfigs map[string]*ProxyConfig) []*ProxyConfig {
 	var pConfigs []*ProxyConfig
