@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2017 Wiky L
+ * Copyright (C) 2017 Wiky L
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -15,50 +15,50 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package void
+package echo
 
 import (
 	. "skywalker/agent/base"
 )
 
-type VoidClientAgent struct {
+type EchoClientAgent struct {
 	BaseAgent
 }
 
-func (*VoidClientAgent) Name() string {
-	return "void"
+func (*EchoClientAgent) Name() string {
+	return "echo"
 }
 
-func (*VoidClientAgent) OnInit(string, map[string]interface{}) error {
+func (*EchoClientAgent) OnInit(string, map[string]interface{}) error {
 	return nil
 }
 
-func (*VoidClientAgent) OnStart() error {
+func (*EchoClientAgent) OnStart() error {
 	return nil
 }
 
-func (*VoidClientAgent) OnConnectResult(int, string, int) (interface{}, interface{}, error) {
+func (*EchoClientAgent) OnConnectResult(int, string, int) (interface{}, interface{}, error) {
 	return nil, nil, nil
 }
 
-func (*VoidClientAgent) ReadFromClient([]byte) (interface{}, interface{}, error) {
+func (*EchoClientAgent) ReadFromClient(data []byte) (interface{}, interface{}, error) {
+	return data, nil, nil
+}
+
+func (*EchoClientAgent) ReadFromSA([]byte) (interface{}, interface{}, error) {
 	return nil, nil, nil
 }
 
-func (*VoidClientAgent) ReadFromSA([]byte) (interface{}, interface{}, error) {
-	return nil, nil, nil
-}
-
-func (*VoidClientAgent) UDPSupported() bool {
+func (*EchoClientAgent) UDPSupported() bool {
 	return true
 }
 
-func (*VoidClientAgent) RecvFromClient([]byte) (interface{}, interface{}, string, int, error) {
-	return nil, nil, "", 0, nil
+func (*EchoClientAgent) RecvFromClient(data []byte) (interface{}, interface{}, string, int, error) {
+	return data, nil, "", 0, nil
 }
 
-func (*VoidClientAgent) RecvFromSA([]byte) (interface{}, interface{}, error) {
+func (*EchoClientAgent) RecvFromSA([]byte) (interface{}, interface{}, error) {
 	return nil, nil, nil
 }
 
-func (*VoidClientAgent) OnClose(bool) {}
+func (*EchoClientAgent) OnClose(bool) {}

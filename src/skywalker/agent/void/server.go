@@ -38,7 +38,7 @@ func (*VoidServerAgent) OnStart() error {
 }
 
 func (*VoidServerAgent) GetRemoteAddress(host string, port int) (string, int) {
-	return host, port
+	return "", 0
 }
 
 func (*VoidServerAgent) OnConnectResult(int, string, int) (interface{}, interface{}, error) {

@@ -44,6 +44,8 @@ CA支持以下协议
     * SOCKS5
     * SHADOWSOCKS
     * REDIRECT
+    * VOID
+    * ECHO
 
 SA支持以下协议
 
@@ -51,6 +53,8 @@ SA支持以下协议
     * SOCKS5
     * SHADOWSOCKS
     * DIRECT
+    * VOID
+    * ECHO
 
 **DIRECT** 表示无格式数据，直接把数据发送出去。
 

@@ -145,3 +145,62 @@ func CreateConnChannel(conn net.Conn, timeout int) chan []byte {
 	}(conn, channel)
 	return channel
 }
+
+/*
+ * FakeAddr & FakeConn
+ * 假的连接，用于处理某些不需要连接的协议，比如void、echo
+ */
+
+type FakeAddr struct{}
+
+func (*FakeAddr) Network() string {
+	return "fake"
+}
+
+func (*FakeAddr) String() string {
+	return "0.0.0.0"
+}
+
+type FakeConn struct {
+	c chan int
+}
+
+func NewFakeConn() *FakeConn {
+	return &FakeConn{
+		c: make(chan int),
+	}
+}
+
+func (c *FakeConn) Read(b []byte) (n int, err error) {
+	<-c.c
+	return 0, errors.New("")
+}
+
+func (c *FakeConn) Write(b []byte) (n int, err error) {
+	return 0, nil
+}
+
+func (c *FakeConn) Close() error {
+	c.c <- 1
+	return nil
+}
+
+func (c *FakeConn) LocalAddr() net.Addr {
+	return &FakeAddr{}
+}
+
+func (c *FakeConn) RemoteAddr() net.Addr {
+	return &FakeAddr{}
+}
+
+func (c *FakeConn) SetDeadline(t time.Time) error {
+	return nil
+}
+
+func (c *FakeConn) SetReadDeadline(t time.Time) error {
+	return nil
+}
+
+func (c *FakeConn) SetWriteDeadline(t time.Time) error {
+	return nil
+}

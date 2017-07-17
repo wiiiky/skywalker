@@ -25,7 +25,6 @@ func cipherStreamXOR(stream _cipher.Stream, data []byte) []byte {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
-	processed := make([]byte, len(data))
-	stream.XORKeyStream(processed, data)
-	return processed
+	stream.XORKeyStream(data, data)
+	return data
 }

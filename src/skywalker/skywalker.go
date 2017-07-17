@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/signal"
 	"skywalker/core"
-	"skywalker/log"
 )
 
 /* 生成ASCII图形 http://patorjk.com/software/taag */
@@ -41,7 +40,6 @@ func main() {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-	s := <-c
-	log.I("Signal: %s", s)
+	<-c
 	force.Finish()
 }

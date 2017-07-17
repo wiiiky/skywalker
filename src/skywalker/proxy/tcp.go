@@ -111,12 +111,16 @@ RUNNING:
  */
 func (p *Proxy) connectRemote(originalHost string, originalPort int, sa agent.ServerAgent,
 	s2c chan *pkg.Package) (net.Conn, chan []byte, string, int) {
+	var conn net.Conn
+	var result int
 	/* 获取服务器地址，并链接 */
 	host, port := sa.GetRemoteAddress(originalHost, originalPort)
 	if host == "" {
-		return nil, nil, "", 0
+		conn = util.NewFakeConn()
+		result = pkg.CONNECT_RESULT_OK
+	} else {
+		conn, result = util.TCPConnect(host, port)
 	}
-	conn, result := util.TCPConnect(host, port)
 	/* 连接结果 */
 	var resultCMD *pkg.Package
 	if result != pkg.CONNECT_RESULT_OK {
