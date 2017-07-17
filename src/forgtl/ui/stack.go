@@ -25,7 +25,7 @@ type Stack struct {
 	*gtk.Box
 }
 
-func SidebarStack() *Stack {
+func NewStack() *Stack {
 	box, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 	sidebar, _ := gtk.StackSidebarNew()
 	separator, _ := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)

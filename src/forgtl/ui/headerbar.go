@@ -15,38 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 
-package main
+package ui
 
 import (
-	"fmt"
-	"forgtl/config"
-	"forgtl/ui"
 	"github.com/wiiiky/gotk3/gtk"
-	"skywalker/core"
 )
 
-func run() *core.Force {
-	force := core.NewForce(nil, nil)
-
-	pConfigs := config.LoadProxyConfigs()
-	if err := force.LoadProxiesFromConfig(pConfigs); err != nil {
-		fmt.Println(err)
-		return nil
-	}
-
-	force.AutoStartProxies()
-
-	return force
+type HeaderBar struct {
+	*gtk.HeaderBar
+	btnNew *gtk.Button
 }
 
-func main() {
-	gtk.Init(nil)
-
-	force := run()
-	defer force.Finish()
-
-	win := ui.NewWindow()
-	win.ShowAll()
-
-	gtk.Main()
+func NewHeaderBar() *HeaderBar {
+	bar, _ := gtk.HeaderBarNew()
+	bar.SetShowCloseButton(true)
+	bar.SetTitle("Skywalker")
+	
+	btnNew, _ := gtk.ButtonNewWithLabel("New")
+	bar.PackStart(btnNew)
+	
+	return &HeaderBar{
+		HeaderBar: bar,
+		btnNew: btnNew,
+	}
 }

@@ -25,17 +25,26 @@ func quit() {
 	gtk.MainQuit()
 }
 
-func ShowWindow() {
+type Window struct {
+	*gtk.Window
+	headerBar *HeaderBar
+	stack *Stack
+}
+
+func NewWindow() *Window {
 	win, _ := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
 	win.Connect("destroy", quit)
-
-	headerBar, _ := gtk.HeaderBarNew()
-	headerBar.SetShowCloseButton(true)
-	headerBar.SetTitle("Skywalker")
-	win.SetTitlebar(headerBar)
 	win.SetDefaultSize(600, 400)
 
-	win.Add(SidebarStack())
+	headerBar := NewHeaderBar()
+	win.SetTitlebar(headerBar)
 
-	win.ShowAll()
+	stack := NewStack()
+	win.Add(stack)
+
+	return &Window{
+		Window: win,
+		headerBar: headerBar,
+		stack: stack,
+	}
 }
