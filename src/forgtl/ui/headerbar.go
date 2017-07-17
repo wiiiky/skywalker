@@ -30,12 +30,18 @@ func NewHeaderBar() *HeaderBar {
 	bar, _ := gtk.HeaderBarNew()
 	bar.SetShowCloseButton(true)
 	bar.SetTitle("Skywalker")
-	
+
 	btnNew, _ := gtk.ButtonNewWithLabel("New")
+	btnNew.Connect("clicked", btnNewClicked)
 	bar.PackStart(btnNew)
-	
+
 	return &HeaderBar{
 		HeaderBar: bar,
-		btnNew: btnNew,
+		btnNew:    btnNew,
 	}
+}
+
+func btnNewClicked() {
+	assistant := NewAssistant()
+	assistant.ShowAll()
 }

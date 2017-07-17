@@ -28,13 +28,14 @@ func quit() {
 type Window struct {
 	*gtk.Window
 	headerBar *HeaderBar
-	stack *Stack
+	stack     *Stack
 }
 
 func NewWindow() *Window {
 	win, _ := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
 	win.Connect("destroy", quit)
 	win.SetDefaultSize(600, 400)
+	win.SetPosition(gtk.WIN_POS_CENTER)
 
 	headerBar := NewHeaderBar()
 	win.SetTitlebar(headerBar)
@@ -43,8 +44,8 @@ func NewWindow() *Window {
 	win.Add(stack)
 
 	return &Window{
-		Window: win,
+		Window:    win,
 		headerBar: headerBar,
-		stack: stack,
+		stack:     stack,
 	}
 }
