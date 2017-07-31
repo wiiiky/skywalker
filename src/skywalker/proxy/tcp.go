@@ -58,6 +58,9 @@ RUNNING:
 			if ok == false {
 				break RUNNING
 			}
+			if data = p.processCAHooks(data); data == nil {
+				continue
+			}
 			cmd, rdata, err := ca.ReadFromClient(data)
 			if err := p.transferData(c2s, cConn, cmd, rdata, err, true); err != nil {
 				p.WARN("Read From Client Error: %s %s", cConn.RemoteAddr(),
@@ -179,6 +182,9 @@ RUNNING:
 			if ok == false {
 				closed_by_client = false
 				break RUNNING
+			}
+			if data = p.processSAHooks(data); data == nil {
+				continue
 			}
 			cmd, rdata, err := sa.ReadFromServer(data)
 			if err := p.transferData(s2c, sConn, cmd, rdata, err, false); err != nil {

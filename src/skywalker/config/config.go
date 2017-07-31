@@ -50,6 +50,27 @@ type (
 		Log         *log.Config `yaml:"log"`     /* 日志配置 */
 		HistoryFile string      `yaml:"history"` /* 命令的历史记录文件 */
 	}
+
+	/* 代理配置 */
+	ProxyConfig struct {
+		Name     string `yaml:"name"`
+		BindAddr string `yaml:"bindAddr"`
+		BindPort uint16 `yaml:"bindPort"`
+		Timeout  int    `yaml:"timeout"`
+
+		ClientAgent  string                 `yaml:"clientAgent"`
+		ClientConfig map[string]interface{} `yaml:"clientConfig"`
+
+		ServerAgent  string                 `yaml:"serverAgent"`
+		ServerConfig map[string]interface{} `yaml:"serverConfig"`
+
+		CAHooks []string `yaml:"caHooks"`
+		SAHooks []string `yaml:"saHooks"`
+
+		Log       *log.Config `yaml:"log"`
+		AutoStart bool        `yaml:"autoStart"`
+		FastOpen  bool        `yaml:"fastOpen"`
+	}
 )
 
 var (
@@ -97,24 +118,6 @@ func (cfg *CoreConfig) init() {
 		cfg.Unix.Chmod = 0644 /* 套接字默认的文件权限 */
 	}
 	log.InitDefault(cfg.Log)
-}
-
-/* 服务配置 */
-type ProxyConfig struct {
-	Name     string `yaml:"name"`
-	BindAddr string `yaml:"bindAddr"`
-	BindPort uint16 `yaml:"bindPort"`
-	Timeout  int    `yaml:"timeout"`
-
-	ClientAgent  string                 `yaml:"clientAgent"`
-	ClientConfig map[string]interface{} `yaml:"clientConfig"`
-
-	ServerAgent  string                 `yaml:"serverAgent"`
-	ServerConfig map[string]interface{} `yaml:"serverConfig"`
-
-	Log       *log.Config `yaml:"log"`
-	AutoStart bool        `yaml:"autoStart"`
-	FastOpen  bool        `yaml:"fastOpen"`
 }
 
 /*

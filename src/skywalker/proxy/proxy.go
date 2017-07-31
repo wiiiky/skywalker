@@ -20,6 +20,7 @@ package proxy
 import (
 	"net"
 	"skywalker/config"
+	"skywalker/hook"
 	"skywalker/util"
 	"time"
 )
@@ -44,7 +45,7 @@ func New(cfg *config.ProxyConfig) *Proxy {
 	name := cfg.Name
 	cname := cfg.ClientAgent
 	sname := cfg.ServerAgent
-	return &Proxy{
+	p := &Proxy{
 		Name:     name,
 		CAName:   cname,
 		SAName:   sname,
@@ -59,6 +60,31 @@ func New(cfg *config.ProxyConfig) *Proxy {
 		AutoStart: cfg.AutoStart,
 		FastOpen:  cfg.FastOpen,
 		Closing:   false,
+		CAHooks:   nil,
+		SAHooks:   nil,
+	}
+	p.initHooks(cfg)
+
+	return p
+}
+
+func (p *Proxy) initHooks(cfg *config.ProxyConfig) {
+	p.CAHooks = nil
+	p.SAHooks = nil
+	for _, name := range cfg.CAHooks {
+		if h := hook.Find(name); h != nil {
+			p.CAHooks = append(p.CAHooks, h)
+		} else {
+			p.WARN("hook %s not found.", name)
+		}
+	}
+
+	for _, name := range cfg.SAHooks {
+		if h := hook.Find(name); h != nil {
+			p.SAHooks = append(p.SAHooks, h)
+		} else {
+			p.WARN("hook %s not found.", name)
+		}
 	}
 }
 
@@ -87,6 +113,8 @@ func (p *Proxy) Update(cfg *config.ProxyConfig) bool {
 
 	p.AutoStart = cfg.AutoStart
 	p.Closing = false
+
+	p.initHooks(cfg)
 
 	return p.Flag != FLAG_NONE
 }
