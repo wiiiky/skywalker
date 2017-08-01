@@ -247,7 +247,12 @@ func (req *httpRequest) parse(data []byte) error {
 		req.Host = host
 		req.ContentLength = getContentLength(headers)
 		req.ProxyAuthorization = getProxyAuthorization(headers)
-		req.Payload = bytes.SplitN(data, []byte("\r\n\r\n"), 2)[1]
+		tmp := bytes.SplitN(data, []byte("\r\n\r\n"), 2)
+		if len(tmp) == 2 {
+			req.Payload = tmp[1]
+		} else {
+			req.Payload = nil
+		}
 		if uint64(len(req.Payload)) < req.ContentLength {
 			req.Status = REQUEST_STATUS_FULL_HEADER
 		} else {
