@@ -43,6 +43,9 @@ const (
 
 /* 根据密码生成KEY */
 func generateKey(password []byte, klen int) []byte {
+	if klen <= 0 {
+		return nil
+	}
 	var last []byte = nil
 	total := 0
 	buf := bytes.Buffer{}
@@ -58,6 +61,9 @@ func generateKey(password []byte, klen int) []byte {
 
 /* 随机生成IV */
 func generateIV(ilen int) []byte {
+	if ilen <= 0 {
+		return nil
+	}
 	iv := make([]byte, ilen)
 	rand.Read(iv)
 	return iv

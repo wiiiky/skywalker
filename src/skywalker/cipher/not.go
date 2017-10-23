@@ -18,27 +18,33 @@
 package cipher
 
 /*
- * 不加密
+ * 取反
  */
 
-type noneEncrypter struct {
+type notEncrypter struct {
 }
 
-func (e *noneEncrypter) Encrypt(plain []byte) []byte {
+func (e *notEncrypter) Encrypt(plain []byte) []byte {
+	for i, v := range plain {
+		plain[i] = ^v
+	}
 	return plain
 }
 
-func newNoneEncrypter(key, iv []byte) Encrypter {
-	return &noneEncrypter{}
+func newNotEncrypter(key, iv []byte) Encrypter {
+	return &notEncrypter{}
 }
 
-type noneDecrypter struct {
+type notDecrypter struct {
 }
 
-func (e *noneDecrypter) Decrypt(encrypted []byte) []byte {
+func (e *notDecrypter) Decrypt(encrypted []byte) []byte {
+	for i, v := range encrypted {
+		encrypted[i] = ^v
+	}
 	return encrypted
 }
 
-func newNoneDecrypter(key, iv []byte) Decrypter {
+func newNotDecrypter(key, iv []byte) Decrypter {
 	return &noneDecrypter{}
 }
