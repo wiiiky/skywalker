@@ -118,12 +118,16 @@ func (a *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, inter
 	if a.decrypter == nil {
 		/* 第一个数据包，应该包含IV和请求数据 */
 		ivSize := a.cfg.cipherInfo.IvSize
-		if len(data) < ivSize {
-			return nil, nil, Error(ERROR_INVALID_PACKAGE, "invalid package")
+		if ivSize > 0 {
+			if len(data) < ivSize {
+				return nil, nil, Error(ERROR_INVALID_PACKAGE, "invalid package")
+			}
+			iv := data[:ivSize]
+			a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, iv)
+			data = data[ivSize:]
+		} else {
+			a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, nil)
 		}
-		iv := data[:ivSize]
-		a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, iv)
-		data = data[ivSize:]
 	}
 
 	/* 解密数据 */
@@ -147,7 +151,9 @@ func (a *ShadowSocksClientAgent) ReadFromClient(data []byte) (interface{}, inter
 func (a *ShadowSocksClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, error) {
 	var rdata [][]byte
 	if a.ivSent == false {
-		rdata = append(rdata, a.iv)
+		if a.iv != nil {
+			rdata = append(rdata, a.iv)
+		}
 		a.ivSent = true
 	}
 	rdata = append(rdata, a.encrypter.Encrypt(data))
@@ -160,13 +166,18 @@ func (a *ShadowSocksClientAgent) UDPSupported() bool {
 
 func (a *ShadowSocksClientAgent) RecvFromClient(data []byte) (interface{}, interface{}, string, int, error) {
 	ivSize := a.cfg.cipherInfo.IvSize
-	if len(data) < ivSize {
-		return nil, nil, "", 0, Error(ERROR_INVALID_PACKAGE, "invalid package")
+	if ivSize > 0 {
+		if len(data) < ivSize {
+			return nil, nil, "", 0, Error(ERROR_INVALID_PACKAGE, "invalid package")
+		}
+		iv := data[:ivSize]
+		a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, iv)
+		data = data[ivSize:]
+	} else {
+		a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, nil)
 	}
-	iv := data[:ivSize]
-	a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, iv)
 
-	if data = a.decrypter.Decrypt(data[ivSize:]); data == nil {
+	if data = a.decrypter.Decrypt(data); data == nil {
 		return nil, nil, "", 0, Error(ERROR_DECRYPT_FAILURE, "decrypt failure")
 	}
 	req, err := socks.ParseSocks5UDPRequest(data)

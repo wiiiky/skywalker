@@ -240,7 +240,9 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result int, host string, p int)
 		req := &ssAddressRequest{addr: a.targetAddr, port: uint16(a.targetPort)}
 		plain := req.build()
 		buf := bytes.Buffer{}
-		buf.Write(a.iv)
+		if a.iv != nil {
+			buf.Write(a.iv)
+		}
 		buf.Write(a.encrypter.Encrypt(plain))
 		return nil, buf.Bytes(), nil
 	}
@@ -251,12 +253,17 @@ func (a *ShadowSocksServerAgent) OnConnectResult(result int, host string, p int)
 
 func (a *ShadowSocksServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
 	if a.decrypter == nil {
-		if len(data) < a.cipherInfo.IvSize {
-			return nil, nil, Error(ERROR_INVALID_PACKAGE, "invalid package")
+		ivSize := a.cipherInfo.IvSize
+		if ivSize > 0 {
+			if len(data) < ivSize {
+				return nil, nil, Error(ERROR_INVALID_PACKAGE, "invalid package")
+			}
+			iv := data[:ivSize]
+			data = data[ivSize:]
+			a.decrypter = a.cipherInfo.DecrypterFunc(a.key, iv)
+		} else {
+			a.decrypter = a.cipherInfo.DecrypterFunc(a.key, nil)
 		}
-		iv := data[:a.cipherInfo.IvSize]
-		data = data[a.cipherInfo.IvSize:]
-		a.decrypter = a.cipherInfo.DecrypterFunc(a.key, iv)
 		a.connected = true
 	}
 	return a.decrypter.Decrypt(data), nil, nil
