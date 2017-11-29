@@ -17,9 +17,10 @@ fmt:
 
 proto: proto-gen
 	PATH="$(PATH):./bin" $(ENV) protoc --go_out=./ ./src/skywalker/rpc/*.proto
+	PATH="$(PATH):./bin" $(ENV) protoc --go_out=./ ./src/skywalker/agent/walker/*.proto
 
 proto-gen:
-	GOPATH=`pwd` go get github.com/golang/protobuf/protoc-gen-go
+	$(ENV) go get github.com/golang/protobuf/protoc-gen-go
 
 clean: bin/skywalker bin/forctl 
 	rm -rf $?

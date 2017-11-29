@@ -1,0 +1,23 @@
+syntax = "proto3";
+package walker;
+
+
+enum AType {
+    IPV4 = 0;
+    IPV6 = 1;
+    DOMAINNAME = 2;
+}
+
+message Request {
+    int32 version = 1;
+    AType atype = 2;
+    string addr = 3;
+    int32 port = 4;
+    string key = 5;
+    string iv = 6;
+}
+
+message Response {
+    int32 version = 1;
+    string result = 2;
+}

@@ -5,7 +5,6 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/skywalker -c /etc/skywalker.yml
-ExecReload=/usr/local/bin/forctl -c /etc/skywalker.yml reload -y
 ExecStop=/usr/local/bin/forctl -c /etc/skywalker.yml quit -y
 PrivateTmp=false
  
