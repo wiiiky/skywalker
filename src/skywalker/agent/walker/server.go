@@ -99,7 +99,10 @@ func (a *WalkerServerAgent) ReadFromServer(data []byte) (interface{}, interface{
 }
 
 func (a *WalkerServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
-	return nil, a.encrypter.Encrypt(data), nil
+	if a.encrypter != nil {
+		return nil, a.encrypter.Encrypt(data), nil
+	}
+	return nil, nil, nil
 }
 
 func (a *WalkerServerAgent) UDPSupported() bool {
