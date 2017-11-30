@@ -17,7 +17,6 @@
 package walker
 
 import (
-	"fmt"
 	. "skywalker/agent/base"
 	"skywalker/cipher"
 	"skywalker/pkg"
@@ -54,7 +53,7 @@ func (a *WalkerServerAgent) Name() string {
 func (a *WalkerServerAgent) OnInit(name string, cfg map[string]interface{}) error {
 	port := uint16(util.GetMapIntDefault(cfg, "port", 0))
 	if port == 0 {
-		return fmt.Errorf("invalid port %d", port)
+		return Error(ERROR_PORT_INVALID, "invalid port")
 	}
 	gWAConfigs[name] = &WalkerServerConfig{
 		addr:   util.GetMapString(cfg, "addr"),
@@ -77,7 +76,7 @@ func (a *WalkerServerAgent) GetRemoteAddress(addr string, port int) (string, int
 
 func (a *WalkerServerAgent) OnConnectResult(result int, addr string, port int) (interface{}, interface{}, error) {
 	if result == pkg.CONNECT_RESULT_OK {
-		data, encrypter := packConnectRequest(addr, uint16(port), a.cfg.method)
+		data, encrypter := packRequest(addr, uint16(port), a.cfg.method)
 		a.encrypter = encrypter
 		return nil, data, nil
 	} else {
@@ -86,23 +85,25 @@ func (a *WalkerServerAgent) OnConnectResult(result int, addr string, port int) (
 }
 
 func (a *WalkerServerAgent) ReadFromServer(data []byte) (interface{}, interface{}, error) {
-	return nil, nil, nil
+	if a.decrypter == nil { /* 等待服务器回应 */
+		rep, decrypter, left, err := unpackResponse(data, a.cfg.method)
+		if err != nil {
+			return nil, nil, err
+		} else if rep.Result != RESULT_SUCCESS {
+			return nil, nil, Error(ERROR_RESULT_FAILURE, rep.Result)
+		}
+		a.decrypter = decrypter
+		data = left
+	}
+	return a.decrypter.Decrypt(data), nil, nil
 }
 
 func (a *WalkerServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
-	return nil, nil, nil
+	return nil, a.encrypter.Encrypt(data), nil
 }
 
 func (a *WalkerServerAgent) UDPSupported() bool {
 	return false
-}
-
-func (a *WalkerServerAgent) RecvFromServer(data []byte) (interface{}, interface{}, error) {
-	return nil, nil, nil
-}
-
-func (a *WalkerServerAgent) RecvFromCA([]byte, string, int) (interface{}, interface{}, string, int, error) {
-	return nil, nil, "", 0, nil
 }
 
 func (a *WalkerServerAgent) OnClose(closed_by_client bool) {

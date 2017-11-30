@@ -20,4 +20,6 @@ message Request {
 message Response {
     int32 version = 1;
     string result = 2;
+    bytes key = 3;
+    bytes iv= 4;
 }

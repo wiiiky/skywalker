@@ -22,8 +22,19 @@ import (
 	"encoding/binary"
 	"github.com/golang/protobuf/proto"
 	"net"
+	. "skywalker/agent/base"
 	"skywalker/cipher"
 	"strings"
+)
+
+const (
+	ERROR_DATA_ERROR     = 1
+	ERROR_PORT_INVALID   = 2
+	ERROR_RESULT_FAILURE = 3
+)
+
+const (
+	RESULT_SUCCESS = "success"
 )
 
 func pack(data []byte) []byte {
@@ -49,7 +60,7 @@ func randomKey(ilen int) []byte {
 	return iv
 }
 
-func packConnectRequest(addr string, port uint16, method string) ([]byte, cipher.Encrypter) {
+func packRequest(addr string, port uint16, method string) ([]byte, cipher.Encrypter) {
 	ip := net.ParseIP(addr)
 	atype := AType_DOMAINNAME
 	if ip != nil {
@@ -72,5 +83,23 @@ func packConnectRequest(addr string, port uint16, method string) ([]byte, cipher
 		Iv:      iv,
 	}
 	data, _ := proto.Marshal(&req)
-	return data, info.EncrypterFunc(key, iv)
+	return pack(data), info.EncrypterFunc(key, iv)
+}
+
+func unpackResponse(data []byte, method string) (*Response, cipher.Decrypter, []byte, error) {
+	if len(data) <= 4 {
+		return nil, nil, nil, Error(ERROR_DATA_ERROR, "unpack error")
+	}
+	size := unpack(data)
+	if len(data) < size+4 {
+		return nil, nil, nil, Error(ERROR_DATA_ERROR, "unpack error")
+	}
+	rep := &Response{}
+	if err := proto.Unmarshal(data[4:4+size], rep); err != nil {
+		return nil, nil, nil, err
+	}
+	info := cipher.GetCipherInfo(strings.ToLower(method))
+	key := randomKey(info.KeySize)
+	iv := randomKey(info.IvSize)
+	return rep, info.DecrypterFunc(key, iv), data[4+size:], nil
 }
