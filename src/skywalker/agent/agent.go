@@ -28,6 +28,7 @@ import (
 	"skywalker/agent/shadowsocks"
 	"skywalker/agent/socks"
 	"skywalker/agent/void"
+	"skywalker/agent/walker"
 	"skywalker/log"
 	"strings"
 )
@@ -78,6 +79,10 @@ func NewEchoServerAgent(name string) ServerAgent {
 	return &echo.EchoServerAgent{BaseAgent: base.BaseAgent{Name: name}}
 }
 
+func NewWalkerServerAgent(name string) ServerAgent {
+	return &walker.WalkerServerAgent{BaseAgent: base.BaseAgent{Name: name}}
+}
+
 /* 代理名和代理构造函数的映射 */
 var (
 	gCAMap = map[string]newClientAgentFunc{
@@ -94,6 +99,7 @@ var (
 		"shadowsocks": NewShadowSocksServerAgent,
 		"void":        NewVoidServerAgent,
 		"echo":        NewEchoServerAgent,
+		"walker":      NewWalkerServerAgent,
 	}
 )
 

@@ -13,8 +13,8 @@ message Request {
     AType atype = 2;
     string addr = 3;
     int32 port = 4;
-    string key = 5;
-    string iv = 6;
+    bytes key = 5;
+    bytes iv = 6;
 }
 
 message Response {

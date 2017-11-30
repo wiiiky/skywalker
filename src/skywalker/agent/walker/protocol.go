@@ -15,3 +15,62 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.";
  */
 package walker
+
+import (
+	"bytes"
+	"crypto/rand"
+	"encoding/binary"
+	"github.com/golang/protobuf/proto"
+	"net"
+	"skywalker/cipher"
+	"strings"
+)
+
+func pack(data []byte) []byte {
+	buf := bytes.Buffer{}
+	binary.Write(&buf, binary.LittleEndian, int32(len(data)))
+	return append(buf.Bytes(), data...)
+}
+
+func unpack(data []byte) int {
+	var size int32
+	buf := bytes.NewReader(data)
+	binary.Read(buf, binary.LittleEndian, &size)
+	return int(size)
+}
+
+/* 随机生成IV */
+func randomKey(ilen int) []byte {
+	if ilen <= 0 {
+		return nil
+	}
+	iv := make([]byte, ilen)
+	rand.Read(iv)
+	return iv
+}
+
+func packConnectRequest(addr string, port uint16, method string) ([]byte, cipher.Encrypter) {
+	ip := net.ParseIP(addr)
+	atype := AType_DOMAINNAME
+	if ip != nil {
+		if len(ip) == 4 {
+			atype = AType_IPV4
+		} else {
+			atype = AType_IPV6
+		}
+	}
+
+	info := cipher.GetCipherInfo(strings.ToLower(method))
+	key := randomKey(info.KeySize)
+	iv := randomKey(info.IvSize)
+	req := Request{
+		Version: 0x01,
+		Atype:   atype,
+		Addr:    addr,
+		Port:    int32(port),
+		Key:     key,
+		Iv:      iv,
+	}
+	data, _ := proto.Marshal(&req)
+	return data, info.EncrypterFunc(key, iv)
+}
