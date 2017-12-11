@@ -24,6 +24,7 @@ import (
 	"os"
 	"skywalker/proxy"
 	"skywalker/rpc"
+	"skywalker/util"
 )
 
 type (
@@ -78,6 +79,11 @@ func init() {
 			Handle:       handleQuit,
 			RequestField: "GetCommon",
 			PostHandle:   postHandleQuit,
+		},
+		rpc.RequestType_CLEARCACHE: &Command{
+			Handle:       handleClearCache,
+			RequestField: "GetCommon",
+			PostHandle:   nil,
 		},
 	}
 }
@@ -343,4 +349,17 @@ func postHandleQuit(f *Force, rep *rpc.Response, err error) {
 	}
 	p, _ := os.FindProcess(int(*rep.Quit.Pid))
 	p.Signal(os.Interrupt)
+}
+
+func handleClearCache(f *Force, v interface{}) (*rpc.Response, error) {
+	reqType := rpc.RequestType_CLEARCACHE
+	status := rpc.ClearCacheResponse_SUCCESS
+	result := &rpc.ClearCacheResponse{
+		Status: &status,
+	}
+	util.DNSCache.Flush()
+	return &rpc.Response{
+		Type:  &reqType,
+		Clear: result,
+	}, nil
 }

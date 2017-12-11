@@ -25,14 +25,15 @@ import (
 )
 
 const (
-	COMMAND_HELP    = "help"
-	COMMAND_STATUS  = "status"
-	COMMAND_START   = "start"
-	COMMAND_STOP    = "stop"
-	COMMAND_RESTART = "restart"
-	COMMAND_INFO    = "info"
-	COMMAND_RELOAD  = "reload"
-	COMMAND_QUIT    = "quit"
+	COMMAND_HELP       = "help"
+	COMMAND_STATUS     = "status"
+	COMMAND_START      = "start"
+	COMMAND_STOP       = "stop"
+	COMMAND_RESTART    = "restart"
+	COMMAND_INFO       = "info"
+	COMMAND_RELOAD     = "reload"
+	COMMAND_QUIT       = "quit"
+	COMMAND_CLEARCACHE = "clearcache"
 )
 
 type (
@@ -127,6 +128,15 @@ func init() {
 			ResponseField:   "GetQuit",
 			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processQuitResponse,
+		},
+		COMMAND_CLEARCACHE: &Command{
+			Optional:        0,
+			Required:        0,
+			Help:            "\tclearcache\tclear DNS cache",
+			ReqType:         rpc.RequestType_CLEARCACHE,
+			ResponseField:   "GetClear",
+			BuildRequest:    buildCommonRequest,
+			ProcessResponse: processClearResponse,
 		},
 	}
 }

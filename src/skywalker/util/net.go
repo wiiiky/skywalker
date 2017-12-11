@@ -35,19 +35,19 @@ const (
 
 /*  DNS缓存 */
 var (
-	gDNSCache Cache = NewDNSCache(CACHE_DEFAULT_TIMEOUT)
+	DNSCache ICache = NewCache(CACHE_DEFAULT_TIMEOUT)
 )
 
 /* 从缓存中获取DNS结果，如果没找到则发起解析 */
 func ResolveHost(host string) (string, error) {
-	ip := gDNSCache.GetString(host)
+	ip := DNSCache.GetString(host)
 	if len(ip) == 0 {
 		ips, err := net.LookupIP(host)
 		if err != nil || len(ips) == 0 {
 			return "", errors.New("Invalid Host")
 		}
 		ip = ips[0].String()
-		gDNSCache.Set(host, ip)
+		DNSCache.Set(host, ip)
 	}
 	return ip, nil
 }

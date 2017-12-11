@@ -23,10 +23,11 @@ import (
 )
 
 type (
-	Cache interface {
+	ICache interface {
 		Get(string) interface{}
 		Set(string, interface{})
 		GetString(string) string
+		Flush()
 
 		Timeout() int64
 		SetTimeout(int64)
@@ -37,26 +38,26 @@ type (
 		timestamp int64
 	}
 
-	dnsCache struct {
+	Cache struct {
 		sync.Mutex /* 多goroutine同时访问，需要加锁 */
 		data       map[string]cacheValue
 		timeout    int64
 	}
 )
 
-func NewDNSCache(timeout int64) Cache {
-	return &dnsCache{data: make(map[string]cacheValue), timeout: timeout}
+func NewCache(timeout int64) ICache {
+	return &Cache{data: make(map[string]cacheValue), timeout: timeout}
 }
 
-func (c *dnsCache) Timeout() int64 {
+func (c *Cache) Timeout() int64 {
 	return c.timeout
 }
 
-func (c *dnsCache) SetTimeout(timeout int64) {
+func (c *Cache) SetTimeout(timeout int64) {
 	c.timeout = timeout
 }
 
-func (c *dnsCache) Get(key string) interface{} {
+func (c *Cache) Get(key string) interface{} {
 	var value interface{}
 	defer c.Unlock()
 	c.Lock()
@@ -71,7 +72,7 @@ func (c *dnsCache) Get(key string) interface{} {
 	return value
 }
 
-func (c *dnsCache) Set(key string, value interface{}) {
+func (c *Cache) Set(key string, value interface{}) {
 	defer c.Unlock()
 	c.Lock()
 	val, ok := c.data[key]
@@ -84,7 +85,7 @@ func (c *dnsCache) Set(key string, value interface{}) {
 	}
 }
 
-func (c *dnsCache) GetString(key string) string {
+func (c *Cache) GetString(key string) string {
 	val := c.Get(key)
 	switch data := val.(type) {
 	case string:
@@ -93,4 +94,8 @@ func (c *dnsCache) GetString(key string) string {
 		return string(data)
 	}
 	return ""
+}
+
+func (c *Cache) Flush() {
+	c.data = make(map[string]cacheValue)
 }

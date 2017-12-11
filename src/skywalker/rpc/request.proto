@@ -10,6 +10,7 @@ enum RequestType {
     INFO = 6;     /* 服务详细信息 */
     RELOAD = 7;   /* reload配置 */
     QUIT = 8;     /* 关闭服务 */
+    CLEARCACHE = 9;    /* 删除DNS缓存 */
 }
 
 message CommonRequest {

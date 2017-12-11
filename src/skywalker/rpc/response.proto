@@ -111,6 +111,13 @@ message QuitResponse {
     required uint32 pid = 2;
 }
 
+message ClearCacheResponse {
+    enum Status {
+        SUCCESS = 1;
+    }
+    required Status status = 1;
+}
+
 message Response {
     required RequestType type = 1;
     optional Error err = 2;
@@ -121,4 +128,5 @@ message Response {
     optional InfoResponse info = 7;
     optional ReloadResponse reload = 8;
     optional QuitResponse quit = 9;
+    optional ClearCacheResponse clear = 10;
 }
