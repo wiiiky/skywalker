@@ -8,6 +8,12 @@ skywalker: src/skywalker/skywalker.go
 forctl: src/forctl/forctl.go
 	$(ENV) go build -o bin/forctl $?
 
+install: all
+	mv bin/skywalker /usr/local/bin/
+	mv bin/forctl /usr/local/bin/
+	mv example/ss.yml /etc/skywalker.yml
+	mv script/systemd/skywalker.service /etc/systemd/system
+
 get:
 	$(ENV) go get --fix skywalker
 	$(ENV) go get --fix forctl
