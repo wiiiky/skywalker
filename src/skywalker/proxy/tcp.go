@@ -49,7 +49,7 @@ func (p *Proxy) caGoroutine(ca agent.ClientAgent,
 	cChan := util.CreateConnChannel(cConn, p.Timeout)
 
 	chain := cConn.RemoteAddr().String()
-	closed_by_client := true
+	closedByClient := true
 RUNNING:
 	for {
 		select {
@@ -70,13 +70,13 @@ RUNNING:
 		case cmd, ok := <-s2c:
 			/* 来自服务端代理的数据 */
 			if ok == false {
-				closed_by_client = false
+				closedByClient = false
 				break RUNNING
 			} else if cmd.Type() == pkg.PKG_DATA {
 				for _, data := range cmd.GetData() {
 					cmd, rdata, err := ca.ReadFromSA(data)
 					if err := p.transferData(c2s, cConn, cmd, rdata, err, true); err != nil {
-						closed_by_client = false
+						closedByClient = false
 						p.WARN("Read From SA Error: %s %s", cConn.RemoteAddr(),
 							err.Error())
 						break RUNNING
@@ -91,7 +91,7 @@ RUNNING:
 				cmd, rdata, err := ca.OnConnectResult(result, host, port)
 				err = p.transferData(c2s, cConn, cmd, rdata, err, true)
 				if result != pkg.CONNECT_RESULT_OK || err != nil {
-					closed_by_client = false
+					closedByClient = false
 					break RUNNING
 				}
 			} else {
@@ -99,8 +99,8 @@ RUNNING:
 			}
 		}
 	}
-	ca.OnClose(closed_by_client)
-	if closed_by_client {
+	ca.OnClose(closedByClient)
+	if closedByClient {
 		p.INFO("%s Closed By Client", chain)
 	} else {
 		p.INFO("%s Closed By Server", chain)
@@ -173,14 +173,14 @@ func (p *Proxy) saGoroutine(sa agent.ServerAgent,
 		return
 	}
 
-	closed_by_client := true
+	closedByClient := true
 RUNNING:
 	for {
 		select {
 		case data, ok := <-sChan:
 			/* 来自服务端的数据 */
 			if ok == false {
-				closed_by_client = false
+				closedByClient = false
 				break RUNNING
 			}
 			if data = p.processSAHooks(data); data == nil {
@@ -188,7 +188,7 @@ RUNNING:
 			}
 			cmd, rdata, err := sa.ReadFromServer(data)
 			if err := p.transferData(s2c, sConn, cmd, rdata, err, false); err != nil {
-				closed_by_client = false
+				closedByClient = false
 				p.WARN("Read From Server Error: %s %s", sConn.RemoteAddr(),
 					err.Error())
 				break RUNNING
@@ -222,5 +222,5 @@ RUNNING:
 	if sConn != nil {
 		sConn.Close()
 	}
-	sa.OnClose(closed_by_client)
+	sa.OnClose(closedByClient)
 }

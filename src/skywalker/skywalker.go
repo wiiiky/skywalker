@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"skywalker/core"
+	"syscall"
 )
 
 /* 生成ASCII图形 http://patorjk.com/software/taag */
@@ -37,9 +38,9 @@ func main() {
 	if force == nil {
 		return
 	}
+	defer force.Finish()
 
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	<-c
-	force.Finish()
 }
