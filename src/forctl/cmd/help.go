@@ -25,8 +25,8 @@ import (
 /* 打印帮助信息 */
 func help(help *Command, args ...string) *rpc.Request {
 	if len(args) == 0 {
-		Print("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s\n",
-			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_RESTART, COMMAND_INFO)
+		Print("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s %s %s %s\n",
+			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_RESTART, COMMAND_INFO, COMMAND_CLEARCACHE, COMMAND_RELOAD, COMMAND_QUIT)
 		return nil
 	}
 	topic := args[0]
