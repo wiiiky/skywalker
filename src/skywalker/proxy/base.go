@@ -40,6 +40,7 @@ const (
 
 type (
 	ProxyInfo struct {
+		sync.Mutex
 		StartTime     int64           /* 服务启动时间 */
 		Sent          int64           /* 发送数据量，指的是SA发送给Server的数据 */
 		Received      int64           /* 接受数据量，指的是CA发送给Client的数据 */
@@ -152,16 +153,18 @@ func (p *Proxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interfac
 	}
 
 	if size > 0 {
-		/* 增加数据时需要使用锁，因为没有只是单纯增加数据和添加记录，因此不会影响性能 */
-		p.Lock()
-		if isClient { /* 发送给客户端的数据 */
-			p.Info.Received += size
-			p.Info.ReceivedQueue.Push(size)
-		} else { /* 发送给服务端的数据 */
-			p.Info.Sent += size
-			p.Info.SentQueue.Push(size)
-		}
-		p.Unlock()
+		go func() {
+			/* 增加数据时需要使用锁 */
+			defer p.Info.Unlock()
+			p.Info.Lock()
+			if isClient { /* 发送给客户端的数据 */
+				p.Info.Received += size
+				p.Info.ReceivedQueue.Push(size)
+			} else { /* 发送给服务端的数据 */
+				p.Info.Sent += size
+				p.Info.SentQueue.Push(size)
+			}
+		}()
 	}
 
 	if err != nil {
