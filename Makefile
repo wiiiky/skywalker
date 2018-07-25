@@ -11,8 +11,8 @@ forctl: src/forctl/forctl.go
 install: all
 	mv bin/skywalker /usr/local/bin/
 	mv bin/forctl /usr/local/bin/
-	mv example/ss.yml /etc/skywalker.yml
-	mv script/systemd/skywalker.service /etc/systemd/system
+	mv -n example/ss.yml /etc/skywalker.yml
+	mv -n script/systemd/skywalker.service /etc/systemd/system
 
 get:
 	$(ENV) go get --fix skywalker
