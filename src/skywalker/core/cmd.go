@@ -84,6 +84,11 @@ func init() {
 			RequestField: "GetCommon",
 			PostHandle:   nil,
 		},
+		rpc.RequestType_LIST: &Command{
+			Handle:       handleList,
+			RequestField: "GetCommon",
+			PostHandle:   nil,
+		},
 	}
 }
 
@@ -240,7 +245,7 @@ func handleRestart(f *Force, v interface{}) (*rpc.Response, error) {
 }
 
 /* 代理详情 */
-func proxyInfo(p *proxy.Proxy) *rpc.InfoResponse_Data {
+func getProxyInfoData(p *proxy.Proxy) *rpc.InfoResponse_Data {
 	var caInfo, saInfo []*rpc.InfoResponse_Info
 	status := rpc.InfoResponse_Status(p.Status)
 	ca, sa := p.GetAgents()
@@ -290,7 +295,7 @@ func handleInfo(f *Force, v interface{}) (*rpc.Response, error) {
 			if p := f.proxies[name]; p == nil {
 				data = proxyInfoNotFound(name)
 			} else {
-				data = proxyInfo(p)
+				data = getProxyInfoData(p)
 			}
 			result = append(result, data)
 		}
@@ -346,5 +351,44 @@ func handleClearCache(f *Force, v interface{}) (*rpc.Response, error) {
 	return &rpc.Response{
 		Type:  rpc.RequestType_CLEARCACHE,
 		Clear: result,
+	}, nil
+}
+
+func getProxyListData(p *proxy.Proxy) *rpc.ListResponse_Data {
+	data := rpc.ListResponse_Data{
+		Name:  p.Name,
+		Chain: nil,
+	}
+	p.Info.Lock()
+	for e := p.Info.Chains.Front(); e != nil; e = e.Next() {
+		c := e.Value.(*proxy.Chain)
+		data.Chain = append(data.Chain, &rpc.ListResponse_Data_Chain{
+			RemoteAddr: c.RemoteAddr,
+			ClientAddr: c.ClientAddr,
+		})
+	}
+	p.Info.Unlock()
+
+	return &data
+}
+
+func handleList(f *Force, v interface{}) (*rpc.Response, error) {
+	var result []*rpc.ListResponse_Data
+	req := v.(*rpc.CommonRequest)
+	names := req.GetName()
+
+	if len(names) == 0 {
+		return nil, errors.New("Invalid Argument For `list`")
+	} else {
+		for _, name := range names {
+			if p := f.proxies[name]; p != nil {
+				data := getProxyListData(p)
+				result = append(result, data)
+			}
+		}
+	}
+	return &rpc.Response{
+		Type: rpc.RequestType_LIST,
+		List: &rpc.ListResponse{Data: result},
 	}, nil
 }

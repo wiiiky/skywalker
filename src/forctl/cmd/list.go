@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2017 Wiky Lyu
+ * Copyright (C) 2018 - 2019 Wiky Lyu
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published
@@ -22,18 +22,14 @@ import (
 	"skywalker/rpc"
 )
 
-/* 打印帮助信息 */
-func help(help *Command, args ...string) *rpc.Request {
-	if len(args) == 0 {
-		Print("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s %s %s %s %s\n",
-			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_RESTART, COMMAND_INFO, COMMAND_LIST, COMMAND_CLEARCACHE, COMMAND_RELOAD, COMMAND_QUIT)
-		return nil
-	}
-	topic := args[0]
-	if cmd := GetCommand(topic); cmd != nil {
-		Print("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
-	} else {
-		PrintError("No help on %s\n", topic)
+/* 处理stop返回结果 */
+func processListResponse(v interface{}) error {
+	rep := v.(*rpc.ListResponse)
+	for _, data := range rep.GetData() {
+		Print("%s\n", data.GetName())
+		for _, c := range data.GetChain() {
+			Print("\t%s <==> %s\n", c.GetClientAddr(), c.GetRemoteAddr())
+		}
 	}
 	return nil
 }

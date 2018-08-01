@@ -33,6 +33,7 @@ const (
 	COMMAND_RELOAD     = "reload"
 	COMMAND_QUIT       = "quit"
 	COMMAND_CLEARCACHE = "clearcache"
+	COMMAND_LIST       = "list"
 )
 
 type (
@@ -136,6 +137,15 @@ func init() {
 			ResponseField:   "GetClear",
 			BuildRequest:    buildCommonRequest,
 			ProcessResponse: processClearResponse,
+		},
+		COMMAND_LIST: &Command{
+			Optional:        -1,
+			Required:        1,
+			Help:            fmt.Sprintf("\tlist %-15ss\tlist all connections", "<name>..."),
+			ReqType:         rpc.RequestType_LIST,
+			ResponseField:   "GetList",
+			BuildRequest:    buildCommonRequest,
+			ProcessResponse: processListResponse,
 		},
 	}
 }

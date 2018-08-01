@@ -122,12 +122,16 @@ message ListResponse {
     enum Status {
         SUCCESS = 0;
     }
-    message Chain {
-        string ClientAddr = 1;
-        string RemoteAddr = 2;
+    message Data {
+        string name = 1; 
+        message Chain {
+            string clientAddr = 1;
+            string remoteAddr = 2;
+        }
+        repeated Chain chain = 2;
     }
     Status status = 1;
-    Chain Chains = 2;
+    repeated Data data = 2;
 }
 
 message Response {
@@ -141,4 +145,5 @@ message Response {
     ReloadResponse reload = 8;
     QuitResponse quit = 9;
     ClearCacheResponse clear = 10;
+    ListResponse list = 11;
 }
