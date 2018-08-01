@@ -20,7 +20,6 @@ package proxy
 import (
 	"net"
 	"skywalker/agent"
-	"skywalker/hook"
 	"skywalker/log"
 	"skywalker/pkg"
 	"skywalker/util"
@@ -69,29 +68,8 @@ type (
 		udpListener *net.UDPConn
 
 		Flag int
-
-		CAHooks []hook.Hook
-		SAHooks []hook.Hook
 	}
 )
-
-func (p *Proxy) processCAHooks(data []byte) []byte {
-	for _, hook := range p.CAHooks {
-		if data = hook.Process(data); data == nil {
-			break
-		}
-	}
-	return data
-}
-
-func (p *Proxy) processSAHooks(data []byte) []byte {
-	for _, hook := range p.SAHooks {
-		if data = hook.Process(data); data == nil {
-			break
-		}
-	}
-	return data
-}
 
 func (p *Proxy) clarifyPackage(data interface{}) []*pkg.Package {
 	switch d := data.(type) {
@@ -136,15 +114,6 @@ func (p *Proxy) transferData(ic chan *pkg.Package, conn net.Conn, tdata interfac
 	var n int
 	var e error
 	for _, d := range p.clarifyBytes(rdata) {
-		if isClient && p.CAHooks != nil {
-			if d = p.processCAHooks(d); d == nil {
-				continue
-			}
-		} else if !isClient && p.SAHooks != nil {
-			if d = p.processSAHooks(d); d == nil {
-				continue
-			}
-		}
 		if n, e = conn.Write(d); e != nil {
 			break
 		} else {
