@@ -48,7 +48,15 @@ func (p *Proxy) caGoroutine(ca agent.ClientAgent,
 
 	cChan := util.CreateConnChannel(cConn, p.Timeout)
 
-	chain := cConn.RemoteAddr().String()
+	chain := &Chain{
+		ClientAddr: cConn.RemoteAddr().String(),
+		RemoteAddr: "",
+	}
+
+	p.Info.Lock()
+	chainElement := p.Info.Chains.PushBack(chain)
+	p.Info.Unlock()
+
 	closedByClient := true
 RUNNING:
 	for {
@@ -82,8 +90,8 @@ RUNNING:
 			} else if cmd.Type() == pkg.PKG_CONNECT_RESULT {
 				result, host, port := cmd.GetConnectResult()
 				if result == pkg.CONNECT_RESULT_OK {
-					chain = fmt.Sprintf("%s <==> %s:%v", cConn.RemoteAddr().String(), host, port)
-					p.INFO("%s Connected", chain)
+					chain.RemoteAddr = fmt.Sprintf("%s:%v", host, port)
+					p.INFO("%s Connected", chain.String())
 				}
 				cmd, rdata, err := ca.OnConnectResult(result, host, port)
 				err = p.transferData(c2s, cConn, cmd, rdata, err, true)
@@ -102,6 +110,9 @@ RUNNING:
 	} else {
 		p.INFO("%s Closed By Server", chain)
 	}
+	p.Info.Lock()
+	p.Info.Chains.Remove(chainElement)
+	p.Info.Unlock()
 }
 
 /*

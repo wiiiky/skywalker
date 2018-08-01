@@ -18,6 +18,8 @@
 package proxy
 
 import (
+	"container/list"
+	"fmt"
 	"net"
 	"skywalker/agent"
 	"skywalker/log"
@@ -27,9 +29,9 @@ import (
 )
 
 const (
-	STATUS_STOPPED = 1
-	STATUS_RUNNING = 2
-	STATUS_ERROR   = 3
+	STATUS_STOPPED = 0
+	STATUS_RUNNING = 1
+	STATUS_ERROR   = 2
 
 	FLAG_UNSET         = -1
 	FLAG_NONE          = 0
@@ -38,6 +40,11 @@ const (
 )
 
 type (
+	Chain struct {
+		ClientAddr string
+		RemoteAddr string
+	}
+
 	ProxyInfo struct {
 		sync.Mutex
 		StartTime     int64           /* 服务启动时间 */
@@ -45,10 +52,11 @@ type (
 		Received      int64           /* 接受数据量，指的是CA发送给Client的数据 */
 		SentQueue     *util.RateQueue /* 接收数据队列，用于计算网络速度 */
 		ReceivedQueue *util.RateQueue /* 发送数据队列，用于计算网络速度 */
+		Chains        *list.List      /* 链接记录 */
 	}
 
 	Proxy struct {
-		sync.Mutex        /* 互斥锁，"继承"锁可直接使用Lock和Unlock */
+		sync.Mutex        /* 互斥锁 */
 		Name       string /* 代理名 */
 		CAName     string /* ca协议名 */
 		SAName     string /* sa协议名 */
@@ -70,6 +78,10 @@ type (
 		Flag int
 	}
 )
+
+func (c *Chain) String() string {
+	return fmt.Sprintf("%s <==> %s", c.ClientAddr, c.RemoteAddr)
+}
 
 func (p *Proxy) clarifyPackage(data interface{}) []*pkg.Package {
 	switch d := data.(type) {

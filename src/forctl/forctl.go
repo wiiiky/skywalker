@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"forctl/io"
 	"forctl/reader"
-	"github.com/golang/protobuf/proto"
 	"reflect"
 	"skywalker/config"
 	"skywalker/rpc"
@@ -125,13 +124,12 @@ func connectSkywalker(inet *config.InetConfig, unix *config.UnixConfig) (*rpc.Co
 	}
 
 	/* 发起认证 */
-	t := rpc.RequestType_AUTH
 	req := &rpc.Request{
-		Type:    &t,
-		Version: proto.Int32(rpc.VERSION),
+		Type:    rpc.RequestType_AUTH,
+		Version: rpc.VERSION,
 		Auth: &rpc.AuthRequest{
-			Username: proto.String(username),
-			Password: proto.String(password),
+			Username: username,
+			Password: password,
 		},
 	}
 	if err = c.WriteRequest(req); err != nil {

@@ -20,7 +20,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"net"
 	"os"
 	"reflect"
@@ -176,7 +175,7 @@ func authenticate(c *rpc.Conn, username, password string) bool {
 	}
 	e := c.WriteResponse(&rpc.Response{
 		Type: req.Type,
-		Auth: &rpc.AuthResponse{Status: &authStatus},
+		Auth: &rpc.AuthResponse{Status: authStatus},
 	})
 	return e == nil && authStatus == rpc.AuthResponse_SUCCESS
 }
@@ -216,7 +215,7 @@ func (f *Force) handleConn(c *rpc.Conn, username, password string) {
 		if err != nil {
 			c.WriteResponse(&rpc.Response{
 				Type: req.Type,
-				Err:  &rpc.Error{Msg: proto.String(err.Error())},
+				Err:  &rpc.Error{Msg: err.Error()},
 			})
 		} else if rep != nil {
 			if e := c.WriteResponse(rep); e != nil {

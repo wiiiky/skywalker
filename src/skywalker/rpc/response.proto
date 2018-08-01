@@ -1,4 +1,4 @@
-syntax = "proto2";
+syntax = "proto3";
 package rpc;
 
 import "src/skywalker/rpc/request.proto";
@@ -6,33 +6,33 @@ import "src/skywalker/rpc/request.proto";
 
 /* 出错 */
 message Error {
-    required string msg = 1;
+    string msg = 1;
 }
 
 message AuthResponse {
     enum Status {
-        SUCCESS = 1;
-        FAILURE = 2;
+        SUCCESS = 0;
+        FAILURE = 1;
     }
-    required Status status = 1;
+    Status status = 1;
 }
 
 /* status 命令的返回结果 */
 message StatusResponse {
     enum Status {
-        STOPPED = 1;
-        RUNNING = 2;
-        ERROR = 3;
+        STOPPED = 0;
+        RUNNING = 1;
+        ERROR = 2;
     }
     message Data {
-        required string name = 1;
-        optional string cname = 2 [default = ""];
-        optional string sname = 3 [default = ""];
-        required Status status = 4;
-        optional string bindAddr = 5 [default = ""];
-        optional int32 bindPort = 6 [default = 0];
-        optional int64 startTime = 7 [default = 0];
-        optional string err = 8 [default = ""];    /* 当不为空时表示出错 */
+        string name = 1;
+        string cname = 2;
+        string sname = 3;
+        Status status = 4;
+        string bindAddr = 5;
+        int32 bindPort = 6;
+        int64 startTime = 7;
+        string err = 8;    /* 当不为空时表示出错 */
     }
     repeated Data data = 1;
 }
@@ -40,57 +40,57 @@ message StatusResponse {
 /* start 命令的返回结果 */
 message StartResponse {
     enum Status {
-        STARTED = 1;
-        ERROR = 2;
-        RUNNING = 3;
+        STARTED = 0;
+        ERROR = 1;
+        RUNNING = 2;
     }
     message Data {
-        required string name = 1;
-        required Status status = 2;
-        optional string err = 3 [default = ""];    /* 当状态是 ERROR 时有效 */
+        string name = 1;
+        Status status = 2;
+        string err = 3;   /* 当状态是 ERROR 时有效 */
     }
     repeated Data data = 1;
 }
 
 message StopResponse {
     enum Status {
-        STOPPED = 1;
-        ERROR = 2;
-        UNRUNNING = 3;
+        STOPPED = 0;
+        ERROR = 1;
+        UNRUNNING = 2;
     }
     message Data {
-        required string name = 1;
-        required Status status = 2;
-        optional string err = 3 [default = ""];
+        string name = 1;
+        Status status = 2;
+        string err = 3;
     }
     repeated Data data = 1;
 }
 
 message InfoResponse {
     enum Status {
-        STOPPED = 1;
-        RUNNING = 2;
-        ERROR = 3;
+        STOPPED = 0;
+        RUNNING = 1;
+        ERROR = 2;
     }
     message Info {
-        required string key = 1;
-        required string value = 2;
+        string key = 1;
+        string value = 2;
     }
     message Data {
-        required string name = 1;
-        optional string cname = 2 [default = ""];
-        optional string sname = 3 [default = ""];
-        required Status status = 4;
-        optional string bindAddr = 5 [default = ""];
-        optional int32 bindPort = 6 [default = 0];
-        optional int64 startTime = 7 [default = 0];
-        optional int64 sent = 8 [default = 0];
-        optional int64 received = 9 [default = 0];
-        optional int64 sentRate = 10 [default = 0];
-        optional int64 receivedRate = 11 [default = 0];
+        string name = 1;
+        string cname = 2;
+        string sname = 3;
+        Status status = 4;
+        string bindAddr = 5;
+        int32 bindPort = 6;
+        int64 startTime = 7;
+        int64 sent = 8;
+        int64 received = 9;
+        int64 sentRate = 10;
+        int64 receivedRate = 11;
         repeated Info caInfo = 12;
         repeated Info saInfo = 13;
-        optional string err = 14 [default = ""];    /* 当不为空时表示出错 */
+        string err = 14;    /* 当不为空时表示出错 */
     }
     repeated Data data = 1;
 }
@@ -104,29 +104,41 @@ message ReloadResponse {
 
 message QuitResponse {
     enum Status {
-        QUITED = 1;
-        ERROR = 2;
+        QUITED = 0;
+        ERROR = 1;
     }
-    required Status status = 1;
-    required uint32 pid = 2;
+    Status status = 1;
+    uint32 pid = 2;
 }
 
 message ClearCacheResponse {
     enum Status {
-        SUCCESS = 1;
+        SUCCESS = 0;
     }
-    required Status status = 1;
+    Status status = 1;
+}
+
+message ListResponse {
+    enum Status {
+        SUCCESS = 0;
+    }
+    message Chain {
+        string ClientAddr = 1;
+        string RemoteAddr = 2;
+    }
+    Status status = 1;
+    Chain Chains = 2;
 }
 
 message Response {
-    required RequestType type = 1;
-    optional Error err = 2;
-    optional AuthResponse auth = 3;
-    optional StatusResponse status = 4;
-    optional StartResponse start = 5;
-    optional StopResponse stop = 6;
-    optional InfoResponse info = 7;
-    optional ReloadResponse reload = 8;
-    optional QuitResponse quit = 9;
-    optional ClearCacheResponse clear = 10;
+    RequestType type = 1;
+    Error err = 2;
+    AuthResponse auth = 3;
+    StatusResponse status = 4;
+    StartResponse start = 5;
+    StopResponse stop = 6;
+    InfoResponse info = 7;
+    ReloadResponse reload = 8;
+    QuitResponse quit = 9;
+    ClearCacheResponse clear = 10;
 }

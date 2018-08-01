@@ -20,7 +20,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"os"
 	"skywalker/proxy"
 	"skywalker/rpc"
@@ -90,24 +89,22 @@ func init() {
 
 /* 返回代理当前状态 */
 func proxyStatus(p *proxy.Proxy) *rpc.StatusResponse_Data {
-	status := rpc.StatusResponse_Status(p.Status)
 	return &rpc.StatusResponse_Data{
-		Name:      proto.String(p.Name),
-		Cname:     proto.String(p.CAName),
-		Sname:     proto.String(p.SAName),
-		Status:    &status,
-		BindAddr:  proto.String(p.BindAddr),
-		BindPort:  proto.Int32(int32(p.BindPort)),
-		StartTime: proto.Int64(p.Info.StartTime),
+		Name:      p.Name,
+		Cname:     p.CAName,
+		Sname:     p.SAName,
+		Status:    rpc.StatusResponse_Status(p.Status),
+		BindAddr:  p.BindAddr,
+		BindPort:  int32(p.BindPort),
+		StartTime: p.Info.StartTime,
 	}
 }
 
 func proxyStatusNotFound(name string) *rpc.StatusResponse_Data {
-	status := rpc.StatusResponse_STOPPED
 	return &rpc.StatusResponse_Data{
-		Name:   proto.String(name),
-		Status: &status,
-		Err:    proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
+		Name:   name,
+		Status: rpc.StatusResponse_STOPPED,
+		Err:    fmt.Sprintf("'%s' Not Found! (no such proxy)", name),
 	}
 }
 
@@ -117,7 +114,6 @@ func handleStatus(f *Force, v interface{}) (*rpc.Response, error) {
 
 	req := v.(*rpc.CommonRequest)
 
-	reqType := rpc.RequestType_STATUS
 	names := req.GetName()
 	if len(names) == 0 { /* 没有指定参数表示所有代理服务 */
 		for _, p := range f.orderedProxies {
@@ -136,7 +132,7 @@ func handleStatus(f *Force, v interface{}) (*rpc.Response, error) {
 	}
 
 	return &rpc.Response{
-		Type:   &reqType,
+		Type:   rpc.RequestType_STATUS,
 		Status: &rpc.StatusResponse{Data: result},
 	}, nil
 }
@@ -147,7 +143,6 @@ func handleStart(f *Force, v interface{}) (*rpc.Response, error) {
 
 	req := v.(*rpc.CommonRequest)
 
-	reqType := rpc.RequestType_START
 	names := req.GetName()
 	if len(names) == 0 {
 		return nil, errors.New("Invalid Argument For `start`")
@@ -169,10 +164,10 @@ func handleStart(f *Force, v interface{}) (*rpc.Response, error) {
 				status = rpc.StartResponse_STARTED
 			}
 		}
-		result = append(result, &rpc.StartResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
+		result = append(result, &rpc.StartResponse_Data{Name: name, Status: status, Err: errmsg})
 	}
 	return &rpc.Response{
-		Type:  &reqType,
+		Type:  rpc.RequestType_START,
 		Start: &rpc.StartResponse{Data: result},
 	}, nil
 }
@@ -182,7 +177,6 @@ func handleStop(f *Force, v interface{}) (*rpc.Response, error) {
 	var result []*rpc.StopResponse_Data
 
 	req := v.(*rpc.CommonRequest)
-	reqType := rpc.RequestType_STOP
 	names := req.GetName()
 	if len(names) == 0 {
 		return nil, errors.New("Invalid Argument For `stop`")
@@ -204,10 +198,10 @@ func handleStop(f *Force, v interface{}) (*rpc.Response, error) {
 				status = rpc.StopResponse_STOPPED
 			}
 		}
-		result = append(result, &rpc.StopResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
+		result = append(result, &rpc.StopResponse_Data{Name: name, Status: status, Err: errmsg})
 	}
 	return &rpc.Response{
-		Type: &reqType,
+		Type: rpc.RequestType_STOP,
 		Stop: &rpc.StopResponse{Data: result},
 	}, nil
 }
@@ -217,7 +211,6 @@ func handleRestart(f *Force, v interface{}) (*rpc.Response, error) {
 	var result []*rpc.StartResponse_Data
 
 	req := v.(*rpc.CommonRequest)
-	reqType := rpc.RequestType_RESTART
 	names := req.GetName()
 	if len(names) == 0 {
 		return nil, errors.New("Invalid Argument For `stop`")
@@ -238,10 +231,10 @@ func handleRestart(f *Force, v interface{}) (*rpc.Response, error) {
 			status = rpc.StartResponse_STARTED
 		}
 
-		result = append(result, &rpc.StartResponse_Data{Name: proto.String(name), Status: &status, Err: proto.String(errmsg)})
+		result = append(result, &rpc.StartResponse_Data{Name: name, Status: status, Err: errmsg})
 	}
 	return &rpc.Response{
-		Type:  &reqType,
+		Type:  rpc.RequestType_RESTART,
 		Start: &rpc.StartResponse{Data: result},
 	}, nil
 }
@@ -252,35 +245,34 @@ func proxyInfo(p *proxy.Proxy) *rpc.InfoResponse_Data {
 	status := rpc.InfoResponse_Status(p.Status)
 	ca, sa := p.GetAgents()
 	for _, info := range ca.GetInfo() {
-		caInfo = append(caInfo, &rpc.InfoResponse_Info{Key: proto.String(info["key"]), Value: proto.String(info["value"])})
+		caInfo = append(caInfo, &rpc.InfoResponse_Info{Key: info["key"], Value: info["value"]})
 	}
 	for _, info := range sa.GetInfo() {
-		saInfo = append(saInfo, &rpc.InfoResponse_Info{Key: proto.String(info["key"]), Value: proto.String(info["value"])})
+		saInfo = append(saInfo, &rpc.InfoResponse_Info{Key: info["key"], Value: info["value"]})
 	}
 	return &rpc.InfoResponse_Data{
-		Name:         proto.String(p.Name),
-		Cname:        proto.String(p.CAName),
-		Sname:        proto.String(p.SAName),
-		Status:       &status,
-		BindAddr:     proto.String(p.BindAddr),
-		BindPort:     proto.Int32(int32(p.BindPort)),
-		StartTime:    proto.Int64(p.Info.StartTime),
-		Sent:         proto.Int64(p.Info.Sent),
-		Received:     proto.Int64(p.Info.Received),
-		SentRate:     proto.Int64(p.Info.SentQueue.Rate()),
+		Name:         p.Name,
+		Cname:        p.CAName,
+		Sname:        p.SAName,
+		Status:       status,
+		BindAddr:     p.BindAddr,
+		BindPort:     int32(p.BindPort),
+		StartTime:    p.Info.StartTime,
+		Sent:         p.Info.Sent,
+		Received:     p.Info.Received,
+		SentRate:     p.Info.SentQueue.Rate(),
 		CaInfo:       caInfo,
 		SaInfo:       saInfo,
-		ReceivedRate: proto.Int64(p.Info.ReceivedQueue.Rate()),
+		ReceivedRate: p.Info.ReceivedQueue.Rate(),
 	}
 }
 
 /* 未找的代理详情 */
 func proxyInfoNotFound(name string) *rpc.InfoResponse_Data {
-	status := rpc.InfoResponse_STOPPED
 	return &rpc.InfoResponse_Data{
-		Name:   proto.String(name),
-		Status: &status,
-		Err:    proto.String(fmt.Sprintf("'%s' Not Found! (no such proxy)", name)),
+		Name:   name,
+		Status: rpc.InfoResponse_STOPPED,
+		Err:    fmt.Sprintf("'%s' Not Found! (no such proxy)", name),
 	}
 }
 
@@ -289,7 +281,6 @@ func handleInfo(f *Force, v interface{}) (*rpc.Response, error) {
 	var result []*rpc.InfoResponse_Data
 
 	req := v.(*rpc.CommonRequest)
-	reqType := rpc.RequestType_INFO
 	names := req.GetName()
 	if len(names) == 0 {
 		return nil, errors.New("Invalid Argument For `info`")
@@ -305,7 +296,7 @@ func handleInfo(f *Force, v interface{}) (*rpc.Response, error) {
 		}
 	}
 	return &rpc.Response{
-		Type: &reqType,
+		Type: rpc.RequestType_INFO,
 		Info: &rpc.InfoResponse{Data: result},
 	}, nil
 }
@@ -322,23 +313,19 @@ func handleReload(f *Force, v interface{}) (*rpc.Response, error) {
 		Deleted:   deleted,
 		Updated:   updated,
 	}
-	reqType := rpc.RequestType_RELOAD
 	return &rpc.Response{
-		Type:   &reqType,
+		Type:   rpc.RequestType_RELOAD,
 		Reload: result,
 	}, nil
 }
 
 func handleQuit(f *Force, v interface{}) (*rpc.Response, error) {
-	reqType := rpc.RequestType_QUIT
-	status := rpc.QuitResponse_QUITED
-	pid := uint32(os.Getpid())
 	result := &rpc.QuitResponse{
-		Status: &status,
-		Pid:    &pid,
+		Status: rpc.QuitResponse_QUITED,
+		Pid:    uint32(os.Getpid()),
 	}
 	return &rpc.Response{
-		Type: &reqType,
+		Type: rpc.RequestType_QUIT,
 		Quit: result,
 	}, nil
 }
@@ -347,19 +334,17 @@ func postHandleQuit(f *Force, rep *rpc.Response, err error) {
 	if rep == nil || rep.Quit == nil {
 		return
 	}
-	p, _ := os.FindProcess(int(*rep.Quit.Pid))
+	p, _ := os.FindProcess(int(rep.Quit.Pid))
 	p.Signal(os.Interrupt)
 }
 
 func handleClearCache(f *Force, v interface{}) (*rpc.Response, error) {
-	reqType := rpc.RequestType_CLEARCACHE
-	status := rpc.ClearCacheResponse_SUCCESS
 	result := &rpc.ClearCacheResponse{
-		Status: &status,
+		Status: rpc.ClearCacheResponse_SUCCESS,
 	}
 	util.DNSCache.Flush()
 	return &rpc.Response{
-		Type:  &reqType,
+		Type:  rpc.RequestType_CLEARCACHE,
 		Clear: result,
 	}, nil
 }

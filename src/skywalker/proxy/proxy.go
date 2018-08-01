@@ -18,6 +18,7 @@
 package proxy
 
 import (
+	"container/list"
 	"net"
 	"skywalker/config"
 	"skywalker/util"
@@ -55,6 +56,7 @@ func New(cfg *config.ProxyConfig) *Proxy {
 		Info: &ProxyInfo{
 			SentQueue:     util.NewRateQueue(2),
 			ReceivedQueue: util.NewRateQueue(2),
+			Chains:        list.New(),
 		},
 		AutoStart: cfg.AutoStart,
 		FastOpen:  cfg.FastOpen,

@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"skywalker/rpc"
 	"time"
 )
@@ -179,8 +178,8 @@ func formatDatetime(timestamp int64) string {
  */
 func buildCommonRequest(cmd *Command, names ...string) *rpc.Request {
 	return &rpc.Request{
-		Version: proto.Int32(rpc.VERSION),
-		Type:    &cmd.ReqType,
+		Version: rpc.VERSION,
+		Type:    cmd.ReqType,
 		Common: &rpc.CommonRequest{
 			Name: names,
 		},
