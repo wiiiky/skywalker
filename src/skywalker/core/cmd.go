@@ -93,7 +93,7 @@ func init() {
 }
 
 /* 返回代理当前状态 */
-func proxyStatus(p *proxy.Proxy) *rpc.StatusResponse_Data {
+func getProxyStatus(p *proxy.Proxy) *rpc.StatusResponse_Data {
 	return &rpc.StatusResponse_Data{
 		Name:      p.Name,
 		Cname:     p.CAName,
@@ -122,18 +122,17 @@ func handleStatus(f *Force, v interface{}) (*rpc.Response, error) {
 	names := req.GetName()
 	if len(names) == 0 { /* 没有指定参数表示所有代理服务 */
 		for _, p := range f.orderedProxies {
-			result = append(result, proxyStatus(p))
+			names = append(names, p.Name)
 		}
-	} else {
-		var data *rpc.StatusResponse_Data
-		for _, name := range names {
-			if p := f.proxies[name]; p == nil {
-				data = proxyStatusNotFound(name)
-			} else {
-				data = proxyStatus(p)
-			}
-			result = append(result, data)
+	}
+	var data *rpc.StatusResponse_Data
+	for _, name := range names {
+		if p := f.proxies[name]; p == nil {
+			data = proxyStatusNotFound(name)
+		} else {
+			data = getProxyStatus(p)
 		}
+		result = append(result, data)
 	}
 
 	return &rpc.Response{
@@ -378,13 +377,13 @@ func handleList(f *Force, v interface{}) (*rpc.Response, error) {
 	names := req.GetName()
 
 	if len(names) == 0 {
-		return nil, errors.New("Invalid Argument For `list`")
-	} else {
-		for _, name := range names {
-			if p := f.proxies[name]; p != nil {
-				data := getProxyListData(p)
-				result = append(result, data)
-			}
+		for _, p := range f.orderedProxies {
+			names = append(names, p.Name)
+		}
+	}
+	for _, name := range names {
+		if p := f.proxies[name]; p != nil {
+			result = append(result, getProxyListData(p))
 		}
 	}
 	return &rpc.Response{

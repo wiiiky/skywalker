@@ -1,8 +1,5 @@
 /bin/
 /config/*
-/src/golang.org/
-/src/github.com/
-/src/gopkg.in/
 *~
 *.a
 .buildconfig

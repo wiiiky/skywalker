@@ -83,6 +83,17 @@ Skywalker 使用 [Yaml1.2](http://www.yaml.org/spec/1.2/spec.html) 作为配置�
 
 可以用于开启和关闭代理、查看代理状态、刷新配置等。
 
+| 命令        | 说明   |  使用方式  |
+| :-----:   | :-----:  | :----:  |
+| status     | 查看当前代理状态 |   `forctl status <name>...`  |
+| info       | 查看代理的详细信息  |   `forctl info <name>`   |
+| list       | 查看代理当前的链接通道  |  `forctl list <name>`  |
+| reload     | 更新配置，将重启服务 | `forctl reload -y` |
+| start      | 启动代理 | `forctl start <name>` |
+| stop       | 关闭代理 | `forctl stop <name>` |
+| restart    | 重启代理 | `forctl restart <name>` |
+| quit       | 退出skywalker | `forctl quit -y` |
+
 ### 截图
 
 ![start](https://raw.githubusercontent.com/hitoshii/skywalker/master/screenshot/screenshot1.png?raw=true)

@@ -140,7 +140,7 @@ func init() {
 		},
 		COMMAND_LIST: &Command{
 			Optional:        -1,
-			Required:        1,
+			Required:        0,
 			Help:            fmt.Sprintf("\tlist %-15ss\tlist all connections", "<name>..."),
 			ReqType:         rpc.RequestType_LIST,
 			ResponseField:   "GetList",
