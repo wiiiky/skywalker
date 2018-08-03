@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	. "forctl/io"
+	"forctl/io"
 	"skywalker/rpc"
 )
 
@@ -26,9 +26,9 @@ import (
 func processQuitResponse(v interface{}) error {
 	rep := v.(*rpc.QuitResponse)
 	if rep.GetStatus() == rpc.QuitResponse_QUITED {
-		Print("%d - QUITED\n", rep.GetPid())
+		io.Print("%d - QUITED\n", rep.GetPid())
 	} else {
-		PrintError("FAILURE\n")
+		io.PrintError("FAILURE\n")
 	}
 	return nil
 }

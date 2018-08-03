@@ -23,6 +23,7 @@ import (
 	"skywalker/agent"
 	"skywalker/pkg"
 	"skywalker/util"
+	"time"
 )
 
 /* 启动数据转发流程 */
@@ -49,8 +50,10 @@ func (p *Proxy) caGoroutine(ca agent.ClientAgent,
 	cChan := util.CreateConnChannel(cConn, p.Timeout)
 
 	chain := &Chain{
-		ClientAddr: cConn.RemoteAddr().String(),
-		RemoteAddr: "",
+		ClientAddr:    cConn.RemoteAddr().String(),
+		RemoteAddr:    "",
+		ConnectedTime: 0,
+		ClosedTime:    0,
 	}
 
 	p.Info.Lock()
@@ -91,6 +94,7 @@ RUNNING:
 				result, host, port := cmd.GetConnectResult()
 				if result == pkg.CONNECT_RESULT_OK {
 					chain.RemoteAddr = fmt.Sprintf("%s:%v", host, port)
+					chain.ConnectedTime = time.Now().UnixNano()
 					p.INFO("%s Connected", chain.String())
 				}
 				cmd, rdata, err := ca.OnConnectResult(result, host, port)
@@ -110,9 +114,15 @@ RUNNING:
 	} else {
 		p.INFO("%s Closed By Server", chain)
 	}
-	p.Info.Lock()
-	p.Info.Chains.Remove(chainElement)
-	p.Info.Unlock()
+	chain.ClosedTime = time.Now().UnixNano()
+
+	/* 链接关闭n秒后再清除相关信息 */
+	go func() {
+		defer p.Info.Unlock()
+		time.Sleep(time.Second * time.Duration(5))
+		p.Info.Lock()
+		p.Info.Chains.Remove(chainElement)
+	}()
 }
 
 /*

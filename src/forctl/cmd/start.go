@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	. "forctl/io"
+	"forctl/io"
 	"skywalker/rpc"
 )
 
@@ -31,11 +31,11 @@ func processStartResponse(v interface{}) error {
 		err := data.GetErr()
 		switch status {
 		case rpc.StartResponse_STARTED:
-			Print("%s started\n", name)
+			io.Print("%s started\n", name)
 		case rpc.StartResponse_RUNNING:
-			Print("%s: ERROR (already started)\n", name)
+			io.Print("%s: ERROR (already started)\n", name)
 		case rpc.StartResponse_ERROR:
-			PrintError("%s: ERROR (%s)\n", name, err)
+			io.PrintError("%s: ERROR (%s)\n", name, err)
 		}
 	}
 	return nil

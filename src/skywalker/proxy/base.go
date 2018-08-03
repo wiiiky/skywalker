@@ -40,9 +40,13 @@ const (
 )
 
 type (
+
+	/* 记录一次代理链接的信息 */
 	Chain struct {
-		ClientAddr string
-		RemoteAddr string
+		ClientAddr    string /* 客户端地址 */
+		RemoteAddr    string /* 服务端地址 */
+		ConnectedTime int64  /* 链接建立时间 */
+		ClosedTime    int64  /* 链接关闭时间 */
 	}
 
 	ProxyInfo struct {

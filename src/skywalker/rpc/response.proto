@@ -127,6 +127,8 @@ message ListResponse {
         message Chain {
             string clientAddr = 1;
             string remoteAddr = 2;
+            int64 connectedTime = 3;
+            int64 closedTime = 4;
         }
         repeated Chain chain = 2;
     }

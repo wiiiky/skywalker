@@ -18,7 +18,7 @@
 package reader
 
 import (
-	. "forctl/cmd"
+	"forctl/cmd"
 	"forctl/io"
 	"gopkg.in/readline.v1"
 	"skywalker/config"
@@ -36,22 +36,22 @@ func New(ccfg *config.CoreConfig, rcfg []*config.ProxyConfig) (*Reader, error) {
 	for _, r := range rcfg {
 		proxies = append(proxies, readline.PcItem(r.Name))
 	}
-	for k, _ := range GetCommands() {
-		if k != COMMAND_HELP {
+	for k, _ := range cmd.GetCommands() {
+		if k != cmd.COMMAND_HELP {
 			cmds = append(cmds, readline.PcItem(k))
 		}
 	}
 	/* 设置自动补全 */
 	completer := readline.NewPrefixCompleter(
-		readline.PcItem(COMMAND_STATUS, proxies...),
-		readline.PcItem(COMMAND_START, proxies...),
-		readline.PcItem(COMMAND_STOP, proxies...),
-		readline.PcItem(COMMAND_RESTART, proxies...),
-		readline.PcItem(COMMAND_INFO, proxies...),
-		readline.PcItem(COMMAND_HELP, cmds...),
-		readline.PcItem(COMMAND_RELOAD),
-		readline.PcItem(COMMAND_QUIT),
-		readline.PcItem(COMMAND_CLEARCACHE),
+		readline.PcItem(cmd.COMMAND_STATUS, proxies...),
+		readline.PcItem(cmd.COMMAND_START, proxies...),
+		readline.PcItem(cmd.COMMAND_STOP, proxies...),
+		readline.PcItem(cmd.COMMAND_RESTART, proxies...),
+		readline.PcItem(cmd.COMMAND_INFO, proxies...),
+		readline.PcItem(cmd.COMMAND_HELP, cmds...),
+		readline.PcItem(cmd.COMMAND_RELOAD),
+		readline.PcItem(cmd.COMMAND_QUIT),
+		readline.PcItem(cmd.COMMAND_CLEARCACHE),
 	)
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:       "\x1B[36mforce>>\x1B[0m ",
@@ -65,13 +65,13 @@ func New(ccfg *config.CoreConfig, rcfg []*config.ProxyConfig) (*Reader, error) {
 }
 
 type Line struct {
-	Cmd  *Command
+	Cmd  *cmd.Command
 	Args []string
 }
 
 func NewLine(buf string) *Line {
 	var seps []string
-	var cmd *Command
+	var c *cmd.Command
 
 	for _, s := range strings.Split(buf, " ") {
 		if len(s) > 0 {
@@ -81,20 +81,20 @@ func NewLine(buf string) *Line {
 	if len(seps) == 0 {
 		return nil
 	}
-	if cmd = GetCommand(seps[0]); cmd == nil {
+	if c = cmd.GetCommand(seps[0]); c == nil {
 		io.PrintError("Unknown syntax: %s\n", seps[0])
 		return nil
 	}
 
 	/* 参数个数不正确 */
-	if cmd.Required > len(seps[1:]) ||
-		(cmd.Optional >= 0 && cmd.Required+cmd.Optional < len(seps[1:])) {
-		io.PrintError("Invalid argument for %s\n%s\n", seps[0], cmd.Help)
+	if c.Required > len(seps[1:]) ||
+		(c.Optional >= 0 && c.Required+c.Optional < len(seps[1:])) {
+		io.PrintError("Invalid argument for %s\n%s\n", seps[0], c.Help)
 		return nil
 	}
 
 	return &Line{
-		Cmd:  cmd,
+		Cmd:  c,
 		Args: seps[1:],
 	}
 }

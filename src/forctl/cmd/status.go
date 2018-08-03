@@ -19,7 +19,7 @@ package cmd
 
 import (
 	"fmt"
-	. "forctl/io"
+	"forctl/io"
 	"skywalker/rpc"
 	"time"
 )
@@ -59,9 +59,9 @@ func processStatusResponse(v interface{}) error {
 	}
 	for _, row := range rows {
 		for i, col := range row {
-			Print("%-*s", maxlen[i], col)
+			io.Print("%-*s", maxlen[i], col)
 		}
-		Print("\n")
+		io.Print("\n")
 	}
 	return nil
 }

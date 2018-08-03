@@ -18,11 +18,11 @@
 package cmd
 
 import (
-	. "forctl/io"
+	"forctl/io"
 )
 
 /* 处理stop返回结果 */
 func processClearResponse(v interface{}) error {
-	Print("Cleared\n")
+	io.Print("Cleared\n")
 	return nil
 }

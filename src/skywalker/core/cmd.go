@@ -362,8 +362,10 @@ func getProxyListData(p *proxy.Proxy) *rpc.ListResponse_Data {
 	for e := p.Info.Chains.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*proxy.Chain)
 		data.Chain = append(data.Chain, &rpc.ListResponse_Data_Chain{
-			RemoteAddr: c.RemoteAddr,
-			ClientAddr: c.ClientAddr,
+			RemoteAddr:    c.RemoteAddr,
+			ClientAddr:    c.ClientAddr,
+			ConnectedTime: c.ConnectedTime,
+			ClosedTime:    c.ClosedTime,
 		})
 	}
 	p.Info.Unlock()

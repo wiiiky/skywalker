@@ -18,22 +18,22 @@
 package cmd
 
 import (
-	. "forctl/io"
+	"forctl/io"
 	"skywalker/rpc"
 )
 
 /* 打印帮助信息 */
 func help(help *Command, args ...string) *rpc.Request {
 	if len(args) == 0 {
-		Print("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s %s %s %s %s\n",
+		io.Print("commands (type help <topic>):\n=====================================\n\t%s\n\t%s %s %s %s %s %s %s %s %s\n",
 			COMMAND_HELP, COMMAND_STATUS, COMMAND_START, COMMAND_STOP, COMMAND_RESTART, COMMAND_INFO, COMMAND_LIST, COMMAND_CLEARCACHE, COMMAND_RELOAD, COMMAND_QUIT)
 		return nil
 	}
 	topic := args[0]
 	if cmd := GetCommand(topic); cmd != nil {
-		Print("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
+		io.Print("commands %s:\n=====================================\n%s\n", topic, cmd.Help)
 	} else {
-		PrintError("No help on %s\n", topic)
+		io.PrintError("No help on %s\n", topic)
 	}
 	return nil
 }

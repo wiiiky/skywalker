@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	. "forctl/io"
+	"forctl/io"
 	"skywalker/rpc"
 )
 
@@ -26,16 +26,16 @@ import (
 func processReloadResponse(v interface{}) error {
 	rep := v.(*rpc.ReloadResponse)
 	for _, d := range rep.GetUnchanged() {
-		Print("%s - UNCHANGED\n", d)
+		io.Print("%s - UNCHANGED\n", d)
 	}
 	for _, d := range rep.GetAdded() {
-		Print("%s - ADDED\n", d)
+		io.Print("%s - ADDED\n", d)
 	}
 	for _, d := range rep.GetDeleted() {
-		Print("%s - DELETED\n", d)
+		io.Print("%s - DELETED\n", d)
 	}
 	for _, d := range rep.GetUpdated() {
-		Print("%s - UPDATED\n", d)
+		io.Print("%s - UPDATED\n", d)
 	}
 
 	return nil

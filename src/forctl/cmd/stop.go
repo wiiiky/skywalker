@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	. "forctl/io"
+	"forctl/io"
 	"skywalker/rpc"
 )
 
@@ -31,11 +31,11 @@ func processStopResponse(v interface{}) error {
 		err := data.GetErr()
 		switch status {
 		case rpc.StopResponse_STOPPED:
-			Print("%s stopped\n", name)
+			io.Print("%s stopped\n", name)
 		case rpc.StopResponse_UNRUNNING:
-			Print("%s: ERROR (already stopped)\n", name)
+			io.Print("%s: ERROR (already stopped)\n", name)
 		case rpc.StopResponse_ERROR:
-			PrintError("%s: ERROR (%s)\n", name, err)
+			io.PrintError("%s: ERROR (%s)\n", name, err)
 		}
 	}
 	return nil

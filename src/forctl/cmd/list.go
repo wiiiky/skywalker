@@ -18,17 +18,42 @@
 package cmd
 
 import (
-	. "forctl/io"
+	"fmt"
+	"forctl/io"
 	"skywalker/rpc"
+	"time"
 )
 
 /* 处理stop返回结果 */
 func processListResponse(v interface{}) error {
 	rep := v.(*rpc.ListResponse)
 	for _, data := range rep.GetData() {
-		Print("%s\n", data.GetName())
+		io.Print("%s\n", data.GetName())
 		for _, c := range data.GetChain() {
-			Print("\t%s <==> %s\n", c.GetClientAddr(), c.GetRemoteAddr())
+			var connectedTime, closedTime time.Time
+			var connected, closed, elapsed string
+			var status string = "\x1b[36m[UNCONNECTED]\x1b[0m"
+
+			if c.GetConnectedTime() > 0 {
+				connectedTime = time.Unix(0, c.GetConnectedTime())
+				connected = fmt.Sprintf("%02d:%02d:%02d", connectedTime.Hour(), connectedTime.Minute(), connectedTime.Second())
+				status = "\x1b[34m[CONNECTED]\x1b[0m"
+			}
+			if c.GetClosedTime() > 0 {
+				closedTime = time.Unix(0, c.GetClosedTime())
+				closed = fmt.Sprintf("%02d:%02d:%02d", closedTime.Hour(), closedTime.Minute(), closedTime.Second())
+				status = "\x1b[33m[CLOSED]\x1b[0m"
+			} else {
+				closed = "..."
+			}
+			if !connectedTime.IsZero() {
+				t := closedTime
+				if t.IsZero() {
+					t = time.Now()
+				}
+				elapsed = fmt.Sprintf(" :%ds", t.Sub(connectedTime)/time.Second)
+			}
+			io.Print("\t%s %s <==> %s  \x1b[34m[%s->%s%s]\x1b[0m\n", status, c.GetClientAddr(), c.GetRemoteAddr(), connected, closed, elapsed)
 		}
 	}
 	return nil
