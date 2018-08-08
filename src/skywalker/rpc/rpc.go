@@ -61,7 +61,7 @@ func (c *Conn) read() []byte {
 		return nil
 	}
 	size := unpack(buf)
-	if size >= 5*1024*1024 { /* 限制最大数据长度为5M */
+	if size >= 10*1024*1024 { /* 限制最大数据长度为10M */
 		return nil
 	}
 	buf = make([]byte, size)
