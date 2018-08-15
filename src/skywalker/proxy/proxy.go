@@ -60,7 +60,7 @@ func New(cfg *config.ProxyConfig) *Proxy {
 		},
 		AutoStart: cfg.AutoStart,
 		FastOpen:  cfg.FastOpen,
-		Closing:   false,
+		Signal:    make(chan bool, 1),
 	}
 
 	return p
@@ -90,7 +90,6 @@ func (p *Proxy) Update(cfg *config.ProxyConfig) bool {
 	}
 
 	p.AutoStart = cfg.AutoStart
-	p.Closing = false
 
 	return p.Flag != FLAG_NONE
 }
@@ -98,9 +97,6 @@ func (p *Proxy) Update(cfg *config.ProxyConfig) bool {
 func (p *Proxy) Close() {
 	p.INFO("%s:%d stopped", p.BindAddr, p.BindPort)
 	p.tcpListener.Close()
-	if p.udpListener != nil {
-		p.udpListener.Close()
-	}
 	p.Status = STATUS_STOPPED
 }
 
@@ -110,7 +106,6 @@ func (p *Proxy) start() error {
 	}
 
 	var tcpListener *net.TCPListener
-	var udpListener *net.UDPConn
 	var err error
 	if tcpListener, err = util.TCPListen(p.BindAddr, p.BindPort, p.FastOpen); err != nil {
 		p.Status = STATUS_ERROR
@@ -118,33 +113,11 @@ func (p *Proxy) start() error {
 		return err
 	}
 
-	ca, sa := p.GetAgents()
-	if !ca.UDPSupported() && sa.UDPSupported() {
-		p.WARN("%s doesn't support UDP", ca.Name())
-	} else if ca.UDPSupported() && !sa.UDPSupported() {
-		p.WARN("%s doesn't support UDP", sa.Name())
-	} else if !ca.UDPSupported() && !sa.UDPSupported() {
-		p.WARN("%s & %s don't support UDP", ca.Name(), sa.Name())
-	} else {
-		/* 支持UDP转发 */
-		if udpListener, err = util.UDPListen(p.BindAddr, p.BindPort); err != nil {
-			tcpListener.Close()
-			p.Status = STATUS_ERROR
-			return err
-		}
-	}
-
 	p.INFO("%s:%d started", p.BindAddr, p.BindPort)
 	p.tcpListener = tcpListener
-	p.udpListener = udpListener
 	p.Status = STATUS_STOPPED
 	p.Info.StartTime = time.Now().Unix()
 	go p.Run()
-	waitTime := time.Duration(50)
-	for p.Status == STATUS_STOPPED {
-		time.Sleep(time.Millisecond * waitTime)
-		waitTime *= 2
-	}
 	return nil
 }
 
@@ -160,16 +133,10 @@ func (p *Proxy) stop() error {
 	if p.Status != STATUS_RUNNING {
 		return nil
 	}
-	p.Closing = true
 
-	p.tcpListener.Close()
-	if p.udpListener != nil {
-		p.udpListener.Close()
-	}
-	waitTime := time.Duration(10)
-	for p.Closing {
-		time.Sleep(time.Millisecond * waitTime)
-		waitTime *= 2
+	p.Signal <- true
+	for p.Status == STATUS_RUNNING {
+		time.Sleep(time.Millisecond * 50)
 	}
 	return nil
 }
@@ -216,52 +183,25 @@ type (
 	}
 )
 
-/* 将UDP套接字的监听转化为channel的监听 */
-func (p *Proxy) getUDPListener() chan *udpPackage {
-	c := make(chan *udpPackage)
-
-	if p.udpListener != nil {
-		go func(l *net.UDPConn, c chan *udpPackage) {
-			defer close(c)
-			buf := make([]byte, 1<<16)
-			for {
-				if n, addr, err := l.ReadFromUDP(buf); err == nil {
-					c <- &udpPackage{addr: addr, data: util.CopyBytes(buf, n)}
-				} else {
-					break
-				}
-			}
-			p.DEBUG("UDP %s closed", l.LocalAddr())
-		}(p.udpListener, c)
-	}
-	return c
-}
-
 /* 执行代理 */
 func (p *Proxy) Run() {
 	defer p.Close()
-	var conn net.Conn
-	var upkg *udpPackage
-	var ok bool
 
 	tcpListener := p.getTCPListener()
-	udpListener := p.getUDPListener()
 
-	for p.Closing == false {
+LOOP:
+	for {
 		p.Status = STATUS_RUNNING
 		select {
-		case conn, ok = <-tcpListener:
-			if ok {
-				go p.handleTCP(conn)
+		case conn, ok := <-tcpListener:
+			if !ok {
+				break LOOP
 			}
-		case upkg, ok = <-udpListener:
-			if ok {
-				go p.handleUDP(upkg)
+			go p.handleTCP(conn)
+		case quit, _ := <-p.Signal:
+			if quit {
+				break LOOP
 			}
-		}
-		if !ok {
-			p.Closing = true
 		}
 	}
-	p.Closing = false
 }

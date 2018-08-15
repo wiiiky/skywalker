@@ -229,10 +229,6 @@ func (a *SocksClientAgent) ReadFromSA(data []byte) (interface{}, interface{}, er
 	return nil, data, nil
 }
 
-func (a *SocksClientAgent) UDPSupported() bool {
-	return true
-}
-
 func (a *SocksClientAgent) GetInfo() []map[string]string {
 	return []map[string]string{
 		map[string]string{
@@ -240,12 +236,4 @@ func (a *SocksClientAgent) GetInfo() []map[string]string {
 			"value": strconv.Itoa(int(a.cfg.version)),
 		},
 	}
-}
-
-func (a *SocksClientAgent) RecvFromClient(data []byte) (interface{}, interface{}, string, int, error) {
-	var req socks5UDPRequest
-	if err := req.parse(data); err != nil {
-		return nil, nil, "", 0, err
-	}
-	return nil, req.data, req.addr, int(req.port), nil
 }

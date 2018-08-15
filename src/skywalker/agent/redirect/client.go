@@ -93,18 +93,6 @@ func (a *RedirectAgent) ReadFromSA(data []byte) (interface{}, interface{}, error
 	return nil, data, nil
 }
 
-func (a *RedirectAgent) UDPSupported() bool {
-	return true
-}
-
-func (a *RedirectAgent) RecvFromClient(data []byte) (interface{}, interface{}, string, int, error) {
-	return data, nil, a.cfg.host, int(a.cfg.port), nil
-}
-
-func (a *RedirectAgent) RecvFromSA(data []byte) (interface{}, interface{}, error) {
-	return data, nil, nil
-}
-
 /* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
 func (a *RedirectAgent) OnClose(bool) {
 }

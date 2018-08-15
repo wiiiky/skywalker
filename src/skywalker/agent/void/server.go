@@ -53,18 +53,6 @@ func (*VoidServerAgent) ReadFromCA([]byte) (interface{}, interface{}, error) {
 	return nil, nil, nil
 }
 
-func (*VoidServerAgent) UDPSupported() bool {
-	return true
-}
-
-func (*VoidServerAgent) RecvFromServer([]byte) (interface{}, interface{}, error) {
-	return nil, nil, nil
-}
-
-func (*VoidServerAgent) RecvFromCA([]byte, string, int) (interface{}, interface{}, string, int, error) {
-	return nil, nil, "", 0, nil
-}
-
 func (*VoidServerAgent) OnClose(bool) {}
 
 func (*VoidServerAgent) GetInfo() []map[string]string {

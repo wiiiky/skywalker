@@ -49,16 +49,4 @@ func (*EchoClientAgent) ReadFromSA([]byte) (interface{}, interface{}, error) {
 	return nil, nil, nil
 }
 
-func (*EchoClientAgent) UDPSupported() bool {
-	return true
-}
-
-func (*EchoClientAgent) RecvFromClient(data []byte) (interface{}, interface{}, string, int, error) {
-	return data, nil, "", 0, nil
-}
-
-func (*EchoClientAgent) RecvFromSA([]byte) (interface{}, interface{}, error) {
-	return nil, nil, nil
-}
-
 func (*EchoClientAgent) OnClose(bool) {}

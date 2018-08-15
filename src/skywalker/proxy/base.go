@@ -75,11 +75,11 @@ type (
 		AutoStart bool /* 是否自动启动 */
 		FastOpen  bool
 
-		Closing     bool
 		tcpListener net.Listener
-		udpListener *net.UDPConn
 
 		Flag int
+
+		Signal chan bool
 	}
 )
 
@@ -163,13 +163,6 @@ func (p *Proxy) GetAgents() (agent.ClientAgent, agent.ServerAgent) {
 	ca := agent.GetClientAgent(p.CAName, p.Name)
 	sa := agent.GetServerAgent(p.SAName, p.Name)
 	return ca, sa
-}
-
-func (p *Proxy) writeTo(data interface{}, addr *net.UDPAddr) {
-	for _, b := range p.clarifyBytes(data) {
-		p.DEBUG("send UDP to %s - %d", addr.String(), len(b))
-		p.udpListener.WriteTo(b, addr)
-	}
 }
 
 /* 日志输出 */

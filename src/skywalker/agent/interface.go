@@ -54,10 +54,6 @@ type (
 		/* 从SA接收到数据 */
 		ReadFromSA([]byte) (interface{}, interface{}, error)
 
-		UDPSupported() bool
-		RecvFromClient([]byte) (interface{}, interface{}, string, int, error)
-		RecvFromSA([]byte) (interface{}, interface{}, error)
-
 		/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
 		OnClose(bool)
 
@@ -99,11 +95,6 @@ type (
 		ReadFromServer([]byte) (interface{}, interface{}, error)
 		/* 从CA接收到数据 */
 		ReadFromCA([]byte) (interface{}, interface{}, error)
-
-		UDPSupported() bool
-		RecvFromServer([]byte) (interface{}, interface{}, error)
-		RecvFromCA([]byte, string, int) (interface{}, interface{}, string, int, error)
-
 		/* 关闭链接，释放资源，收尾工作，True表示是被客户端断开，否则是服务器断开 */
 		OnClose(bool)
 

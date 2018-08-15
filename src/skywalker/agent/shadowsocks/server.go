@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"math/rand"
 	. "skywalker/agent/base"
-	"skywalker/agent/socks"
 	"skywalker/cipher"
 	"skywalker/pkg"
 	"skywalker/util"
@@ -280,10 +279,6 @@ func (a *ShadowSocksServerAgent) OnClose(closed_by_client bool) {
 	}
 }
 
-func (a *ShadowSocksServerAgent) UDPSupported() bool {
-	return true
-}
-
 func (a *ShadowSocksServerAgent) GetInfo() []map[string]string {
 	formatServerAddrs := func(addrs []ssServerAddress) string {
 		var s []string
@@ -314,12 +309,4 @@ func (a *ShadowSocksServerAgent) GetInfo() []map[string]string {
 			"value": strconv.Itoa(a.cfg.ssServerAddress.serverPort),
 		},
 	}
-}
-
-func (a *ShadowSocksServerAgent) RecvFromCA(data []byte, host string, port int) (interface{}, interface{}, string, int, error) {
-	reqData, err := socks.CreateSocks5UDPRequest(host, port, data)
-	if err != nil {
-		return nil, nil, "", 0, err
-	}
-	return nil, bytes.Join([][]byte{a.iv, a.encrypter.Encrypt(reqData)}, []byte("")), a.cfg.serverAddr, a.cfg.serverPort, nil
 }

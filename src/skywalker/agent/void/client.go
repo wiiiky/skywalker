@@ -49,16 +49,4 @@ func (*VoidClientAgent) ReadFromSA([]byte) (interface{}, interface{}, error) {
 	return nil, nil, nil
 }
 
-func (*VoidClientAgent) UDPSupported() bool {
-	return true
-}
-
-func (*VoidClientAgent) RecvFromClient([]byte) (interface{}, interface{}, string, int, error) {
-	return nil, nil, "", 0, nil
-}
-
-func (*VoidClientAgent) RecvFromSA([]byte) (interface{}, interface{}, error) {
-	return nil, nil, nil
-}
-
 func (*VoidClientAgent) OnClose(bool) {}

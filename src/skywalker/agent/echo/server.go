@@ -52,15 +52,3 @@ func (a *EchoServerAgent) ReadFromServer(data []byte) (interface{}, interface{},
 func (a *EchoServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, error) {
 	return data, nil, nil
 }
-
-func (a *EchoServerAgent) UDPSupported() bool {
-	return true
-}
-
-func (a *EchoServerAgent) RecvFromServer(data []byte) (interface{}, interface{}, error) {
-	return nil, nil, nil
-}
-
-func (a *EchoServerAgent) RecvFromCA(data []byte, host string, port int) (interface{}, interface{}, string, int, error) {
-	return data, nil, host, port, nil
-}

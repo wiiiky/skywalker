@@ -19,7 +19,6 @@ package shadowsocks
 
 import (
 	. "skywalker/agent/base"
-	"skywalker/agent/socks"
 	"skywalker/cipher"
 	"skywalker/pkg"
 	"strings"
@@ -158,31 +157,4 @@ func (a *ShadowSocksClientAgent) ReadFromSA(data []byte) (interface{}, interface
 	}
 	rdata = append(rdata, a.encrypter.Encrypt(data))
 	return nil, rdata, nil
-}
-
-func (a *ShadowSocksClientAgent) UDPSupported() bool {
-	return true
-}
-
-func (a *ShadowSocksClientAgent) RecvFromClient(data []byte) (interface{}, interface{}, string, int, error) {
-	ivSize := a.cfg.cipherInfo.IvSize
-	if ivSize > 0 {
-		if len(data) < ivSize {
-			return nil, nil, "", 0, Error(ERROR_INVALID_PACKAGE, "invalid package")
-		}
-		iv := data[:ivSize]
-		a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, iv)
-		data = data[ivSize:]
-	} else {
-		a.decrypter = a.cfg.cipherInfo.DecrypterFunc(a.key, nil)
-	}
-
-	if data = a.decrypter.Decrypt(data); data == nil {
-		return nil, nil, "", 0, Error(ERROR_DECRYPT_FAILURE, "decrypt failure")
-	}
-	req, err := socks.ParseSocks5UDPRequest(data)
-	if err != nil {
-		return nil, nil, "", 0, err
-	}
-	return nil, req.GetData(), req.GetAddr(), int(req.GetPort()), nil
 }

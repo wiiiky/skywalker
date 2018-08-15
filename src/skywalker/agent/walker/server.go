@@ -105,10 +105,6 @@ func (a *WalkerServerAgent) ReadFromCA(data []byte) (interface{}, interface{}, e
 	return nil, nil, nil
 }
 
-func (a *WalkerServerAgent) UDPSupported() bool {
-	return false
-}
-
 func (a *WalkerServerAgent) OnClose(closed_by_client bool) {
 }
 
